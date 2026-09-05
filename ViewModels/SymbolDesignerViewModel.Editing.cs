@@ -168,6 +168,14 @@ public partial class SymbolDesignerViewModel
 
     private void OnSelectedItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        // 多选批量外观同步：属性面板改的值落在 SelectedItem 上 → 广播给 MultiSelected 其余成员。
+        // CAD 语义：批量选中后改颜色/线宽/填充等外观属性 = 对整组生效。
+        // 仅同步"通用外观属性"（颜色/线宽/填充/透明度/虚线），几何属性（X/Y/W/H/PathData）保持单图元编辑。
+        if (MultiSelected.Count > 1 && IsAppearanceProperty(e.PropertyName))
+        {
+            SyncAppearanceToMultiSelected(sender as PrimitiveItem, e.PropertyName!);
+        }
+
         if (e.PropertyName == nameof(PrimitiveItem.Width) ||
             e.PropertyName == nameof(PrimitiveItem.Height))
         {
@@ -225,6 +233,35 @@ public partial class SymbolDesignerViewModel
             };
             if (!string.IsNullOrEmpty(hex))
                 PushRecentColor(hex);
+        }
+    }
+
+    /// <summary>是否为可批量同步的"通用外观属性"（多选时广播给其余成员）。</summary>
+    private static bool IsAppearanceProperty(string? name) => name is
+        nameof(PrimitiveItem.StrokeColor) or
+        nameof(PrimitiveItem.StrokeWidth) or
+        nameof(PrimitiveItem.StrokeDashStyle) or
+        nameof(PrimitiveItem.FillStyle) or
+        nameof(PrimitiveItem.FillColor) or
+        nameof(PrimitiveItem.GradientStartColor) or
+        nameof(PrimitiveItem.GradientEndColor) or
+        nameof(PrimitiveItem.FillBrightness) or
+        nameof(PrimitiveItem.FillOpacity) or
+        nameof(PrimitiveItem.Opacity);
+
+    /// <summary>把 SelectedItem 上已变化的外观属性值广播到 MultiSelected 其余成员。
+    /// 用反射按属性名取值/赋值,避免为十几个属性手写 if 分支。
+    /// 只同步外观属性（调用方已用 IsAppearanceProperty 过滤）,不触发撤销（连动系统默认整体撤销）。</summary>
+    private void SyncAppearanceToMultiSelected(PrimitiveItem? source, string propertyName)
+    {
+        if (source is null) return;
+        var prop = typeof(PrimitiveItem).GetProperty(propertyName);
+        if (prop is null || !prop.CanRead || !prop.CanWrite) return;
+        var value = prop.GetValue(source);
+        foreach (var p in MultiSelected)
+        {
+            if (p == source) continue;
+            prop.SetValue(p, value);
         }
     }
 
