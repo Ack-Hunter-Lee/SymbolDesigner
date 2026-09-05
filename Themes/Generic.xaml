@@ -62,7 +62,7 @@
                                     BorderBrush="#0a0e1a" BorderThickness="0.1" />
                         </ControlTemplate>
 
-                        <!-- Resize 手柄的公共样式：1.5×1.5 逻辑像素（画布外层 Viewbox 会等比放大）
+                        <!-- Resize 手柄的公共样式：1.5×1.5 逻辑像素（缩放通过 RenderTransform，与 token 无关）
                              仅 IsSelected 时显示。-->
                         <Style TargetType="{x:Type views:ResizeThumb}">
                             <Setter Property="Width" Value="1.5" />

@@ -1575,7 +1575,7 @@
                                 </ItemsControl.ItemContainerStyle>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <!--  圆心=橙、端点=绿（画布逻辑坐标经 Viewbox 放大后视觉合理）  -->
+                                        <!--  圆心=橙、端点=绿（画布逻辑坐标经 RenderTransform 放大后视觉合理）  -->
                                         <Ellipse
                                             Width="3"
                                             Height="3"
