@@ -173,6 +173,19 @@ public partial class SymbolDesignerViewModel
             UpdateShapePreview();
     }
 
+    /// <summary>重置所有"绘制吸附"的可视化状态：橡皮线变色提示 + 对象追踪贯穿虚线。
+    /// 用于草稿结束（Enter/Esc 提交或 Backspace 撤销最后一点），避免最后一点的吸附提示线
+    /// 残留在画布上。IsObjectSnapTrackingX/Y 置 false 后 XAML 的两根 Line 立即 Collapsed。
+    /// 同时清零 IsPathSnappingActive（轴对齐绿线），保证提交/取消后画布干净。</summary>
+    private void ResetDraftSnapVisuals()
+    {
+        IsPathSnappingActive = false;
+        IsObjectSnapTrackingX = false;
+        IsObjectSnapTrackingY = false;
+        ObjectSnapTrackingX = 0;
+        ObjectSnapTrackingY = 0;
+    }
+
     /// <summary>起点吸附判定：Polyline 绘制中，鼠标位置与首顶点距离 &lt; 阈值 → DraftSnapToStart=true。
     /// 仅当已画了 2 个以上点（有可闭合的边）时参与吸附，避免起笔点附近也会误触发高亮。
     /// 注意：闭合语义只对 Polyline 生效（ThickPolyline 的 IsClosed 仍走开放式轮廓管道），
@@ -220,6 +233,8 @@ public partial class SymbolDesignerViewModel
             IsShapePreviewVisible = false;
             _draftCloseRequested = false;
             DraftSnapToStart = false;
+            // 同步隐藏"对象追踪贯穿虚线"（最后一点吸附命中后停留在画布上的孤儿提示）
+            ResetDraftSnapVisuals();
             DrawMode = DrawMode.None;
             ActiveToolKey = null; // Esc 放弃草稿 → 退出工具栏工具激活态（高亮复位）
             return;
@@ -256,6 +271,8 @@ public partial class SymbolDesignerViewModel
         DraftPoints.RemoveAt(DraftPoints.Count - 1);
         DraftPreviewPoint = new System.Windows.Point(double.NaN, double.NaN);
         UpdateDraftPathData();
+        // 撤销最后一点：对象追踪命中可能指向上一点（P_{n-1}），提示线位置已无意义，重置干净
+        ResetDraftSnapVisuals();
     }
 
     /// <summary>画布鼠标松开：提交草稿为正式图元（折线/直线/形状），清空草稿。</summary>
@@ -316,6 +333,8 @@ public partial class SymbolDesignerViewModel
             DraftPreviewPoint = new System.Windows.Point(double.NaN, double.NaN);
             DraftShapeData = string.Empty;
             IsShapePreviewVisible = false;
+            // 形状提交：擦除对象追踪提示线（如果路径类被走过，状态可能残留）
+            ResetDraftSnapVisuals();
             DrawMode = DrawMode.None;
             ActiveToolKey = null; // 形状提交 → 退出工具栏工具激活态（高亮复位）
             return;
@@ -392,6 +411,8 @@ public partial class SymbolDesignerViewModel
         // 起点吸附闭合请求：本次提交已消费（Polyline 分支读 IsClosed），复位等待下次绘制
         _draftCloseRequested = false;
         DraftSnapToStart = false;
+        // 路径提交：擦除对象追踪提示线（最后一点吸附命中可能把 IsObjectSnapTrackingX/Y 留在 true）
+        ResetDraftSnapVisuals();
         // 画完自动退出 画线模式，避免后续点击画布又加点
         DrawMode = DrawMode.None;
         ActiveToolKey = null; // 路径类（折线）提交 → 退出工具栏工具激活态（高亮复位）
@@ -408,19 +429,58 @@ public partial class SymbolDesignerViewModel
     /// 由 ClickDraw 在吸附命中时置 true，EndDraw 里消费并复位。仅 Polyline 闭合语义。</summary>
     private bool _draftCloseRequested;
 
-    /// <summary>绘制路径模式下的点吸附决策：
-    /// - AxisSnapEnabled=true（顶部开关开）：强制投影到水平/竖直（Shift 切水平）
-    /// - AxisSnapEnabled=false（默认）：Polar Tracking 风格——
-    ///   当前段方向（anchor→target）与水平/竖直夹角在阈值内则吸附成水平/竖直线，
-    ///   阈值外则保持自由。阈值 = 5°（CAD 默认）。
-    /// 同时副作用 IsPathSnappingActive：吸附激活时为 true，XAML 橡皮线变色提示。
+    /// <summary>绘制路径模式下的点吸附决策（CAD Object Snap Tracking + Polar Tracking）：
+    /// 优先级（先到先得）：
+    /// 1) Object Snap Tracking：与任一已画点 P_i 的 X 或 Y 同坐标（在 Xt/Yt 容差内）
+    ///    → 投影到 (P_i.X, target.Y) 或 (target.X, P_i.Y)，用于"和已画点对齐"，
+    ///    XAML 同步贯穿虚线提示。X、Y 可同时命中。
+    /// 2) AxisSnapEnabled=true（顶部开关开）：强制水平/竖直（Shift 切水平）
+    /// 3) AxisSnapEnabled=false（默认）：Polar Tracking 风格——
+    ///    当前段方向与水平/竖直夹角 ≤ 5° 则吸附成水平/竖直线
+    /// 4) 自由落点（return target）
+    ///
+    /// 副作用：
+    /// - IsPathSnappingActive：轴对齐激活（XAML 橡皮线变绿）
+    /// - IsObjectSnapTrackingX / Y + ObjectSnapTrackingX / Y：对象追踪激活（XAML 贯穿虚线）
     /// 形状模式（Ellipse/Ring）不调用本方法，避免被投影到轴线上。</summary>
     private System.Windows.Point ConstrainPoint(System.Windows.Point anchor, System.Windows.Point target)
     {
-        // 默认未吸附（让 XAML 走非绿色 Stroke）
+        // 默认未吸附（让 XAML 走非绿色 Stroke / 隐藏贯穿虚线）
         IsPathSnappingActive = false;
+        IsObjectSnapTrackingX = false;
+        IsObjectSnapTrackingY = false;
 
-        // 顶部开关开：强制水平/竖直（沿用旧语义，Shift 切水平）
+        // ── 1. Object Snap Tracking：与已画点（DraftPoints + 历史选中元素上不参与，仅当前草稿内）
+        //    X / Y 同坐标吸附。容差 Xt = Yt = 6.0（画布逻辑单位，比视觉半径略大，
+        //    鼠标"经过附近"就能对齐，比终点 CloseSnapThreshold 略小避免误触发）。
+        const double snapTol = 6.0;
+        if (DraftPoints.Count >= 2)  // 至少已有 2 个已确认点（1 个点的草稿没意义）
+        {
+            // 跳过最后一个点（= anchor）：避免自己吸到自己；
+            // 跳过第一个点由 _draftSnapToStart 路径处理（吸附到首点，DraftSnapToStart 控制）。
+            double bestDx = snapTol, bestDy = snapTol;
+            int hitX = -1, hitY = -1;
+            for (int i = 0; i < DraftPoints.Count - 1; i++)
+            {
+                double dxi = System.Math.Abs(target.X - DraftPoints[i].X);
+                double dyi = System.Math.Abs(target.Y - DraftPoints[i].Y);
+                if (dxi < bestDx) { bestDx = dxi; hitX = i; }
+                if (dyi < bestDy) { bestDy = dyi; hitY = i; }
+            }
+            double? snappedX = null, snappedY = null;
+            if (hitX >= 0) { snappedX = DraftPoints[hitX].X; ObjectSnapTrackingX = snappedX.Value; IsObjectSnapTrackingX = true; }
+            if (hitY >= 0) { snappedY = DraftPoints[hitY].Y; ObjectSnapTrackingY = snappedY.Value; IsObjectSnapTrackingY = true; }
+            // 至少命中一个 → 应用吸附；都没有命中才走下一步
+            if (snappedX.HasValue || snappedY.HasValue)
+            {
+                // 不强制 IsPathSnappingActive：吸附只改了对应坐标，方向仍自由（与 CAD Object Snap Tracking 语义一致）
+                return new System.Windows.Point(
+                    snappedX ?? target.X,
+                    snappedY ?? target.Y);
+            }
+        }
+
+        // ── 2. 顶部开关开：强制水平/竖直（沿用旧语义，Shift 切水平）
         if (AxisSnapEnabled)
         {
             IsPathSnappingActive = true;
@@ -429,7 +489,7 @@ public partial class SymbolDesignerViewModel
                 : new System.Windows.Point(anchor.X, target.Y);
         }
 
-        // Polar Tracking 风格：按接近水平/竖直自动吸附
+        // ── 3. Polar Tracking 风格：按接近水平/竖直自动吸附
         double dx = target.X - anchor.X;
         double dy = target.Y - anchor.Y;
         // 距离太短（鼠标几乎在 anchor 上）→ 不吸附，避免抖动

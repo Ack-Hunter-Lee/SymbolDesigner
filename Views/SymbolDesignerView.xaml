@@ -1380,6 +1380,37 @@
                             </Path>
 
                             <!--
+                                对象追踪贯穿提示线（CAD Object Snap Tracking 风格）：
+                                当鼠标与已画点 P_i 的 X 同坐标 → 画一条从画布顶到底的竖向虚线（橙色）；
+                                当鼠标与 P_i 的 Y 同坐标 → 画一条从画布左到右的横向虚线（橙色）。
+                                画布尺寸通过绑定 CanvasWidth/CanvasHeight 动态撑满，
+                                仅在 IsObjectSnapTrackingX/Y=true 时显示（不吸附时自动隐藏）。
+                                与橡皮线 IsPathSnappingActive（绿色/轴对齐）互不冲突——可同时激活。
+                            -->
+                            <Line
+                                IsHitTestVisible="False"
+                                Stretch="None"
+                                Stroke="{StaticResource Brush.State.Warn}"
+                                StrokeDashArray="{Binding CanvasScale, Converter={StaticResource DivDashByScale}, ConverterParameter='2.0,2.0'}"
+                                StrokeThickness="{Binding CanvasScale, Converter={StaticResource DivByScale}, ConverterParameter=0.4}"
+                                X1="{Binding ObjectSnapTrackingX}"
+                                X2="{Binding ObjectSnapTrackingX}"
+                                Y1="0"
+                                Y2="{Binding CanvasHeight}"
+                                Visibility="{Binding IsObjectSnapTrackingX, Converter={StaticResource BoolToVis}}" />
+                            <Line
+                                IsHitTestVisible="False"
+                                Stretch="None"
+                                Stroke="{StaticResource Brush.State.Warn}"
+                                StrokeDashArray="{Binding CanvasScale, Converter={StaticResource DivDashByScale}, ConverterParameter='2.0,2.0'}"
+                                StrokeThickness="{Binding CanvasScale, Converter={StaticResource DivByScale}, ConverterParameter=0.4}"
+                                X1="0"
+                                X2="{Binding CanvasWidth}"
+                                Y1="{Binding ObjectSnapTrackingY}"
+                                Y2="{Binding ObjectSnapTrackingY}"
+                                Visibility="{Binding IsObjectSnapTrackingY, Converter={StaticResource BoolToVis}}" />
+
+                            <!--
                                 形状工具的实时轮廓预览（Rectangle/RoundedRectangle/Ellipse/Ring/Triangle）。
                                 阶段 3：从"中心点 → 当前鼠标"动态生成 PathGeometry，
                                 蓝绿色描边 + 半透明填充，让用户在第 2 次点击前就能预判最终形状。

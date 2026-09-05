@@ -68,6 +68,23 @@ public partial class SymbolDesignerViewModel
     /// 形状模式不触发（形状有独立的预览 Path）。</summary>
     [ObservableProperty] private bool _isPathSnappingActive;
 
+    /// <summary>绘制路径模式下"对象追踪 X 对齐"激活态：鼠标 X 与任一已画点 X 同坐标（误差范围内），
+    /// XAML 画一条贯穿画布的浅色虚线提示"现在按 X 对齐到 P_i"。
+    /// 与 IsPathSnappingActive（轴对齐）并行：可同时为 true——既轴对齐又对象追踪。
+    /// 仅 Polyline/ThickPolyline/Line 路径类参与。</summary>
+    [ObservableProperty] private bool _isObjectSnapTrackingX;
+
+    /// <summary>绘制路径模式下"对象追踪 Y 对齐"激活态：鼠标 Y 与任一已画点 Y 同坐标。
+    /// XAML 画一条贯穿画布的横向虚线。语义与 IsObjectSnapTrackingX 对称。</summary>
+    [ObservableProperty] private bool _isObjectSnapTrackingY;
+
+    /// <summary>对象追踪命中点的 X 坐标（画布逻辑坐标，用于 XAML 画贯穿虚线的 Y1/Y2）。
+    /// 仅在 IsObjectSnapTrackingX=true 时有效。</summary>
+    [ObservableProperty] private double _objectSnapTrackingX;
+
+    /// <summary>对象追踪命中点的 Y 坐标。语义与 ObjectSnapTrackingX 对称。</summary>
+    [ObservableProperty] private double _objectSnapTrackingY;
+
     /// <summary>起点吸附闭合激活态：绘制路径类（Polyline/ThickPolyline）时，鼠标移动到首端点附近
     /// （距离 &lt; CloseSnapThreshold）即置 true。
     /// XAML 绑到起点手柄高亮（变绿 + 放大）与橡皮线终点——吸附时橡皮线终点吸附到起点坐标，
