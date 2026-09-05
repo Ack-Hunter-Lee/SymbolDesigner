@@ -100,6 +100,8 @@ public class DraggablePrimitive : ContentControl
             item.Y = nl.Y;
         }
         vm.OnItemGeometryChanged(item);
+        // 拖动改变图元位置 → 选区包围盒/缩放手柄跟随实时刷新
+        vm.RefreshScaleSelectionHandles();
     }
 
     private void OnDragCompleted(object sender, DragCompletedEventArgs e)

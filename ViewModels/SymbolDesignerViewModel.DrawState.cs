@@ -32,7 +32,12 @@ public partial class SymbolDesignerViewModel
         // 联动代码改的（选中 ThickPolyline 自动进入 / 取消选中自动退出）不算用户手动选择
         if (!_autoSyncingDrawMode)
             _userChangedDrawMode = true;
+        // 模式切换：手动选绘制工具 → 隐藏选区缩放手柄；退出绘制 → 恢复显示
+        RefreshScaleSelectionHandles();
     }
+
+    /// <summary>绘制开始/结束变化时同步选区缩放手柄显隐（绘制中隐藏,退出绘制恢复）。</summary>
+    partial void OnIsDrawingChanged(bool value) => RefreshScaleSelectionHandles();
 
     /// <summary>在联动代码中安全地设置 DrawMode（不标记"用户手动选择"）。</summary>
     private void SetDrawModeFromSelection(DrawMode value)

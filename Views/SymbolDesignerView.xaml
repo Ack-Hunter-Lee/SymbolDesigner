@@ -1296,7 +1296,9 @@
                             IsHitTestVisible="True"
                             MouseLeftButtonDown="OnCanvasDrawMouseDown"
                             MouseLeftButtonUp="OnCanvasDrawMouseUp"
-                            MouseMove="OnCanvasDrawMouseMove">
+                            MouseMove="OnCanvasDrawMouseMove"
+                            MouseRightButtonDown="OnCanvasMarqueeDown"
+                            MouseRightButtonUp="OnCanvasMarqueeUp">
                             <Grid.Style>
                                 <!--
                                     画线模式（IsDrawModeActive）时画布光标切换为十字准星，提示"点击起笔 / 逐点连线"。
@@ -1947,6 +1949,83 @@
                                                 </Rectangle.Style>
                                             </Rectangle>
                                         </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!--
+                                右键框选层：纯视觉（IsHitTestVisible=False 不挡鼠标）。
+                                按下右键 → CanvasHost 捕获鼠标，拖动时 code-behind 更新此矩形，
+                                松开 → 计算框选矩形 → VM.SelectInRect 加入多选集合。
+                                与选区缩放手柄层共享同一坐标系（画布逻辑坐标）。
+                            -->
+                            <Canvas x:Name="MarqueeLayer" IsHitTestVisible="False" Panel.ZIndex="10010">
+                                <Rectangle
+                                    x:Name="MarqueeRect"
+                                    Width="0"
+                                    Height="0"
+                                    Visibility="Collapsed"
+                                    Fill="{StaticResource Brush.State.AccentFill}"
+                                    Stroke="{StaticResource Brush.State.AccentBorder}"
+                                    StrokeDashArray="1.5,1.2"
+                                    StrokeEndLineCap="Round"
+                                    StrokeLineJoin="Round"
+                                    StrokeStartLineCap="Round"
+                                    StrokeThickness="0.8" />
+                            </Canvas>
+
+                            <!--
+                                选区缩放手柄：框选/多选后显示在选集包围盒四角，拖动 = 围绕对角锚点等比缩放。
+                                仅在非“主动绘制 / 厚度 / 轮廓编辑”时可见（VM RefreshScaleSelectionHandles 维护）。
+                                每个手柄 DataContext = ScaleHandleInfo（Corner/X/Y），中心对齐包围盒角点。
+                            -->
+                            <ItemsControl
+                                x:Name="ScaleHandleHost"
+                                IsHitTestVisible="True"
+                                ItemsSource="{Binding ScaleSelectionHandles}"
+                                PreviewMouseLeftButtonDown="OnScaleHandleMouseDown"
+                                PreviewMouseMove="OnScaleHandleMouseMove"
+                                PreviewMouseLeftButtonUp="OnScaleHandleMouseUp"
+                                Visibility="{Binding HasScaleSelectionHandles, Converter={StaticResource BoolToVis}}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <Canvas />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemContainerStyle>
+                                    <Style TargetType="ContentPresenter">
+                                        <Setter Property="Canvas.Left" Value="{Binding X}" />
+                                        <Setter Property="Canvas.Top" Value="{Binding Y}" />
+                                        <Setter Property="Panel.ZIndex" Value="10000" />
+                                        <Setter Property="Width" Value="2.5" />
+                                        <Setter Property="Height" Value="2.5" />
+                                        <Setter Property="Margin" Value="-1.25,-1.25,0,0" />
+                                        <Style.Triggers>
+                                            <!--  四个角的方向光标：NW/SE = SizeNWSE，NE/SW = SizeNESW  -->
+                                            <DataTrigger Binding="{Binding Corner}" Value="NW">
+                                                <Setter Property="Cursor" Value="SizeNWSE" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Corner}" Value="SE">
+                                                <Setter Property="Cursor" Value="SizeNWSE" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Corner}" Value="NE">
+                                                <Setter Property="Cursor" Value="SizeNESW" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Corner}" Value="SW">
+                                                <Setter Property="Cursor" Value="SizeNESW" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ItemsControl.ItemContainerStyle>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Rectangle
+                                            Width="2.5"
+                                            Height="2.5"
+                                            ToolTip="拖拽以等比缩放选中元素"
+                                            Fill="{StaticResource Brush.State.Accent}"
+                                            Stroke="{StaticResource Brush.Brand.Stroke}"
+                                            StrokeThickness="0.1" />
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>

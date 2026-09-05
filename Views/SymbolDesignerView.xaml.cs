@@ -391,6 +391,132 @@ public partial class SymbolDesignerView : UserControl
     /// <summary>平移上一帧的鼠标屏幕位置（相对 ZoomPanViewport，用于累加 PanX/PanY）。</summary>
     private Point _panLastPos;
 
+    // ───────────── 右键框选（Marquee 多选 + 选区缩放手柄） ─────────────
+
+    /// <summary>是否正在右键拖拽框选（显示选区矩形,松开时把框内图元加入多选）。</summary>
+    private bool _isMarqueeSelecting;
+
+    /// <summary>框选起始点（画布逻辑坐标）。</summary>
+    private Point _marqueeStart;
+
+    /// <summary>右键按下：普通模式下开始框选（记录起始点 + 显示选区矩形 + 捕获鼠标）。
+    /// 绘制模式下不启动（右键保留给绘制语义）。</summary>
+    private void OnCanvasMarqueeDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Right) return;
+        if (DataContext is not SymbolDesignerViewModel vm) return;
+        // 绘制模式下右键不框选（CAD 语义：绘制中右键 = 撤销/结束,不抢）
+        if (vm.IsDrawModeActive || IsEditingOutlineActive()) return;
+
+        _isMarqueeSelecting = true;
+        _marqueeStart = e.GetPosition(CanvasHost);
+        MarqueeRect.Visibility = Visibility.Visible;
+        Canvas.SetLeft(MarqueeRect, _marqueeStart.X);
+        Canvas.SetTop(MarqueeRect, _marqueeStart.Y);
+        MarqueeRect.Width = 0;
+        MarqueeRect.Height = 0;
+        if (sender is UIElement ui) ui.CaptureMouse();
+        e.Handled = true;
+    }
+
+    /// <summary>右键移动：更新选区矩形（允许负尺寸拖动 = 四方向框选,用规范化矩形）。</summary>
+    private void OnCanvasMarqueeMove(object sender, MouseEventArgs e)
+    {
+        if (!_isMarqueeSelecting) return;
+        var cur = e.GetPosition(CanvasHost);
+        double x = Math.Min(_marqueeStart.X, cur.X);
+        double y = Math.Min(_marqueeStart.Y, cur.Y);
+        double w = Math.Abs(cur.X - _marqueeStart.X);
+        double h = Math.Abs(cur.Y - _marqueeStart.Y);
+        Canvas.SetLeft(MarqueeRect, x);
+        Canvas.SetTop(MarqueeRect, y);
+        MarqueeRect.Width = w;
+        MarqueeRect.Height = h;
+        e.Handled = true;
+    }
+
+    /// <summary>右键松开：隐藏选区矩形,把框内图元加入多选（VM.SelectInRect）。</summary>
+    private void OnCanvasMarqueeUp(object sender, MouseButtonEventArgs e)
+    {
+        if (!_isMarqueeSelecting) return;
+        _isMarqueeSelecting = false;
+        MarqueeRect.Visibility = Visibility.Collapsed;
+        if (sender is UIElement ui && ui.IsMouseCaptured) ui.ReleaseMouseCapture();
+        if (DataContext is not SymbolDesignerViewModel vm) return;
+
+        var cur = e.GetPosition(CanvasHost);
+        double x = Math.Min(_marqueeStart.X, cur.X);
+        double y = Math.Min(_marqueeStart.Y, cur.Y);
+        double w = Math.Abs(cur.X - _marqueeStart.X);
+        double h = Math.Abs(cur.Y - _marqueeStart.Y);
+        if (w < 0.5 || h < 0.5) { e.Handled = true; return; }  // 纯点击不框选
+
+        vm.SelectInRect(new Rect(x, y, w, h));
+        e.Handled = true;
+    }
+
+    /// <summary>是否处于轮廓编辑模式（骨架/厚度/轮廓三态之一都算编辑中,框选应让位）。</summary>
+    private bool IsEditingOutlineActive()
+        => DataContext is SymbolDesignerViewModel vm
+           && (vm.OutlineEditMode == ViewModels.OutlineEditMode.Thickness
+               || vm.OutlineEditMode == ViewModels.OutlineEditMode.Outline);
+
+    // ───────────── 选区缩放手柄（四角拖动 = 围绕对角锚点等比缩放选集） ─────────────
+
+    /// <summary>当前是否正在拖拽缩放手柄。</summary>
+    private bool _isScalingSelection;
+
+    /// <summary>框选手柄拖拽起点（画布逻辑坐标,需配合对角线锚点算比例）。</summary>
+    private Point _scaleHandleStart;
+
+    /// <summary>缩放手柄按下：调 VM 记录手势快照（一次撤销）,保存本次鼠标起点用于比例计算。</summary>
+    private void OnScaleHandleMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (DataContext is not SymbolDesignerViewModel vm) return;
+        if (e.OriginalSource is not FrameworkElement fe || fe.DataContext is not ViewModels.ScaleHandleInfo h) return;
+
+        // 对角锚点:与拖动的角相对的角（画布逻辑坐标,从当前选区包围盒取）
+        var frame = vm.ScaleSelectionFrame;
+        var anchor = h.Corner switch
+        {
+            ViewModels.ScaleCorner.NW => new Point(frame.Right, frame.Bottom),
+            ViewModels.ScaleCorner.NE => new Point(frame.Left, frame.Bottom),
+            ViewModels.ScaleCorner.SW => new Point(frame.Right, frame.Top),
+            ViewModels.ScaleCorner.SE => new Point(frame.Left, frame.Top),
+            _ => new Point(frame.Left, frame.Top),
+        };
+        _isScalingSelection = true;
+        _scaleHandleStart = e.GetPosition(CanvasHost);
+        vm.BeginScaleSelection(h.Corner, anchor, _scaleHandleStart);
+        if (sender is UIElement ui) ui.CaptureMouse();
+        e.Handled = true;
+    }
+
+    /// <summary>缩放手柄移动：把当前鼠标位置交给 VM,VM 按"到锚点距离比例"实时缩放选集。</summary>
+    private void OnScaleHandleMouseMove(object sender, MouseEventArgs e)
+    {
+        if (!_isScalingSelection) return;
+        if (e.LeftButton != MouseButtonState.Pressed)
+        {
+            _isScalingSelection = false;
+            return;
+        }
+        if (DataContext is SymbolDesignerViewModel vm)
+            vm.UpdateScaleSelection(e.GetPosition(CanvasHost));
+        e.Handled = true;
+    }
+
+    /// <summary>缩放手柄松开：结束手势,VM 提交一次撤销。</summary>
+    private void OnScaleHandleMouseUp(object sender, MouseButtonEventArgs e)
+    {
+        if (!_isScalingSelection) return;
+        _isScalingSelection = false;
+        if (sender is UIElement ui && ui.IsMouseCaptured) ui.ReleaseMouseCapture();
+        if (DataContext is SymbolDesignerViewModel vm)
+            vm.EndScaleSelection();
+        e.Handled = true;
+    }
+
     // ───────────── 画线工具（CAD 风格连续绘制） ─────────────
 
     /// <summary>画布鼠标按下：CAD 模式下点击加点（ThickPolyline 或 Line）；
@@ -424,9 +550,16 @@ public partial class SymbolDesignerView : UserControl
     }
 
     /// <summary>画布鼠标移动：平移中累加 PanX/PanY（屏幕像素增量，与 ZoomPanViewport 中键平移一致）；
-    /// 否则画线模式下更新橡皮线终点（实时预览下一段）。</summary>
+    /// 否则画线模式下更新橡皮线终点（实时预览下一段）。右键框选中则更新选区矩形。</summary>
     private void OnCanvasDrawMouseMove(object sender, MouseEventArgs e)
     {
+        // 右键框选中：优先更新选区矩形（不经过左键平移/画线分支）
+        if (_isMarqueeSelecting)
+        {
+            OnCanvasMarqueeMove(sender, e);
+            return;
+        }
+
         if (_isCanvasPanning)
         {
             if (e.LeftButton != MouseButtonState.Pressed)

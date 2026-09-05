@@ -127,6 +127,8 @@ public partial class SymbolDesignerViewModel
         RaiseMaxChanged();
         OnPropertyChanged(nameof(CanEnterOutlineMode));
         OnPropertyChanged(nameof(CanEnterThicknessMode));
+        // 选区缩放手柄随选中变化刷新（多选集合变化已由 RaiseMultiSelectChanged 处理,这里是单选焦点变化）
+        RefreshScaleSelectionHandles();
         // 布尔结果选中即进入轮廓模式：轮廓点选择 + 接缝样式（Miter/Round）/圆角半径编辑入口，
         // 与闭合 Polyline 的轮廓模式一致——布尔骨架点本来就不允许拖拽
         // （VertexHandles 不生成、UpdateVertexPosition 早退），骨架模式没有可操作手柄。
