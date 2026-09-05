@@ -920,7 +920,6 @@
                         IsEnabled 绑 CanPickFormat（未选中图元时禁用，文字框聚焦时也不拦截 Ctrl+C/V）。
                     -->
                     <Border
-                        IsEnabled="{Binding CanPickFormat}"
                         MouseLeftButtonDown="OnFormatPainterClick"
                         Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
                         ToolTip="格式刷 (选中图元后点此按钮吸取样式, 再点其它图元即应用。Ctrl+点击进入连刷模式)">
@@ -930,9 +929,11 @@
                                     <Trigger Property="IsEnabled" Value="False">
                                         <Setter Property="Opacity" Value="0.35" />
                                     </Trigger>
-                                    <!--  激活态：背景变深蓝灰（与左侧绘图工具激活态一致）  -->
+                                    <!--  激活态：背景变深蓝灰 + 边框亮蓝（与左侧绘图工具激活态一致）  -->
                                     <DataTrigger Binding="{Binding IsFormatPainterActive}" Value="True">
                                         <Setter Property="Background" Value="{StaticResource Brush.Tool.HoverBlue}" />
+                                        <Setter Property="BorderBrush" Value="{StaticResource Brush.State.AccentBorder}" />
+                                        <Setter Property="BorderThickness" Value="1" />
                                         <Setter Property="Opacity" Value="1.0" />
                                     </DataTrigger>
                                 </Style.Triggers>
