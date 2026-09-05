@@ -1292,7 +1292,7 @@
                             x:Name="CanvasHost"
                             Width="{Binding CanvasWidth}"
                             Height="{Binding CanvasHeight}"
-                            Background="{StaticResource Brush.Bg.Canvas}"
+                            Background="{Binding CanvasBackgroundBrush}"
                             IsHitTestVisible="True"
                             MouseLeftButtonDown="OnCanvasDrawMouseDown"
                             MouseLeftButtonUp="OnCanvasDrawMouseUp"
@@ -2410,6 +2410,60 @@
                         <!--  ═══ 属性页（原右侧属性栏内容） ═══  -->
                         <ScrollViewer VerticalScrollBarVisibility="Auto" Visibility="{Binding IsPropertiesPaneVisible, Converter={StaticResource BoolToVis}}">
                             <StackPanel>
+                                <!--
+                                    画布背景颜色(画布级全局设置,与选中元素无关):SwatchesPicker 改背景色 + 重置按钮。
+                                    CanvasHost.Background 绑 VM.CanvasBackgroundBrush,改色即时生效。
+                                    画布背景色可切浅色(如白),便于查看深色导入元素。
+                                -->
+                                <Border
+                                    Margin="0,0,0,4"
+                                    Padding="6"
+                                    Background="{StaticResource Brush.Bg.Darker}"
+                                    BorderBrush="{StaticResource Brush.Border.Subtle}"
+                                    BorderThickness="1"
+                                    CornerRadius="3">
+                                    <StackPanel>
+                                        <Grid Margin="0,0,0,4">
+                                            <TextBlock
+                                                HorizontalAlignment="Left"
+                                                VerticalAlignment="Center"
+                                                FontSize="11"
+                                                FontWeight="Bold"
+                                                Foreground="{StaticResource Brush.Text.Muted}"
+                                                Text="画布背景" />
+                                            <Button
+                                                HorizontalAlignment="Right"
+                                                Padding="4,0"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                Command="{Binding ResetCanvasBackgroundCommand}"
+                                                Cursor="Hand"
+                                                FontSize="9"
+                                                Foreground="{StaticResource Brush.State.Accent}"
+                                                Content="重置" />
+                                        </Grid>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock
+                                                Grid.Column="0"
+                                                VerticalAlignment="Center"
+                                                FontSize="10"
+                                                Foreground="{StaticResource Brush.Text.Secondary}"
+                                                Text="背景色" />
+                                            <controls:SwatchesPicker
+                                                Grid.Column="1"
+                                                Width="92"
+                                                MoreColorsRequested="OnSwatchesPickerMoreColors"
+                                                PickerRequested="OnSwatchesPickerPickerRequested"
+                                                RecentColors="{Binding DataContext.RecentColorings, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                SelectedColor="{Binding CanvasBackgroundColor, Mode=TwoWay}" />
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+
                                 <!--
                                     通用透明度：任何元素选中时都显示,放在最顶部作为公共属性。
                                     与"背景透明度"工具栏项语义独立：这里是绘制层单个元素的可见度。

@@ -23,6 +23,10 @@ public class SymbolProject
     /// <summary>画布高度（逻辑坐标，默认 96）。</summary>
     public double CanvasHeight { get; set; } = 96;
 
+    /// <summary>画布背景色（hex，如 "#2A2A2A"）。null = 未设置，加载时用主题默认。
+    /// 属性面板"画布背景"组可改；保存进工程保证重开后背景一致。</summary>
+    public string? CanvasBackgroundColor { get; set; }
+
     /// <summary>背景参考图绝对路径（null = 未导入）。加载时若文件丢失，背景图静默不显示。
     /// 老工程文件保留此字段作为 fallback。新工程优先用 BackgroundImageData 嵌入。</summary>
     public string? BackgroundImagePath { get; set; }

@@ -21,6 +21,40 @@ public partial class SymbolDesignerViewModel
     /// <summary>画布平移 Y。</summary>
     [ObservableProperty] private double _panY = 0;
 
+    // ============== 画布背景色(用户可切换;默认跟随主题 Brush.Bg.Canvas) ==============
+
+    /// <summary>画布背景颜色(hex)。默认 = 主题 Brush.Bg.Canvas 色值。
+    /// 用户可切换成白/黑/浅色等,便于在不同底色下观察图元
+    /// (例如深色 SVG 导入后画布上看不见时,切浅色背景即可看见)。
+    /// 绑定:CanvasHost.Background 经 HexToBrushConverter 转换;空白画布点击判定不受影响。</summary>
+    [ObservableProperty] private string _canvasBackgroundColor = ResolveDefaultCanvasColor();
+
+    /// <summary>画布背景画刷(绑定 CanvasHost.Background)。颜色变化时实时刷新。</summary>
+    public System.Windows.Media.Brush? CanvasBackgroundBrush => Converters.ColorUtil.ParseHex(CanvasBackgroundColor);
+
+    partial void OnCanvasBackgroundColorChanged(string value)
+    {
+        OnPropertyChanged(nameof(CanvasBackgroundBrush));
+        IsDirty = true;  // 画布背景是工程全局设置,改动即标脏
+    }
+
+    /// <summary>解析默认画布背景色:优先取主题资源 Brush.Bg.Canvas 的实际色值,
+    /// 主题缺失时的兜底写死与 Theme.xaml 一致的色值(仅为兜底,正常时用主题值)。</summary>
+    private static string ResolveDefaultCanvasColor()
+    {
+        var app = System.Windows.Application.Current;
+        if (app is not null
+            && app.TryFindResource("Brush.Bg.Canvas") is System.Windows.Media.SolidColorBrush b)
+        {
+            return b.Color.ToString();
+        }
+        return "#2A2A2A"; // 兜底:与 Themes/Theme.xaml Brush.Bg.Canvas 保持一致
+    }
+
+    /// <summary>把画布背景重置回主题默认色(属性面板"画布背景"组的重置按钮)。</summary>
+    [CommunityToolkit.Mvvm.Input.RelayCommand]
+    private void ResetCanvasBackground() => CanvasBackgroundColor = ResolveDefaultCanvasColor();
+
     // ============== 背景参考图（描图用的底层图片，仅在编辑器内显示，不导出到 XAML） ==============
 
     /// <summary>背景参考图文件路径（绝对路径）。null = 未导入。

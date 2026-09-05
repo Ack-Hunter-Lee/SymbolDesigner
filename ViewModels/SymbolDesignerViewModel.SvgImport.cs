@@ -20,10 +20,10 @@ namespace SymbolDesigner.ViewModels;
 /// </summary>
 public partial class SymbolDesignerViewModel
 {
-    /// <summary>导入后的整体平移:算所有图元的最小包围盒,若最小 X 或最小 Y < 落点 X/Y,
-    /// 整体平移 (落点X - 最小X, 落点Y - 最小Y) 把包围盒左上角对齐到落点。
-    /// 落点 = (10, 10),留 10 像素画布边距。
-    /// 注:只正向平移(让元素落到画布内),不裁剪超出画布尺寸的元素——若元素整体大于画布,允许溢出。</summary>
+    /// <summary>导入后的整体平移:算所有图元的最小包围盒（取各图元 X/Y 的最小值,含 PathData 局部坐标的偏移）,
+    /// 再整体平移使包围盒左上角对齐到画布落点 (10, 10)——**无条件平移**。
+    /// 原因:SVG 坐标任意(如画布 1000×1000 时元素可能在 x=500),若不平移就落到画布外看不见。
+    /// 平移不改变尺寸/相对位置(只是整体搬移),画布内放不下的大元素允许向右侧/下方溢出。</summary>
     private void NormalizeIntoCanvas(System.Collections.Generic.List<Models.PrimitiveItem> items)
     {
         if (items.Count == 0) return;
@@ -38,8 +38,10 @@ public partial class SymbolDesignerViewModel
         }
         if (minX == double.MaxValue) return;
 
-        double dx = minX < dropX ? dropX - minX : 0;
-        double dy = minY < dropY ? dropY - minY : 0;
+        // 无条件平移:minX → dropX（左上角落点）。即使元素已在画布左边界附近也执行,
+        // 保证"导入的元素一定从画布左上角开始可见"(与用户预期的"直接放画布上"一致)。
+        double dx = dropX - minX;
+        double dy = dropY - minY;
         if (dx == 0 && dy == 0) return;
 
         foreach (var item in items)

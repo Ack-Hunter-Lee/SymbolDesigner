@@ -144,6 +144,7 @@ public partial class SymbolDesignerViewModel
         {
             CanvasWidth = CanvasWidth,
             CanvasHeight = CanvasHeight,
+            CanvasBackgroundColor = CanvasBackgroundColor,
             BackgroundImagePath = BackgroundImagePath,
             BackgroundOpacity = BackgroundOpacity,
             BackgroundFitMode = BackgroundFitMode,
@@ -298,6 +299,10 @@ public partial class SymbolDesignerViewModel
         // 加载画布尺寸
         CanvasWidth = project.CanvasWidth;
         CanvasHeight = project.CanvasHeight;
+
+        // 加载画布背景色:老工程无此字段 → 保持当前值(主题默认)
+        if (!string.IsNullOrEmpty(project.CanvasBackgroundColor))
+            CanvasBackgroundColor = project.CanvasBackgroundColor!;
 
         // 加载背景参考图：优先用嵌入的 BackgroundImageData(工程自包含,移动/分享不丢图),
         // 老工程只有 BackgroundImagePath 时 fallback 到外部文件(可能路径失效)。
