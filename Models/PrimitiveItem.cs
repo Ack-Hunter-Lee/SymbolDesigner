@@ -29,7 +29,7 @@ public class ToolboxEntry
 
 /// <summary>
 /// 画布上的单个图形实例。每个元件（设备）由多个 PrimitiveItem 组合而成。
-/// X/Y/Width/Height 均为画布坐标（画布尺寸 160×96）。
+/// X/Y/Width/Height 均为画布坐标（默认画布 1920×1080）。
 /// </summary>
 public partial class PrimitiveItem : ObservableObject
 {

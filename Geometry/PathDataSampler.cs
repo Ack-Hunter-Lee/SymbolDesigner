@@ -16,7 +16,7 @@ namespace SymbolDesigner.Svg;
 public static class PathDataSampler
 {
     /// <summary>采样精度(画布单位)。SVG 路径经 viewBox 缩放后,弦高小于该值即停止采样。
-    /// 0.5 对画布 160×96 是亚像素精度,曲线边缘看起来不会"锯齿"。</summary>
+    /// 0.5 是亚像素精度（默认画布 1920×1080 的 1/2160），曲线边缘看起来不会"锯齿"。</summary>
     public const double Flatness = 0.5;
 
     /// <summary>解析 SVG path "d" 字符串,输出画布坐标系下的采样点集。</summary>

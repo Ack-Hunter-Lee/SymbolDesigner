@@ -39,7 +39,7 @@ public enum RightPanePage
 
 /// <summary>
 /// 元件设计器 ViewModel。
-/// 左侧工具栏列出 5 个 L1 基础图形 + L2 复合图形，右侧画布（160×96）允许拖入并自由摆放，
+/// 左侧工具栏列出 5 个 L1 基础图形 + L2 复合图形，右侧画布（1920×1080）允许拖入并自由摆放，
 /// 组合出 L2 设备元件的雏形。本 ViewModel 不持久化，重启后状态丢失（后续阶段再加保存）。
 /// 本类按职责拆分为多个 partial 文件（*.SymbolDesignerViewModel.*.cs），本文件仅保留
 /// 核心集合与构造函数：
@@ -88,7 +88,7 @@ public partial class SymbolDesignerViewModel : ObservableObject
         // 属性编辑去抖:时间到 → 落栈
         _undoCommitTimer.Tick += (_, _) => ForceCommitEdit();
 
-        // 初始化时计算一次厚度上限(默认画布 160x96 → 48,clamp 后 48)
+        // 初始化时计算一次厚度上限(默认画布 1920x1080 → 短边 1080×0.3=324,clamp 后 324)
         // 否则首屏显示的 Slider 上限是字段默认值 30,直到用户改画布尺寸才刷新
         RecomputeSelectedThicknessMax();
 

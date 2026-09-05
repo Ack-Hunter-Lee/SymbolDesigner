@@ -608,7 +608,7 @@ public partial class SymbolDesignerView : UserControl
     private Point _vertexDragStart;
 
     /// <summary>吸附闭合的判定阈值（画布逻辑坐标）。末端顶点距起点小于该值 → 自动吸附并闭合 Polyline。
-    /// 视觉对应：手柄 2×2 方块经 Viewbox（160×96 逻辑区）放大后约 8~10px 的命中半径。</summary>
+    /// 视觉对应：手柄 2×2 方块经 Viewbox（1920×1080 逻辑区）放大后约 8~10px 的命中半径。</summary>
     private const double CloseSnapThreshold = 3.0;
 
     /// <summary>顶点手柄鼠标按下：记录拖拽起点 + 捕获鼠标，避免移动时丢事件。</summary>

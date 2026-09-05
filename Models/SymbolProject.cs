@@ -17,11 +17,11 @@ public class SymbolProject
         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
-    /// <summary>画布宽度（逻辑坐标，默认 160）。加载时校验，不匹配则缩放或警告。</summary>
-    public double CanvasWidth { get; set; } = 160;
+    /// <summary>画布宽度（逻辑坐标，默认 1920，16:9 标准画布）。</summary>
+    public double CanvasWidth { get; set; } = 1920;
 
-    /// <summary>画布高度（逻辑坐标，默认 96）。</summary>
-    public double CanvasHeight { get; set; } = 96;
+    /// <summary>画布高度（逻辑坐标，默认 1080）。</summary>
+    public double CanvasHeight { get; set; } = 1080;
 
     /// <summary>画布背景色（hex，如 "#2A2A2A"）。null = 未设置，加载时用主题默认。
     /// 属性面板"画布背景"组可改；保存进工程保证重开后背景一致。</summary>

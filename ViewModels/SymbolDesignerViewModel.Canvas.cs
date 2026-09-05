@@ -6,11 +6,11 @@ namespace SymbolDesigner.ViewModels;
 /// <summary>画布尺寸 / 缩放平移 / 背景参考图状态（描图用，仅在编辑器内显示，不导出到 XAML）。</summary>
 public partial class SymbolDesignerViewModel
 {
-    /// <summary>画布宽度（逻辑坐标）。默认 240，可从工程文件加载。</summary>
-    [ObservableProperty] private double _canvasWidth = 320;
+    /// <summary>画布宽度（逻辑坐标）。默认 1920(16:9)，可从工程文件加载。</summary>
+    [ObservableProperty] private double _canvasWidth = 1920;
 
-    /// <summary>画布高度（逻辑坐标）。默认 192，可从工程文件加载。</summary>
-    [ObservableProperty] private double _canvasHeight = 192;
+    /// <summary>画布高度（逻辑坐标）。默认 1080，可从工程文件加载。</summary>
+    [ObservableProperty] private double _canvasHeight = 1080;
 
     /// <summary>画布缩放倍率（0.25 ~ 4.0）。</summary>
     [ObservableProperty] private double _zoomLevel = 1.0;

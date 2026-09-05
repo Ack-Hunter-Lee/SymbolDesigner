@@ -1686,7 +1686,7 @@
                                 </ItemsControl.ItemContainerStyle>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <!--  顶点手柄：2×2 蓝色方块（画布 160×96 经 Viewbox 放大后视觉合理）  -->
+                                        <!--  顶点手柄：2×2 蓝色方块（画布 1920×1080 经 Viewbox 放大后视觉合理）  -->
                                         <Rectangle
                                             Width="2"
                                             Height="2"

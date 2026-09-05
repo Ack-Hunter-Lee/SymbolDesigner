@@ -26,7 +26,7 @@ public class ZoomPanViewport : ContentControl
             new FrameworkPropertyMetadata(typeof(ZoomPanViewport)));
     }
 
-    /// <summary>内容逻辑宽度（如画布宽 160）。</summary>
+    /// <summary>内容逻辑宽度（如画布宽 1920）。</summary>
     public static readonly DependencyProperty ContentWidthProperty =
         DependencyProperty.Register(nameof(ContentWidth), typeof(double), typeof(ZoomPanViewport),
             new FrameworkPropertyMetadata(1.0, OnTransformPropertyChanged));

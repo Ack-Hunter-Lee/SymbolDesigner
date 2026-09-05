@@ -169,7 +169,7 @@ public class DraggablePrimitive : ContentControl
     }
 
     /// <summary>实体命中容差（画布逻辑单位）。线状图元点到线段 ≤ 此值视为命中。
-    /// 相对视图缩放在 160×96 附近，与线宽 0.8 相比足够宽松，点击容易命中。</summary>
+    /// 相对视图缩放在 1920×1080 附近，与线宽 0.8 相比足够宽松，点击容易命中。</summary>
     private const double EntityHitTolerance = 3.0;
 
     /// <summary>圆环"圆心十字区"拾取半径：与 VM 子对象识别一致（视图中心区域用于拾取圆心）。</summary>
