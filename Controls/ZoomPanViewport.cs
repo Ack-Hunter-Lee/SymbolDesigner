@@ -56,6 +56,13 @@ public class ZoomPanViewport : ContentControl
         DependencyProperty.Register(nameof(FitRatio), typeof(double), typeof(ZoomPanViewport),
             new FrameworkPropertyMetadata(0.9, OnTransformPropertyChanged));
 
+    /// <summary>当前实际渲染缩放系数（autoScale × ZoomLevel）。
+    /// 只读暴露给 XAML：供预览线/端点做反向缩放，实现"视觉尺寸恒定、不随画布缩放变化"。
+    /// 由 UpdateTransform 每次重算时赋值，任何缩放/窗口尺寸变化都会触发绑定刷新。</summary>
+    public static readonly DependencyProperty CurrentScaleProperty =
+        DependencyProperty.Register(nameof(CurrentScale), typeof(double), typeof(ZoomPanViewport),
+            new FrameworkPropertyMetadata(1.0));
+
     /// <summary>最小缩放倍率。</summary>
     public static readonly DependencyProperty MinZoomProperty =
         DependencyProperty.Register(nameof(MinZoom), typeof(double), typeof(ZoomPanViewport),
@@ -82,6 +89,7 @@ public class ZoomPanViewport : ContentControl
     public double PanX { get => (double)GetValue(PanXProperty); set => SetValue(PanXProperty, value); }
     public double PanY { get => (double)GetValue(PanYProperty); set => SetValue(PanYProperty, value); }
     public double FitRatio { get => (double)GetValue(FitRatioProperty); set => SetValue(FitRatioProperty, value); }
+    public double CurrentScale => (double)GetValue(CurrentScaleProperty);
     public double MinZoom { get => (double)GetValue(MinZoomProperty); set => SetValue(MinZoomProperty, value); }
     public double MaxZoom { get => (double)GetValue(MaxZoomProperty); set => SetValue(MaxZoomProperty, value); }
     public bool EnableWheelZoom { get => (bool)GetValue(EnableWheelZoomProperty); set => SetValue(EnableWheelZoomProperty, value); }
@@ -121,6 +129,9 @@ public class ZoomPanViewport : ContentControl
         double scale = autoScale * ZoomLevel;
         double cx = (availW - cw * scale) * 0.5;
         double cy = (availH - ch * scale) * 0.5;
+
+        // 暴露实际渲染缩放系数,供上层做"反缩放"(预览线/端点视觉恒定)
+        if (Math.Abs(CurrentScale - scale) > 1e-9) SetValue(CurrentScaleProperty, scale);
 
         var tg = new TransformGroup();
         tg.Children.Add(new ScaleTransform(scale, scale));

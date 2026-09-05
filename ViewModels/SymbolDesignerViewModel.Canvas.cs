@@ -21,6 +21,11 @@ public partial class SymbolDesignerViewModel
     /// <summary>画布平移 Y。</summary>
     [ObservableProperty] private double _panY = 0;
 
+    /// <summary>当前画布实际渲染缩放系数（autoScale × ZoomLevel，由 ZoomPanViewport.CurrentScale 同步）。
+    /// 预览线/预览端点做"视觉恒定反缩放"用：线宽、端点尺寸除以它，任何缩放下屏幕尺寸不变。
+    /// 放在 VM 上是因 XAML Style Setter 内不能用 ElementName 绑定，只能绑 DataContext 属性。</summary>
+    [ObservableProperty] private double _canvasScale = 1.0;
+
     // ============== 画布背景色(用户可切换;默认跟随主题 Brush.Bg.Canvas) ==============
 
     /// <summary>画布背景颜色(hex)。默认 = 主题 Brush.Bg.Canvas 色值。

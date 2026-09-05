@@ -36,6 +36,26 @@ public partial class SymbolDesignerView : UserControl
                 newVm.RequestLocate += OnRequestLocate;
             }
         };
+        // ZoomPanViewport.CurrentScale → VM.CanvasScale 同步（预览线/端点"视觉恒定反缩放"）。
+        // 不能用 Style Setter 的 ElementName 绑定，这里用 DP 变更回调桥接。
+        _scaleDescriptor = System.ComponentModel.DependencyPropertyDescriptor.FromProperty(
+            Controls.ZoomPanViewport.CurrentScaleProperty, typeof(Controls.ZoomPanViewport));
+        _scaleDescriptor.AddValueChanged(ZoomPan, OnCurrentScaleChanged);
+        Loaded += (_, _) => SyncCanvasScale();  // 首帧布局后把初始 scale 同步过去
+    }
+
+    private readonly System.ComponentModel.DependencyPropertyDescriptor _scaleDescriptor;
+
+    private void OnCurrentScaleChanged(object? sender, EventArgs e) => SyncCanvasScale();
+
+    /// <summary>把 ZoomPanViewport.CurrentScale 同步到 VM.CanvasScale（值变化才写，避免无效通知）。</summary>
+    private void SyncCanvasScale()
+    {
+        if (ZoomPan is Controls.ZoomPanViewport { CurrentScale: var s } zp &&
+            DataContext is ViewModels.SymbolDesignerViewModel vm)
+        {
+            if (Math.Abs(s - vm.CanvasScale) > 1e-9) vm.CanvasScale = s;
+        }
     }
 
     /// <summary>VM 触发"快速定位"事件 → 把视口中心平移到该元素画布中心。

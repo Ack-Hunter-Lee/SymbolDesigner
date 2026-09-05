@@ -27,6 +27,8 @@
         <conv:TagToBrushesConverter x:Key="TagBrush" />
         <conv:PickCenterBrushConverter x:Key="PickCenterBrush" />
         <conv:KeyEqualsActiveConverter x:Key="KeyActive" />
+        <conv:InverseScaleConverter x:Key="InvScale" />
+        <conv:DivideByScaleConverter x:Key="DivByScale" />
         <!-- 枚举相等比较（RadioButton 列表用：当前枚举值 == 该 RadioButton 代表的枚举值 → 选中） -->
         <conv:EnumEqualsConverter x:Key="EnumEqualsConverter" />
         <!--  ThickOutlineConverter 已重构为静态工具类 ThickOutlineBuilder，不再需要 XAML 实例  -->
@@ -1364,11 +1366,11 @@
                                 <Path.Style>
                                     <Style TargetType="Path">
                                         <Setter Property="Stroke" Value="{StaticResource Brush.State.Accent}" />
-                                        <Setter Property="StrokeThickness" Value="0.5" />
+                                        <Setter Property="StrokeThickness" Value="{Binding CanvasScale, Converter={StaticResource DivByScale}, ConverterParameter=0.5}" />
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding IsPathSnappingActive}" Value="True">
                                                 <Setter Property="Stroke" Value="{StaticResource Brush.State.Success}" />
-                                                <Setter Property="StrokeThickness" Value="1.0" />
+                                                <Setter Property="StrokeThickness" Value="{Binding CanvasScale, Converter={StaticResource DivByScale}, ConverterParameter=1.0}" />
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
@@ -1390,7 +1392,7 @@
                                 IsHitTestVisible="False"
                                 Stretch="None"
                                 Stroke="{StaticResource Brush.State.AccentBorder}"
-                                StrokeThickness="1.2"
+                                StrokeThickness="{Binding CanvasScale, Converter={StaticResource DivByScale}, ConverterParameter=1.2}"
                                 Visibility="{Binding IsShapePreviewVisible, Converter={StaticResource BoolToVis}}" />
 
                             <!--
@@ -1419,15 +1421,23 @@
                                 </ItemsControl.ItemContainerStyle>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <!--  草稿端点标记：与顶点手柄同款 2×2 蓝色小方块（不响应鼠标，仅视觉提示）  -->
+                                        <!--  草稿端点标记：与顶点手柄同款 2×2 蓝色小方块（不响应鼠标，仅视觉提示）。
+                                            反向缩放：方块随画布放大而不变大，任何比例下屏幕尺寸恒为 2px，中心仍贴顶点。  -->
                                         <Rectangle
                                             Width="2"
                                             Height="2"
                                             Fill="{StaticResource Brush.State.Accent}"
                                             RenderOptions.EdgeMode="Aliased"
                                             SnapsToDevicePixels="True"
+                                            RenderTransformOrigin="0.5,0.5"
                                             Stroke="{StaticResource Brush.Brand.Stroke}"
-                                            StrokeThickness="0.1" />
+                                            StrokeThickness="0.1">
+                                            <Rectangle.RenderTransform>
+                                                <ScaleTransform
+                                                    ScaleX="{Binding CurrentScale, RelativeSource={RelativeSource AncestorType=controls:ZoomPanViewport}, Converter={StaticResource InvScale}}"
+                                                    ScaleY="{Binding CurrentScale, RelativeSource={RelativeSource AncestorType=controls:ZoomPanViewport}, Converter={StaticResource InvScale}}" />
+                                            </Rectangle.RenderTransform>
+                                        </Rectangle>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
