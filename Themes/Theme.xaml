@@ -1,0 +1,150 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+        SymbolDesigner 皮肤系统（主题静态字典）。
+        主色基底：#181818（现代深色面板）。
+
+        命名规范：
+          Brush.Bg.*     背景：极深/深/中深/中/浅/亮
+          Brush.Border.* 边框：细/标准/亮/高亮
+          Brush.Text.*   文本：主/次/弱/三级/反白
+          Brush.State.*  状态色：成功/警告/危险/信息/选中态
+          Brush.Port.*   端口节点用色
+          Brush.Brand.*  品牌强调色（高亮、选中描边、预览线）
+
+        改主题：仅修改本文件，所有 XAML 自动更新。
+        XamlExporter 导出的颜色不在此处（导出属于"客户资产"，不受主题影响）。
+    -->
+
+    <!-- ====== 背景层级 ====== -->
+    <SolidColorBrush x:Key="Brush.Bg.Canvas"       Color="#2A2A2A" />
+    <SolidColorBrush x:Key="Brush.Bg.CanvasChrome" Color="#202024" />
+    <SolidColorBrush x:Key="Brush.Bg.Base"          Color="#181818" />
+    <SolidColorBrush x:Key="Brush.Bg.Deep"         Color="#141420" />
+    <SolidColorBrush x:Key="Brush.Bg.Darker"       Color="#0F1820" />
+    <SolidColorBrush x:Key="Brush.Bg.Input"        Color="#0A0A14" />
+    <SolidColorBrush x:Key="Brush.Bg.Panel"        Color="#1A1A22" />
+    <SolidColorBrush x:Key="Brush.Bg.Surface"      Color="#202028" />
+    <SolidColorBrush x:Key="Brush.Bg.Hover"        Color="#1F2A36" />
+    <SolidColorBrush x:Key="Brush.Bg.Selected"     Color="#1A2A3A" />
+    <SolidColorBrush x:Key="Brush.Bg.SelectedAlt"  Color="#182430" />
+    <SolidColorBrush x:Key="Brush.Bg.Success"      Color="#1A3A1A" />
+    <SolidColorBrush x:Key="Brush.Bg.SuccessSub"  Color="#1A3A2A" />
+    <SolidColorBrush x:Key="Brush.Bg.SuccessSoft" Color="#1A3A3A" />
+    <SolidColorBrush x:Key="Brush.Bg.Warn"         Color="#2A2A1A" />
+    <SolidColorBrush x:Key="Brush.Bg.Danger"       Color="#2A1818" />
+    <SolidColorBrush x:Key="Brush.Bg.DangerSoft"  Color="#3A1A1A" />
+    <SolidColorBrush x:Key="Brush.Bg.Info"         Color="#1A2A3A" />
+    <SolidColorBrush x:Key="Brush.Bg.Accent"       Color="#1A2848" />
+    <SolidColorBrush x:Key="Brush.Bg.Neutral"      Color="#1A1A0A" />
+    <SolidColorBrush x:Key="Brush.Bg.Popup"        Color="#141420" />
+
+    <!-- ====== 边框 ====== -->
+    <SolidColorBrush x:Key="Brush.Border.Subtle"   Color="#2A3A4A" />
+    <SolidColorBrush x:Key="Brush.Border.Mid"      Color="#3A5A7A" />
+    <SolidColorBrush x:Key="Brush.Border.Neutral"  Color="#3A5A5A" />
+    <SolidColorBrush x:Key="Brush.Border.Warn"     Color="#5A5A2A" />
+    <SolidColorBrush x:Key="Brush.Border.Danger"   Color="#5A2A2A" />
+    <SolidColorBrush x:Key="Brush.Border.DangerDeep" Color="#4A2828" />
+    <SolidColorBrush x:Key="Brush.Border.Success"  Color="#3A5A3A" />
+    <SolidColorBrush x:Key="Brush.Border.SuccessSoft" Color="#2A5A3A" />
+    <SolidColorBrush x:Key="Brush.Border.Accent"   Color="#3A5A7A" />
+    <SolidColorBrush x:Key="Brush.Border.AccentDeep" Color="#2A3A5A" />
+    <SolidColorBrush x:Key="Brush.Border.AccentBlue" Color="#4A4A5A" />
+    <SolidColorBrush x:Key="Brush.Border.Muted"    Color="#5A5A5A" />
+    <SolidColorBrush x:Key="Brush.Border.Inset"    Color="#5A6A7A" />
+    <SolidColorBrush x:Key="Brush.Border.Tooltip"  Color="#1F2A36" />
+    <SolidColorBrush x:Key="Brush.Border.Divider"  Color="#1F2A36" />
+
+    <!-- ====== 文本 ====== -->
+    <SolidColorBrush x:Key="Brush.Text.Primary"    Color="#A8C4D8" />
+    <SolidColorBrush x:Key="Brush.Text.Secondary"  Color="#B0C4D8" />
+    <SolidColorBrush x:Key="Brush.Text.Muted"      Color="#78909C" />
+    <SolidColorBrush x:Key="Brush.Text.Tertiary"   Color="#546E7A" />
+    <SolidColorBrush x:Key="Brush.Text.Hint"       Color="#CFD8DC" />
+
+    <!-- ====== 状态色（语义色，跨场景复用） ====== -->
+    <SolidColorBrush x:Key="Brush.State.Accent"         Color="#4FC3F7" />
+    <SolidColorBrush x:Key="Brush.State.AccentBorder"   Color="#5DADE2" />
+    <SolidColorBrush x:Key="Brush.State.AccentFill"     Color="#305DADE2" />
+    <SolidColorBrush x:Key="Brush.State.Success"        Color="#66BB6A" />
+    <SolidColorBrush x:Key="Brush.State.SuccessLight"   Color="#A5D6A7" />
+    <SolidColorBrush x:Key="Brush.State.SuccessBorder"  Color="#81C784" />
+    <SolidColorBrush x:Key="Brush.State.Warn"           Color="#FFB74D" />
+    <SolidColorBrush x:Key="Brush.State.WarnLight"      Color="#FFE082" />
+    <SolidColorBrush x:Key="Brush.State.WarnBorder"     Color="#FF8A65" />
+    <SolidColorBrush x:Key="Brush.State.Danger"         Color="#EF5350" />
+    <SolidColorBrush x:Key="Brush.State.DangerLight"    Color="#EF9A9A" />
+
+    <!-- ====== 端口节点 ====== -->
+    <SolidColorBrush x:Key="Brush.Port.Input"   Color="#81D4FA" />
+    <SolidColorBrush x:Key="Brush.Port.Input2"  Color="#64B5F6" />
+    <SolidColorBrush x:Key="Brush.Port.Input3"  Color="#90CAF9" />
+    <SolidColorBrush x:Key="Brush.Port.Mid"     Color="#FFD54F" />
+    <SolidColorBrush x:Key="Brush.Port.Output"  Color="#80CBC4" />
+    <SolidColorBrush x:Key="Brush.Port.Output2" Color="#4DD0E1" />
+
+    <!-- ====== 品牌/图元 ====== -->
+    <SolidColorBrush x:Key="Brush.Brand.Primary"     Color="#A8C4D8" />
+    <SolidColorBrush x:Key="Brush.Brand.Stroke"      Color="#FFFFFF" />
+    <SolidColorBrush x:Key="Brush.Brand.StrokeLight" Color="#E0E0E0" />
+    <SolidColorBrush x:Key="Brush.Brand.Hint"        Color="#90A4AE" />
+
+    <!-- ====== 阴影/遮罩（半透色） ====== -->
+    <SolidColorBrush x:Key="Brush.Overlay.Dim"       Color="#80000000" />
+    <SolidColorBrush x:Key="Brush.Overlay.Hint"      Color="#305DADE2" />
+
+    <!-- ====== 闭合/粗折线轮廓（Polyline 闭合形态与 ThickPolyline 共用） ====== -->
+    <SolidColorBrush x:Key="Brush.Outline.Stroke" Color="#B0B0B0" />
+    <SolidColorBrush x:Key="Brush.Outline.Fill"   Color="#40FFFFFF" />
+    <SolidColorBrush x:Key="Brush.Outline.Icon"   Color="#A8C4D8" />
+
+    <!-- ====== 取色面板 ======
+         色相光谱条（用于"更多颜色"按钮左侧图标，标识该按钮打开系统 ColorDialog）。
+         7 段彩虹渐变，固定展示数据 — 不是主题色，不应参与主题变更。 -->
+    <LinearGradientBrush x:Key="Brush.Palette.Spectrum" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Color="#FF0000" Offset="0" />
+        <GradientStop Color="#FFFF00" Offset="0.17" />
+        <GradientStop Color="#00FF00" Offset="0.33" />
+        <GradientStop Color="#00FFFF" Offset="0.5" />
+        <GradientStop Color="#0000FF" Offset="0.67" />
+        <GradientStop Color="#FF00FF" Offset="0.83" />
+        <GradientStop Color="#FF0000" Offset="1" />
+    </LinearGradientBrush>
+
+    <!-- ====== 工具栏 Tool 颜色 token（TagToBrushesConverter 解析用）
+         Tag 字符串格式："Bg.Token,Border.Token,Text.Token"
+         TagToBrushesConverter 根据 token 名称解析到对应 SolidColorBrush，
+         使 Tag 内不再出现硬编码 hex 字符串，统一在 Theme.xaml 维护。 ====== -->
+    <!-- 工具栏前景（图标/文字）：统一白色，避免各按钮硬编码自己颜色 -->
+    <SolidColorBrush x:Key="Brush.Tool.Icon" Color="#FFFFFF" />
+    <!-- 工具栏按钮 hover/选中背景 -->
+    <SolidColorBrush x:Key="Brush.Tool.HoverBlue"  Color="#1A2A3A" />
+    <SolidColorBrush x:Key="Brush.Tool.HoverBlue2" Color="#1A2848" />
+    <SolidColorBrush x:Key="Brush.Tool.HoverIndigo" Color="#1A2848" />
+    <SolidColorBrush x:Key="Brush.Tool.HoverPurple" Color="#2A1A4A" />
+    <SolidColorBrush x:Key="Brush.Tool.HoverCyan"   Color="#1A2A4A" />
+    <SolidColorBrush x:Key="Brush.Tool.HoverTeal"   Color="#1A3A3A" />
+    <SolidColorBrush x:Key="Brush.Tool.HoverGreen"  Color="#1A3A1A" />
+    <SolidColorBrush x:Key="Brush.Tool.HoverAmber"  Color="#2A2A1A" />
+    <SolidColorBrush x:Key="Brush.Tool.HoverOlive"  Color="#1A1A0A" />
+    <SolidColorBrush x:Key="Brush.Tool.HoverRed"    Color="#3A1A1A" />
+    <SolidColorBrush x:Key="Brush.Tool.HoverRedDeep" Color="#2A1818" />
+    <SolidColorBrush x:Key="Brush.Tool.HoverNeutral" Color="#0F1820" />
+    <SolidColorBrush x:Key="Brush.Tool.HoverCyan2"  Color="#1A2A3A" />
+    <SolidColorBrush x:Key="Brush.Tool.HoverWarm"   Color="#3A1A1A" />
+
+    <SolidColorBrush x:Key="Brush.Tool.BorderBlue"   Color="#3A5A7A" />
+    <SolidColorBrush x:Key="Brush.Tool.BorderPurple" Color="#4A3A6A" />
+    <SolidColorBrush x:Key="Brush.Tool.BorderCyan"   Color="#3A4A6A" />
+    <SolidColorBrush x:Key="Brush.Tool.BorderIndigo" Color="#3A4A5A" />
+    <SolidColorBrush x:Key="Brush.Tool.BorderGreen"  Color="#3A5A3A" />
+    <SolidColorBrush x:Key="Brush.Tool.BorderTeal"   Color="#3A5A5A" />
+    <SolidColorBrush x:Key="Brush.Tool.BorderAmber"  Color="#5A5A2A" />
+    <SolidColorBrush x:Key="Brush.Tool.BorderRed"    Color="#5A2A2A" />
+    <SolidColorBrush x:Key="Brush.Tool.BorderOlive"  Color="#3A3A1A" />
+    <SolidColorBrush x:Key="Brush.Tool.BorderNeutral" Color="#2A3A4A" />
+    <SolidColorBrush x:Key="Brush.Tool.BorderNeutral2" Color="#2A4A2A" />
+</ResourceDictionary>

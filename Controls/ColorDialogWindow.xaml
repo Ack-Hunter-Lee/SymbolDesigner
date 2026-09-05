@@ -1,0 +1,150 @@
+<Window x:Class="SymbolDesigner.Controls.ColorDialogWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="选择颜色"
+        Width="360" Height="320"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        ResizeMode="NoResize"
+        Background="{StaticResource Brush.Bg.Base}"
+        Foreground="{StaticResource Brush.Text.Primary}">
+    <Grid Margin="12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- 左侧：HSV 色相-饱和度平面 -->
+        <Border Grid.Column="0" Width="200" Height="160" CornerRadius="3"
+                BorderBrush="{StaticResource Brush.Border.Mid}" BorderThickness="1"
+                ClipToBounds="True">
+            <Grid x:Name="SvPlane" MouseDown="OnSvMouseDown" MouseMove="OnSvMouseMove"
+                  MouseUp="OnSvMouseUp" Cursor="Cross">
+                <Grid.Background>
+                    <DrawingBrush>
+                        <DrawingBrush.Drawing>
+                            <DrawingGroup>
+                                <!-- Hue 由 hue gradient 覆盖；饱和度-明度由两层覆盖实现 -->
+                                <GeometryDrawing>
+                                    <GeometryDrawing.Geometry>
+                                        <RectangleGeometry Rect="0,0,200,160" />
+                                    </GeometryDrawing.Geometry>
+                                    <GeometryDrawing.Brush>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                            <GradientStop Color="#FFFFFFFF" Offset="0" />
+                                            <GradientStop Color="#00000000" Offset="1" />
+                                        </LinearGradientBrush>
+                                    </GeometryDrawing.Brush>
+                                </GeometryDrawing>
+                                <GeometryDrawing>
+                                    <GeometryDrawing.Geometry>
+                                        <RectangleGeometry Rect="0,0,200,160" />
+                                    </GeometryDrawing.Geometry>
+                                    <GeometryDrawing.Brush>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                            <GradientStop Color="#00FFFFFF" Offset="0" />
+                                            <GradientStop x:Name="HueStop" Color="#FFFF0000" Offset="1" />
+                                        </LinearGradientBrush>
+                                    </GeometryDrawing.Brush>
+                                </GeometryDrawing>
+                            </DrawingGroup>
+                        </DrawingBrush.Drawing>
+                    </DrawingBrush>
+                </Grid.Background>
+                <!-- 当前选点指示（圆圈） -->
+                <Ellipse x:Name="SvIndicator" Width="12" Height="12" IsHitTestVisible="False"
+                         Stroke="White" StrokeThickness="2" />
+            </Grid>
+        </Border>
+
+        <!-- 中间：Hue 滑条 -->
+        <Grid Grid.Column="1" Margin="8,0" Width="20" Height="160">
+            <Border CornerRadius="3" BorderBrush="{StaticResource Brush.Border.Mid}" BorderThickness="1"
+                    ClipToBounds="True">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,1" EndPoint="0,0">
+                        <GradientStop Color="#FFFF0000" Offset="0.000" />
+                        <GradientStop Color="#FFFFFF00" Offset="0.167" />
+                        <GradientStop Color="#FF00FF00" Offset="0.333" />
+                        <GradientStop Color="#FF00FFFF" Offset="0.500" />
+                        <GradientStop Color="#FF0000FF" Offset="0.667" />
+                        <GradientStop Color="#FFFF00FF" Offset="0.833" />
+                        <GradientStop Color="#FFFF0000" Offset="1.000" />
+                    </LinearGradientBrush>
+                </Border.Background>
+            </Border>
+            <Canvas x:Name="HueCanvas" Background="Transparent"
+                    MouseDown="OnHueMouseDown" MouseMove="OnHueMouseMove"
+                    MouseUp="OnHueMouseUp" Cursor="Hand" />
+            <!-- 当前 Hue 指示器（横向小三角） -->
+            <Polygon x:Name="HueIndicator" Points="0,4 6,8 0,12"
+                     Fill="{StaticResource Brush.Text.Primary}" IsHitTestVisible="False"
+                     HorizontalAlignment="Right" Margin="0,-2,-2,0" />
+        </Grid>
+
+        <!-- 右侧：当前色 + 原始色 + 输入 + 按钮 -->
+        <StackPanel Grid.Column="2" VerticalAlignment="Top">
+            <Grid Height="40">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="6" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border x:Name="NewSwatch" Grid.Column="0" CornerRadius="3"
+                        BorderBrush="{StaticResource Brush.Border.Mid}" BorderThickness="1" />
+                <Border x:Name="OldSwatch" Grid.Column="2" CornerRadius="3"
+                        BorderBrush="{StaticResource Brush.Border.Mid}" BorderThickness="1" />
+            </Grid>
+            <Grid Margin="0,8,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="HEX" FontSize="10" VerticalAlignment="Center"
+                           Foreground="{StaticResource Brush.Text.Muted}" />
+                <TextBox x:Name="HexBox" Grid.Column="1" Width="90" FontSize="10"
+                         Background="{StaticResource Brush.Bg.Input}"
+                         Foreground="{StaticResource Brush.Text.Primary}"
+                         BorderBrush="{StaticResource Brush.Border.Mid}"
+                         BorderThickness="1" Padding="3,2"
+                         TextChanged="OnHexChanged" />
+            </Grid>
+            <Grid Margin="0,4,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="R" FontSize="10" VerticalAlignment="Center"
+                           Foreground="{StaticResource Brush.Text.Muted}" />
+                <TextBox x:Name="RBox" Grid.Column="1" Width="34" FontSize="10" Margin="2,0"
+                         Background="{StaticResource Brush.Bg.Input}"
+                         Foreground="{StaticResource Brush.Text.Primary}"
+                         BorderBrush="{StaticResource Brush.Border.Mid}"
+                         BorderThickness="1" Padding="3,2" LostFocus="OnRgbChanged" />
+                <TextBox x:Name="GBox" Grid.Column="2" Width="34" FontSize="10" Margin="2,0"
+                         Background="{StaticResource Brush.Bg.Input}"
+                         Foreground="{StaticResource Brush.Text.Primary}"
+                         BorderBrush="{StaticResource Brush.Border.Mid}"
+                         BorderThickness="1" Padding="3,2" LostFocus="OnRgbChanged" />
+                <TextBox x:Name="BBox" Grid.Column="3" Width="34" FontSize="10" Margin="2,0"
+                         Background="{StaticResource Brush.Bg.Input}"
+                         Foreground="{StaticResource Brush.Text.Primary}"
+                         BorderBrush="{StaticResource Brush.Border.Mid}"
+                         BorderThickness="1" Padding="3,2" LostFocus="OnRgbChanged" />
+            </Grid>
+            <StackPanel Orientation="Horizontal" Margin="0,12,0,0" HorizontalAlignment="Right">
+                <Button Content="确定" Width="64" Margin="0,0,6,0" Click="OnOkClick" IsDefault="True"
+                        Background="{StaticResource Brush.Bg.Accent}"
+                        Foreground="{StaticResource Brush.Text.Primary}"
+                        BorderBrush="{StaticResource Brush.Border.Mid}" />
+                <Button Content="取消" Width="64" Click="OnCancelClick" IsCancel="True"
+                        Background="{StaticResource Brush.Bg.Panel}"
+                        Foreground="{StaticResource Brush.Text.Primary}"
+                        BorderBrush="{StaticResource Brush.Border.Mid}" />
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Window>

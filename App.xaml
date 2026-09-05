@@ -1,0 +1,16 @@
+<Application x:Class="SymbolDesigner.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- 皮肤系统：所有语义化颜色字典（Theme.xaml 必须在 Generic.xaml 前，
+                     因为 Generic.xaml 内的样式引用了 Theme 里的 Brush） -->
+                <ResourceDictionary Source="pack://application:,,,/SymbolDesigner;component/Themes/Theme.xaml" />
+                <!-- 工具栏缩略图/控件样式等集中资源 -->
+                <ResourceDictionary Source="pack://application:,,,/SymbolDesigner;component/Themes/Generic.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

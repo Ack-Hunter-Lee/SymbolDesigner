@@ -1,0 +1,27 @@
+<Window x:Class="SymbolDesigner.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:SymbolDesigner.ViewModels"
+        xmlns:views="clr-namespace:SymbolDesigner.Views"
+        Title="元件设计器"
+        Width="1280" Height="800"
+        WindowState="Maximized"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource Brush.Bg.Input}">
+    <Window.DataContext>
+        <!-- 独立进程的 VM。主程序 ProjectReference 复用本工程时不会触发此 xaml 解析。 -->
+        <vm:SymbolDesignerViewModel />
+    </Window.DataContext>
+    <!-- 键绑定放 Window 层级，避免 KeyBinding 受视觉树焦点路径影响而失效。
+         DrawingFinished / Canceled / LastPointRemoved 命令都在 VM 内可执行。 -->
+    <Window.InputBindings>
+        <KeyBinding Key="Enter"    Command="{Binding FinishDrawCommand}" />
+        <KeyBinding Key="Escape"   Command="{Binding CancelOrClearCommand}" />
+        <KeyBinding Key="Backspace" Command="{Binding UndoLastPointCommand}" />
+        <KeyBinding Key="Delete"   Command="{Binding DeleteSelectedCommand}" />
+        <!-- Ctrl+C / Ctrl+V：复制/粘贴选中图元（CanExecute 内按键盘焦点放行输入框的文本复制） -->
+        <KeyBinding Key="C" Modifiers="Control" Command="{Binding CopySelectionCommand}" />
+        <KeyBinding Key="V" Modifiers="Control" Command="{Binding PasteCopiedCommand}" />
+    </Window.InputBindings>
+    <views:SymbolDesignerView DataContext="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=DataContext}" />
+</Window>

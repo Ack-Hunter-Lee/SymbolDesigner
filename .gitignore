@@ -1,0 +1,6 @@
+.vs/
+bin/
+obj/
+*.user
+*.suo
+dump.ps1

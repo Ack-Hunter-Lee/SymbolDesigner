@@ -1,0 +1,148 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:views="clr-namespace:SymbolDesigner.Views"
+    xmlns:controls="clr-namespace:SymbolDesigner.Controls">
+
+    <!--
+        共享画刷资源（独立 exe 自给自足，不依赖主程序 FactoryKanban 的 KanbanStyles.xaml）。
+        主程序里这些资源定义在 Styles/KanbanStyles.xaml 同一份值，这里复制一份保证两边样式一致。
+        后期如需调整颜色，记得两边同步。
+    -->
+    <LinearGradientBrush x:Key="MetalFrameInner" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Offset="0" Color="#3a4a5a" />
+        <GradientStop Offset="0.5" Color="#2a3a4a" />
+        <GradientStop Offset="1" Color="#1a2a3a" />
+    </LinearGradientBrush>
+
+    <!--
+        ZoomPanViewport 默认样式：Border(裁剪) + ContentPresenter(PART_ContentHost)。
+        ContentPresenter 应用 RenderTransform 实现缩放/平移；Left/Top 对齐保证变换锚点在内容左上角。
+    -->
+    <Style TargetType="{x:Type controls:ZoomPanViewport}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type controls:ZoomPanViewport}">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            ClipToBounds="True">
+                        <ContentPresenter x:Name="PART_ContentHost"
+                                          HorizontalAlignment="Left"
+                                          VerticalAlignment="Top"
+                                          RenderTransformOrigin="0,0"
+                                          Content="{TemplateBinding Content}"
+                                          ContentTemplate="{TemplateBinding ContentTemplate}" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        DraggablePrimitive 默认样式：内含 Thumb（拖动手柄）+ ContentPresenter（图形）+ 选中高亮边框。
+        TemplateBinding 把 Background / Width / Height 透传到 Thumb，使 ContentPresenter 跟随 Thumb 实际尺寸。
+    -->
+
+    <Style TargetType="{x:Type views:DraggablePrimitive}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type views:DraggablePrimitive}">
+                    <ControlTemplate.Resources>
+                        <!-- Resize 手柄的视觉模板：小方块 + 半透明蓝填充 + 深色描边 -->
+                        <ControlTemplate x:Key="ResizeThumbVisual" TargetType="{x:Type Thumb}">
+                            <Border Background="#B04FC3F7"
+                                    BorderBrush="#0a0e1a" BorderThickness="0.1" />
+                        </ControlTemplate>
+
+                        <!-- Resize 手柄的公共样式：1.5×1.5 逻辑像素（画布外层 Viewbox 会等比放大）
+                             仅 IsSelected 时显示。-->
+                        <Style TargetType="{x:Type views:ResizeThumb}">
+                            <Setter Property="Width" Value="1.5" />
+                            <Setter Property="Height" Value="1.5" />
+                            <Setter Property="Template" Value="{StaticResource ResizeThumbVisual}" />
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ControlTemplate.Resources>
+
+                    <Grid Width="{TemplateBinding Width}" Height="{TemplateBinding Height}">
+
+                        <!-- 拖动手柄：铺满整个容器，点击任意位置都能拖动 -->
+                        <Thumb x:Name="PART_Thumb"
+                               Background="Transparent"
+                               Cursor="SizeAll">
+                            <Thumb.Template>
+                                <ControlTemplate TargetType="{x:Type Thumb}">
+                                    <Border Background="{TemplateBinding Background}" />
+                                </ControlTemplate>
+                            </Thumb.Template>
+                        </Thumb>
+
+                        <!-- 图形内容（Rectangle / Ellipse / Triangle 等基础图形；复合图形 FanBladeView 已移除） -->
+                        <ContentPresenter Content="{TemplateBinding Content}"
+                                          IsHitTestVisible="False" />
+
+                        <!-- 选中装饰层：不改动图元本体的 Stroke/Fill/Opacity（保证属性面板调色实时可见），
+                             改用上层蓝色虚线描边标识选中（无填充，不遮挡图形本身）。
+                             几何 = DataContext.SelectionGeometry（按 TypeKey 贴形：
+                             圆→圆、三角→三角、折线/粗折线/布尔→骨架轮廓），
+                             选中永远贴着形状走，不规则图形也贴合。
+                             - 普通选中：蓝色虚线（Brush.State.Accent）
+                             - 阵列源位置本体（IsArraySourceClone）：更亮虚线（Brush.State.AccentBorder）
+                             IsHitTestVisible=False 不挡拖动手柄；Stretch=None 保持局部坐标。 -->
+                        <Path x:Name="SelectionDecor"
+                              Data="{Binding SelectionGeometry}"
+                              Stretch="None"
+                              IsHitTestVisible="False"
+                              Stroke="{StaticResource Brush.State.Accent}"
+                              StrokeThickness="0.7"
+                              StrokeDashArray="1.6,1.2"
+                              StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                              StrokeLineJoin="Round">
+                            <Path.Style>
+                                <Style TargetType="Path">
+                                    <!-- 关闭态默认 Collapsed（注意：不能写到 Path 本地属性，
+                                         本地值优先级高于 Style 触发器，会导致选中永远打不开） -->
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding IsSelected}" Value="True" />
+                                                <Condition Binding="{Binding IsArraySourceClone}" Value="True" />
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="Visibility" Value="Visible" />
+                                            <Setter Property="Stroke" Value="{StaticResource Brush.State.AccentBorder}" />
+                                            <Setter Property="StrokeThickness" Value="1.0" />
+                                        </MultiDataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Path.Style>
+                        </Path>
+
+                        <!-- 四个角的 Resize 手柄（仅选中时显示）。手柄在视觉树最后，覆盖在所有元素之上以接收命中。 -->
+                        <views:ResizeThumb Direction="NW"
+                                          HorizontalAlignment="Left" VerticalAlignment="Top"
+                                          Cursor="SizeNWSE" />
+                        <views:ResizeThumb Direction="NE"
+                                          HorizontalAlignment="Right" VerticalAlignment="Top"
+                                          Cursor="SizeNESW" />
+                        <views:ResizeThumb Direction="SW"
+                                          HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                                          Cursor="SizeNESW" />
+                        <views:ResizeThumb Direction="SE"
+                                          HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                          Cursor="SizeNWSE" />
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>
