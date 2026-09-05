@@ -343,43 +343,58 @@ public partial class SymbolDesignerViewModel
     }
 
     /// <summary>剪贴板 DTO 缓存：Ctrl+C 复制当前选中图元的深拷贝（DTO 序列化，与撤销/保存同源）。
+    /// 支持多选批量复制：Ctrl+C 把 MultiSelected 全部成员存为列表；单选退化为一元列表。
     /// 应用内复制语义：缓存内存即可，无需系统剪贴板（跨进程粘贴不在本需求内）。</summary>
-    private PrimitiveItemDto? _copiedDto;
+    private List<PrimitiveItemDto>? _copiedDtos;
 
-    /// <summary>复制选中图元（Ctrl+C）。复制不影响画布内容/脏状态。</summary>
+    /// <summary>复制选中图元（Ctrl+C）。多选时复制整个选集；单选复制当前焦点。不影响画布内容/脏状态。</summary>
     [RelayCommand(CanExecute = nameof(CanCopySelection))]
     private void CopySelection()
     {
-        if (SelectedItem is null) return;
-        _copiedDto = ToDto(SelectedItem);
+        // 多选优先：复制整个 MultiSelected；否则退化到单选 SelectedItem。
+        var sources = MultiSelected.Count > 0 ? MultiSelected.ToList() : (SelectedItem is { } s ? new List<PrimitiveItem> { s } : null);
+        if (sources is null || sources.Count == 0) return;
+        _copiedDtos = sources.Select(ToDto).ToList();
     }
 
     /// <summary>焦点在文本输入框时不拦截按键：Ctrl+C/V 让给系统剪贴板（文本语义），
     /// 由 WPF 键盘路由把命令不可用时的按键继续传递给 TextBox。</summary>
     private bool CanCopySelection()
-        => SelectedItem is not null && !IsTextFieldFocused();
+        => (MultiSelected.Count > 0 || SelectedItem is not null) && !IsTextFieldFocused();
 
-    /// <summary>粘贴图元副本（Ctrl+V）：以 _copiedDto 重建，整体偏移 (24,24) 防与源重叠。</summary>
+    /// <summary>粘贴图元副本（Ctrl+V）：以 _copiedDtos 重建全部，整体偏移 (24,24) 防与源重叠。
+    /// 粘贴后自动选中所有新副本（可立即整体拖动/批量改属性）。</summary>
     [RelayCommand(CanExecute = nameof(CanPasteCopied))]
     private void PasteCopied()
     {
-        if (_copiedDto is null) return;
+        if (_copiedDtos is null || _copiedDtos.Count == 0) return;
         ForceCommitEdit();
-        // 每次粘贴独立深拷贝（CreateFromDto→ToDto 往返），_copiedDto 保持原始快照可反复粘贴。
-        // 空 Id → CreateFromDto 内部的 Guid.TryParse 失败 → 分配新 Guid：副本与源不同身份，
-        // 否则约束引用/选中/持久化全部串线（PrimitiveItemDto.Id 为 init-only，须经 DTO 通道重置）。
-        var dto = ToDto(CreateFromDto(_copiedDto));
-        dto.Id = string.Empty;
-        var clone = CreateFromDto(dto);
-        clone.X += 24;
-        clone.Y += 24;
-        Primitives.Add(clone); // → OnPrimitivesChanged → IsDirty + 撤销快照
+        var clones = new List<PrimitiveItem>();
+        foreach (var dto in _copiedDtos)
+        {
+            // 每次粘贴独立深拷贝（CreateFromDto→ToDto 往返），_copiedDtos 保持原始快照可反复粘贴。
+            // 空 Id → CreateFromDto 内部的 Guid.TryParse 失败 → 分配新 Guid：副本与源不同身份，
+            // 否则约束引用/选中/持久化全部串线（PrimitiveItemDto.Id 为 init-only，须经 DTO 通道重置）。
+            var copy = ToDto(CreateFromDto(dto));
+            copy.Id = string.Empty;
+            var clone = CreateFromDto(copy);
+            clone.X += 24;
+            clone.Y += 24;
+            clones.Add(clone);
+        }
+        foreach (var clone in clones)
+            Primitives.Add(clone); // → OnPrimitivesChanged → IsDirty + 撤销快照
         ItemCount = Primitives.Count;
-        SelectedItem = clone;  // 粘贴后直接选中新副本，便于立即拖动/改属性
+        // 选中全部新副本：批量粘贴后整体拖动/改属性（替换 SelectedItem，并清空 MultiSelected 再重建）。
+        MultiSelected.Clear();
+        foreach (var c in clones) MultiSelected.Add(c);
+        SelectedItem = clones.FirstOrDefault();  // 焦点 = 第一个副本，供属性面板展示
+        // 多选集合变化 → 刷新选区缩放手柄/约束命令可执行态（与 AddToMultiSelect 的 RaiseMultiSelectChanged 同效）
+        RaiseMultiSelectChanged();
     }
 
     private bool CanPasteCopied()
-        => _copiedDto is not null && !IsTextFieldFocused();
+        => (_copiedDtos is not null && _copiedDtos.Count > 0) && !IsTextFieldFocused();
 
     /// <summary>当前键盘焦点是否在文本输入控件（TextBox/PasswordBox）。</summary>
     private static bool IsTextFieldFocused()

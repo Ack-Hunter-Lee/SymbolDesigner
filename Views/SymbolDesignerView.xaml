@@ -1411,21 +1411,21 @@
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemContainerStyle>
                                     <Style TargetType="ContentPresenter">
-                                        <!--  Canvas.Left/Top 绑顶点坐标；Margin=-1 使方块中心对齐顶点  -->
+                                        <!--  Canvas.Left/Top 绑顶点坐标；Margin=-1.5 使方块中心对齐顶点  -->
                                         <Setter Property="Canvas.Left" Value="{Binding X}" />
                                         <Setter Property="Canvas.Top" Value="{Binding Y}" />
-                                        <Setter Property="Width" Value="2" />
-                                        <Setter Property="Height" Value="2" />
-                                        <Setter Property="Margin" Value="-1,-1,0,0" />
+                                        <Setter Property="Width" Value="3" />
+                                        <Setter Property="Height" Value="3" />
+                                        <Setter Property="Margin" Value="-1.5,-1.5,0,0" />
                                     </Style>
                                 </ItemsControl.ItemContainerStyle>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <!--  草稿端点标记：与顶点手柄同款 2×2 蓝色小方块（不响应鼠标，仅视觉提示）。
-                                            反向缩放：方块随画布放大而不变大，任何比例下屏幕尺寸恒为 2px，中心仍贴顶点。  -->
+                                        <!--  草稿端点标记：与顶点手柄同款 3×3 蓝色小方块（不响应鼠标，仅视觉提示）。
+                                            反向缩放：方块随画布放大而不变大，任何比例下屏幕尺寸恒为 3px，中心仍贴顶点。  -->
                                         <Rectangle
-                                            Width="2"
-                                            Height="2"
+                                            Width="3"
+                                            Height="3"
                                             Fill="{StaticResource Brush.State.Accent}"
                                             RenderOptions.EdgeMode="Aliased"
                                             SnapsToDevicePixels="True"
@@ -1685,27 +1685,35 @@
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemContainerStyle>
                                     <Style TargetType="ContentPresenter">
-                                        <!--  Canvas.Left/Top 绑 VertexHandle.X/Y；Margin=-1 使手柄中心对齐顶点  -->
+                                        <!--  Canvas.Left/Top 绑 VertexHandle.X/Y；Margin=-1.5 使手柄中心对齐顶点  -->
                                         <Setter Property="Canvas.Left" Value="{Binding X}" />
                                         <Setter Property="Canvas.Top" Value="{Binding Y}" />
                                         <Setter Property="Panel.ZIndex" Value="9999" />
-                                        <Setter Property="Width" Value="2" />
-                                        <Setter Property="Height" Value="2" />
-                                        <Setter Property="Margin" Value="-1,-1,0,0" />
+                                        <Setter Property="Width" Value="3" />
+                                        <Setter Property="Height" Value="3" />
+                                        <Setter Property="Margin" Value="-1.5,-1.5,0,0" />
                                     </Style>
                                 </ItemsControl.ItemContainerStyle>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <!--  顶点手柄：2×2 蓝色方块（画布 1920×1080 经 Viewbox 放大后视觉合理）  -->
+                                        <!--  顶点手柄：3×3 蓝色方块。
+                                            反向缩放：任何缩放比例下屏幕尺寸恒为 3px，中心仍贴顶点。  -->
                                         <Rectangle
-                                            Width="2"
-                                            Height="2"
+                                            Width="3"
+                                            Height="3"
                                             Cursor="SizeAll"
                                             Fill="#4FC3F7"
                                             Stroke="#ffffff"
                                             StrokeThickness="0.1"
+                                            RenderTransformOrigin="0.5,0.5"
                                             Tag="{Binding Index}"
-                                            ToolTip="拖拽以编辑顶点" />
+                                            ToolTip="拖拽以编辑顶点">
+                                            <Rectangle.RenderTransform>
+                                                <ScaleTransform
+                                                    ScaleX="{Binding CurrentScale, RelativeSource={RelativeSource AncestorType=controls:ZoomPanViewport}, Converter={StaticResource InvScale}}"
+                                                    ScaleY="{Binding CurrentScale, RelativeSource={RelativeSource AncestorType=controls:ZoomPanViewport}, Converter={StaticResource InvScale}}" />
+                                            </Rectangle.RenderTransform>
+                                        </Rectangle>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
@@ -1731,22 +1739,29 @@
                                         <Setter Property="Canvas.Left" Value="{Binding X}" />
                                         <Setter Property="Canvas.Top" Value="{Binding Y}" />
                                         <Setter Property="Panel.ZIndex" Value="9998" />
-                                        <Setter Property="Width" Value="2.5" />
-                                        <Setter Property="Height" Value="2.5" />
-                                        <Setter Property="Margin" Value="-1.25,-1.25,0,0" />
+                                        <Setter Property="Width" Value="3.5" />
+                                        <Setter Property="Height" Value="3.5" />
+                                        <Setter Property="Margin" Value="-1.75,-1.75,0,0" />
                                     </Style>
                                 </ItemsControl.ItemContainerStyle>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <!--  段手柄：2.5×2.5 橙色方块（与顶点蓝色方块区分）  -->
+                                        <!--  段手柄：3.5×3.5 橙色方块（与顶点蓝色方块区分）。反向缩放：屏幕尺寸恒定。  -->
                                         <Rectangle
-                                            Width="2.5"
-                                            Height="2.5"
+                                            Width="3.5"
+                                            Height="3.5"
                                             Cursor="SizeAll"
                                             Fill="#FFB74D"
                                             Stroke="#ffffff"
                                             StrokeThickness="0.1"
-                                            ToolTip="拖拽以平移整段线段（保持长度）" />
+                                            RenderTransformOrigin="0.5,0.5"
+                                            ToolTip="拖拽以平移整段线段（保持长度）">
+                                            <Rectangle.RenderTransform>
+                                                <ScaleTransform
+                                                    ScaleX="{Binding CurrentScale, RelativeSource={RelativeSource AncestorType=controls:ZoomPanViewport}, Converter={StaticResource InvScale}}"
+                                                    ScaleY="{Binding CurrentScale, RelativeSource={RelativeSource AncestorType=controls:ZoomPanViewport}, Converter={StaticResource InvScale}}" />
+                                            </Rectangle.RenderTransform>
+                                        </Rectangle>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
@@ -1771,9 +1786,9 @@
                                         <Setter Property="Canvas.Left" Value="{Binding X}" />
                                         <Setter Property="Canvas.Top" Value="{Binding Y}" />
                                         <Setter Property="Panel.ZIndex" Value="9998" />
-                                        <Setter Property="Width" Value="2" />
-                                        <Setter Property="Height" Value="1.5" />
-                                        <Setter Property="Margin" Value="-1,-0.75,0,0" />
+                                        <Setter Property="Width" Value="3" />
+                                        <Setter Property="Height" Value="2" />
+                                        <Setter Property="Margin" Value="-1.5,-1,0,0" />
                                     </Style>
                                 </ItemsControl.ItemContainerStyle>
                                 <ItemsControl.ItemTemplate>
@@ -1783,20 +1798,26 @@
                                             左 L 蓝 #81D4FA，右 R 橙 #FF8A65。
                                         -->
                                         <Path
-                                            Width="2"
-                                            Height="1.5"
+                                            Width="3"
+                                            Height="2"
                                             Stretch="Fill"
                                             Stroke="#ffffff"
+                                            RenderTransformOrigin="0.5,0.5"
                                             StrokeThickness="0.1">
+                                            <Path.RenderTransform>
+                                                <ScaleTransform
+                                                    ScaleX="{Binding CurrentScale, RelativeSource={RelativeSource AncestorType=controls:ZoomPanViewport}, Converter={StaticResource InvScale}}"
+                                                    ScaleY="{Binding CurrentScale, RelativeSource={RelativeSource AncestorType=controls:ZoomPanViewport}, Converter={StaticResource InvScale}}" />
+                                            </Path.RenderTransform>
                                             <Path.Style>
                                                 <Style TargetType="Path">
                                                     <Setter Property="Fill" Value="#81D4FA" />
                                                     <!--  默认 = End（入端）：尖朝上  -->
-                                                    <Setter Property="Data" Value="M0,3 L4,3 L2,0 Z" />
+                                                    <Setter Property="Data" Value="M0,4 L6,4 L3,0 Z" />
                                                     <Style.Triggers>
                                                         <!--  Start（出端）：尖朝下  -->
                                                         <DataTrigger Binding="{Binding Endpoint}" Value="Start">
-                                                            <Setter Property="Data" Value="M0,0 L4,0 L2,3 Z" />
+                                                            <Setter Property="Data" Value="M0,0 L6,0 L3,4 Z" />
                                                         </DataTrigger>
                                                         <DataTrigger Binding="{Binding Side}" Value="R">
                                                             <Setter Property="Fill" Value="#FF8A65" />
@@ -1831,28 +1852,34 @@
                                         <Setter Property="Canvas.Left" Value="{Binding X}" />
                                         <Setter Property="Canvas.Top" Value="{Binding Y}" />
                                         <Setter Property="Panel.ZIndex" Value="9996" />
-                                        <Setter Property="Width" Value="2.5" />
-                                        <Setter Property="Height" Value="2.5" />
-                                        <Setter Property="Margin" Value="-1.25,-1.25,0,0" />
+                                        <Setter Property="Width" Value="3.5" />
+                                        <Setter Property="Height" Value="3.5" />
+                                        <Setter Property="Margin" Value="-1.75,-1.75,0,0" />
                                     </Style>
                                 </ItemsControl.ItemContainerStyle>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <!--  中心手柄：白色小圆；外圆手柄：蓝色方块；内圆手柄：黄色方块  -->
+                                        <!--  中心手柄：白色小圆；外圆手柄：蓝色方块；内圆手柄：黄色方块。反向缩放：屏幕尺寸恒定。  -->
                                         <Rectangle
-                                            Width="2.5"
-                                            Height="2.5"
+                                            Width="3.5"
+                                            Height="3.5"
                                             Cursor="SizeAll"
+                                            RenderTransformOrigin="0.5,0.5"
                                             Stroke="#ffffff"
                                             StrokeThickness="0.1">
+                                            <Rectangle.RenderTransform>
+                                                <ScaleTransform
+                                                    ScaleX="{Binding CurrentScale, RelativeSource={RelativeSource AncestorType=controls:ZoomPanViewport}, Converter={StaticResource InvScale}}"
+                                                    ScaleY="{Binding CurrentScale, RelativeSource={RelativeSource AncestorType=controls:ZoomPanViewport}, Converter={StaticResource InvScale}}" />
+                                            </Rectangle.RenderTransform>
                                             <Rectangle.Style>
                                                 <Style TargetType="Rectangle">
                                                     <Setter Property="Fill" Value="#64B5F6" />
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding Kind}" Value="{x:Static viewmodels:RingHandleKind.Center}">
                                                             <Setter Property="Fill" Value="#ffffff" />
-                                                            <Setter Property="RadiusX" Value="1.25" />
-                                                            <Setter Property="RadiusY" Value="1.25" />
+                                                            <Setter Property="RadiusX" Value="1.75" />
+                                                            <Setter Property="RadiusY" Value="1.75" />
                                                         </DataTrigger>
                                                         <DataTrigger Binding="{Binding Kind}" Value="{x:Static viewmodels:RingHandleKind.Inner}">
                                                             <Setter Property="Fill" Value="#FFD54F" />
@@ -1884,14 +1911,14 @@
                                         <Setter Property="Canvas.Left" Value="{Binding X}" />
                                         <Setter Property="Canvas.Top" Value="{Binding Y}" />
                                         <Setter Property="Panel.ZIndex" Value="9997" />
-                                        <Setter Property="Width" Value="2" />
-                                        <Setter Property="Height" Value="2" />
-                                        <Setter Property="Margin" Value="-1,-1,0,0" />
+                                        <Setter Property="Width" Value="3" />
+                                        <Setter Property="Height" Value="3" />
+                                        <Setter Property="Margin" Value="-1.5,-1.5,0,0" />
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                <Setter Property="Width" Value="3" />
-                                                <Setter Property="Height" Value="3" />
-                                                <Setter Property="Margin" Value="-1.5,-1.5,0,0" />
+                                                <Setter Property="Width" Value="4" />
+                                                <Setter Property="Height" Value="4" />
+                                                <Setter Property="Margin" Value="-2,-2,0,0" />
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
@@ -1903,8 +1930,14 @@
                                             - 转角点（Corner）：4×4 蓝色圆点（骨线转折产生，走 join 系统）
                                             - 普通轮廓点（Normal）：2×2 黄色方块（端点/段末端偏移，可圆角化）
                                             选中后变浅绿/浅蓝描边+放大。用 Style 触发器让 StrokeThickness 也能响应。
+                                            反向缩放：任何缩放比例下屏幕尺寸恒定。
                                         -->
-                                        <Grid Cursor="Hand" Tag="{Binding Index}">
+                                        <Grid Cursor="Hand" RenderTransformOrigin="0.5,0.5" Tag="{Binding Index}">
+                                            <Grid.RenderTransform>
+                                                <ScaleTransform
+                                                    ScaleX="{Binding CurrentScale, RelativeSource={RelativeSource AncestorType=controls:ZoomPanViewport}, Converter={StaticResource InvScale}}"
+                                                    ScaleY="{Binding CurrentScale, RelativeSource={RelativeSource AncestorType=controls:ZoomPanViewport}, Converter={StaticResource InvScale}}" />
+                                            </Grid.RenderTransform>
                                             <Grid.Style>
                                                 <Style TargetType="Grid">
                                                     <Setter Property="ToolTip" Value="点击以编辑该接缝的轮廓样式" />
@@ -1920,10 +1953,10 @@
                                             </Grid.Style>
                                             <!--  转角点：蓝色圆点  -->
                                             <Ellipse
-                                                Width="4"
-                                                Height="4"
+                                                Width="5"
+                                                Height="5"
                                                 Stroke="#ffffff"
-                                                StrokeThickness="0.1"
+                                                StrokeThickness="0.15"
                                                 Visibility="{Binding IsCorner, Converter={StaticResource BoolToVis}}">
                                                 <Ellipse.Style>
                                                     <Style TargetType="Ellipse">
@@ -1940,10 +1973,10 @@
                                             </Ellipse>
                                             <!--  普通轮廓点：黄色方块  -->
                                             <Rectangle
-                                                Width="2"
-                                                Height="2"
+                                                Width="3"
+                                                Height="3"
                                                 Stroke="#ffffff"
-                                                StrokeThickness="0.1"
+                                                StrokeThickness="0.15"
                                                 Visibility="{Binding IsCorner, Converter={StaticResource InverseBoolToVis}}">
                                                 <Rectangle.Style>
                                                     <Style TargetType="Rectangle">
@@ -1981,7 +2014,7 @@
                                     StrokeEndLineCap="Round"
                                     StrokeLineJoin="Round"
                                     StrokeStartLineCap="Round"
-                                    StrokeThickness="0.8" />
+                                    StrokeThickness="{Binding CanvasScale, Converter={StaticResource DivByScale}, ConverterParameter=0.8}" />
                             </Canvas>
 
                             <!--
@@ -2007,9 +2040,9 @@
                                         <Setter Property="Canvas.Left" Value="{Binding X}" />
                                         <Setter Property="Canvas.Top" Value="{Binding Y}" />
                                         <Setter Property="Panel.ZIndex" Value="10000" />
-                                        <Setter Property="Width" Value="2.5" />
-                                        <Setter Property="Height" Value="2.5" />
-                                        <Setter Property="Margin" Value="-1.25,-1.25,0,0" />
+                                        <Setter Property="Width" Value="3.5" />
+                                        <Setter Property="Height" Value="3.5" />
+                                        <Setter Property="Margin" Value="-1.75,-1.75,0,0" />
                                         <Style.Triggers>
                                             <!--  四个角的方向光标：NW/SE = SizeNWSE，NE/SW = SizeNESW  -->
                                             <DataTrigger Binding="{Binding Corner}" Value="NW">
@@ -2029,13 +2062,21 @@
                                 </ItemsControl.ItemContainerStyle>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
+                                        <!--  选区缩放手柄：反向缩放，任何缩放比例下屏幕尺寸恒为 3.5px，中心仍贴包围盒角点。  -->
                                         <Rectangle
-                                            Width="2.5"
-                                            Height="2.5"
+                                            Width="3.5"
+                                            Height="3.5"
                                             ToolTip="拖拽以等比缩放选中元素"
+                                            RenderTransformOrigin="0.5,0.5"
                                             Fill="{StaticResource Brush.State.Accent}"
                                             Stroke="{StaticResource Brush.Brand.Stroke}"
-                                            StrokeThickness="0.1" />
+                                            StrokeThickness="0.1">
+                                            <Rectangle.RenderTransform>
+                                                <ScaleTransform
+                                                    ScaleX="{Binding CurrentScale, RelativeSource={RelativeSource AncestorType=controls:ZoomPanViewport}, Converter={StaticResource InvScale}}"
+                                                    ScaleY="{Binding CurrentScale, RelativeSource={RelativeSource AncestorType=controls:ZoomPanViewport}, Converter={StaticResource InvScale}}" />
+                                            </Rectangle.RenderTransform>
+                                        </Rectangle>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
