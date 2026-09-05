@@ -27,6 +27,8 @@
         <conv:TagToBrushesConverter x:Key="TagBrush" />
         <conv:PickCenterBrushConverter x:Key="PickCenterBrush" />
         <conv:KeyEqualsActiveConverter x:Key="KeyActive" />
+        <!-- 枚举相等比较（RadioButton 列表用：当前枚举值 == 该 RadioButton 代表的枚举值 → 选中） -->
+        <conv:EnumEqualsConverter x:Key="EnumEqualsConverter" />
         <!--  ThickOutlineConverter 已重构为静态工具类 ThickOutlineBuilder，不再需要 XAML 实例  -->
 
         <!--
@@ -2522,6 +2524,14 @@
                                         </Border>
 
                                         <!--  ── 2. 填充 ──  -->
+                                        <!--
+                                            按用户设计参考图重做：
+                                              顶部 6 个 RadioButton 单选（无/单色/渐变/单色渐变/图案/图片）
+                                              下方按方式显示"颜色"或"起止色"SwatchesPicker
+                                              再下方"亮度"+"透明度"Slider+数值（对所有非 None 方式生效）
+                                            Pattern/ImageTexture 当前 UI 框架就位,具体渲染后续迭代——
+                                              选中后下方色板/Slider 灰显,提示"待实现"。
+                                        -->
                                         <Border
                                             Margin="0,0,0,4"
                                             Padding="6"
@@ -2536,26 +2546,63 @@
                                                     FontWeight="Bold"
                                                     Foreground="{StaticResource Brush.Text.Muted}"
                                                     Text="填充" />
-                                                <!--  填充方式  -->
-                                                <Grid Margin="0,0,0,2">
-                                                    <TextBlock
-                                                        VerticalAlignment="Center"
-                                                        FontSize="10"
-                                                        Foreground="{StaticResource Brush.Text.Secondary}"
-                                                        Text="方式" />
-                                                    <ComboBox
-                                                        Width="96"
-                                                        HorizontalAlignment="Right"
-                                                        Background="{StaticResource Brush.Bg.Input}"
-                                                        BorderBrush="{StaticResource Brush.Border.Mid}"
-                                                        DisplayMemberPath="Label"
-                                                        Foreground="{StaticResource Brush.Text.Primary}"
-                                                        ItemsSource="{Binding FillOptions}"
-                                                        SelectedValue="{Binding SelectedItem.FillStyle, Mode=TwoWay}"
-                                                        SelectedValuePath="Value" />
-                                                </Grid>
-                                                <!--  单色填充颜色（FillStyle=Solid 时显示）  -->
-                                                <Grid Margin="0,6,0,0">
+
+                                                <!--  ── 方式：6 个 RadioButton 单选  ──  -->
+                                                <!--  直接写 6 个 RadioButton（枚举固定，无需 ItemsControl 动态化）。
+                                                     GroupName="FillStyleGroup" 强制互斥;EnumEqualsConverter 判断 SelectedItem.FillStyle
+                                                     与本 RadioButton 的 ConverterParameter 是否相等,相等 → 选中;
+                                                     用户点别的 RadioButton → Converter 回写新枚举值到 SelectedItem.FillStyle。  -->
+                                                <RadioButton
+                                                    Margin="0,1,0,1"
+                                                    VerticalAlignment="Center"
+                                                    Content="无填充"
+                                                    FontSize="10"
+                                                    Foreground="{StaticResource Brush.Text.Primary}"
+                                                    GroupName="FillStyleGroup"
+                                                    IsChecked="{Binding SelectedItem.FillStyle, Mode=TwoWay, Converter={StaticResource EnumEqualsConverter}, ConverterParameter={x:Static models:FillStyle.None}}" />
+                                                <RadioButton
+                                                    Margin="0,1,0,1"
+                                                    VerticalAlignment="Center"
+                                                    Content="单色填充"
+                                                    FontSize="10"
+                                                    Foreground="{StaticResource Brush.Text.Primary}"
+                                                    GroupName="FillStyleGroup"
+                                                    IsChecked="{Binding SelectedItem.FillStyle, Mode=TwoWay, Converter={StaticResource EnumEqualsConverter}, ConverterParameter={x:Static models:FillStyle.Solid}}" />
+                                                <RadioButton
+                                                    Margin="0,1,0,1"
+                                                    VerticalAlignment="Center"
+                                                    Content="渐变填充"
+                                                    FontSize="10"
+                                                    Foreground="{StaticResource Brush.Text.Primary}"
+                                                    GroupName="FillStyleGroup"
+                                                    IsChecked="{Binding SelectedItem.FillStyle, Mode=TwoWay, Converter={StaticResource EnumEqualsConverter}, ConverterParameter={x:Static models:FillStyle.Gradient}}" />
+                                                <RadioButton
+                                                    Margin="0,1,0,1"
+                                                    VerticalAlignment="Center"
+                                                    Content="单色渐变填充"
+                                                    FontSize="10"
+                                                    Foreground="{StaticResource Brush.Text.Primary}"
+                                                    GroupName="FillStyleGroup"
+                                                    IsChecked="{Binding SelectedItem.FillStyle, Mode=TwoWay, Converter={StaticResource EnumEqualsConverter}, ConverterParameter={x:Static models:FillStyle.MonochromeGradient}}" />
+                                                <RadioButton
+                                                    Margin="0,1,0,1"
+                                                    VerticalAlignment="Center"
+                                                    Content="图案填充"
+                                                    FontSize="10"
+                                                    Foreground="{StaticResource Brush.Text.Primary}"
+                                                    GroupName="FillStyleGroup"
+                                                    IsChecked="{Binding SelectedItem.FillStyle, Mode=TwoWay, Converter={StaticResource EnumEqualsConverter}, ConverterParameter={x:Static models:FillStyle.Pattern}}" />
+                                                <RadioButton
+                                                    Margin="0,1,0,1"
+                                                    VerticalAlignment="Center"
+                                                    Content="图片或纹理填充"
+                                                    FontSize="10"
+                                                    Foreground="{StaticResource Brush.Text.Primary}"
+                                                    GroupName="FillStyleGroup"
+                                                    IsChecked="{Binding SelectedItem.FillStyle, Mode=TwoWay, Converter={StaticResource EnumEqualsConverter}, ConverterParameter={x:Static models:FillStyle.ImageTexture}}" />
+
+                                                <!--  ── 颜色（Solid / MonochromeGradient 时显示） ──  -->
+                                                <Grid Margin="0,2,0,4">
                                                     <Grid.Style>
                                                         <Style TargetType="Grid">
                                                             <Setter Property="Visibility" Value="Collapsed" />
@@ -2563,25 +2610,34 @@
                                                                 <DataTrigger Binding="{Binding SelectedItem.FillStyle}" Value="{x:Static models:FillStyle.Solid}">
                                                                     <Setter Property="Visibility" Value="Visible" />
                                                                 </DataTrigger>
+                                                                <DataTrigger Binding="{Binding SelectedItem.FillStyle}" Value="{x:Static models:FillStyle.MonochromeGradient}">
+                                                                    <Setter Property="Visibility" Value="Visible" />
+                                                                </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
                                                     </Grid.Style>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
                                                     <TextBlock
+                                                        Grid.Column="0"
                                                         VerticalAlignment="Center"
                                                         FontSize="10"
                                                         Foreground="{StaticResource Brush.Text.Secondary}"
-                                                        Text="填充色" />
+                                                        Text="颜色" />
                                                     <controls:SwatchesPicker
+                                                        Grid.Column="1"
                                                         Width="92"
-                                                        HorizontalAlignment="Right"
                                                         ClearFillRequested="OnFillColorClearFillRequested"
                                                         MoreColorsRequested="OnSwatchesPickerMoreColors"
                                                         PickerRequested="OnSwatchesPickerPickerRequested"
                                                         RecentColors="{Binding DataContext.RecentColorings, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                         SelectedColor="{Binding SelectedItem.FillColor, Mode=TwoWay}" />
                                                 </Grid>
-                                                <!--  线性渐变起止色（FillStyle=Gradient 时显示）  -->
-                                                <StackPanel Margin="0,6,0,0">
+
+                                                <!--  ── 渐变起止色（Gradient 时显示） ──  -->
+                                                <StackPanel Margin="0,2,0,4">
                                                     <StackPanel.Style>
                                                         <Style TargetType="StackPanel">
                                                             <Setter Property="Visibility" Value="Collapsed" />
@@ -2593,34 +2649,202 @@
                                                         </Style>
                                                     </StackPanel.Style>
                                                     <Grid Margin="0,0,0,4">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
                                                         <TextBlock
+                                                            Grid.Column="0"
                                                             VerticalAlignment="Center"
                                                             FontSize="10"
                                                             Foreground="{StaticResource Brush.Text.Secondary}"
                                                             Text="起始色" />
                                                         <controls:SwatchesPicker
+                                                            Grid.Column="1"
                                                             Width="92"
-                                                            HorizontalAlignment="Right"
                                                             MoreColorsRequested="OnSwatchesPickerMoreColors"
                                                             PickerRequested="OnSwatchesPickerPickerRequested"
                                                             RecentColors="{Binding DataContext.RecentColorings, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                             SelectedColor="{Binding SelectedItem.GradientStartColor, Mode=TwoWay}" />
                                                     </Grid>
                                                     <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
                                                         <TextBlock
+                                                            Grid.Column="0"
                                                             VerticalAlignment="Center"
                                                             FontSize="10"
                                                             Foreground="{StaticResource Brush.Text.Secondary}"
                                                             Text="结束色" />
                                                         <controls:SwatchesPicker
+                                                            Grid.Column="1"
                                                             Width="92"
-                                                            HorizontalAlignment="Right"
                                                             MoreColorsRequested="OnSwatchesPickerMoreColors"
                                                             PickerRequested="OnSwatchesPickerPickerRequested"
                                                             RecentColors="{Binding DataContext.RecentColorings, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                             SelectedColor="{Binding SelectedItem.GradientEndColor, Mode=TwoWay}" />
                                                     </Grid>
                                                 </StackPanel>
+
+                                                <!--  ── 单色渐变提示（MonochromeGradient 时显示一行小字） ──  -->
+                                                <TextBlock
+                                                    Margin="0,-2,0,4"
+                                                    FontSize="9"
+                                                    Foreground="{StaticResource Brush.Text.Tertiary}"
+                                                    Text="结束色按所选颜色自动加深派生">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding SelectedItem.FillStyle}" Value="{x:Static models:FillStyle.MonochromeGradient}">
+                                                                    <Setter Property="Visibility" Value="Visible" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+
+                                                <!--  ── 图案 / 图片 暂未实现提示 ──  -->
+                                                <Border
+                                                    Margin="0,2,0,4"
+                                                    Padding="6,4"
+                                                    BorderBrush="{StaticResource Brush.Border.Subtle}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="2">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                            <Setter Property="Background" Value="{StaticResource Brush.Bg.Base}" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding SelectedItem.FillStyle}" Value="{x:Static models:FillStyle.Pattern}">
+                                                                    <Setter Property="Visibility" Value="Visible" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding SelectedItem.FillStyle}" Value="{x:Static models:FillStyle.ImageTexture}">
+                                                                    <Setter Property="Visibility" Value="Visible" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <TextBlock
+                                                        FontSize="9"
+                                                        Foreground="{StaticResource Brush.Text.Tertiary}"
+                                                        TextWrapping="Wrap"
+                                                        Text="图案/图片填充 — UI 框架已就位,具体图案与图片导入逻辑后续迭代。" />
+                                                </Border>
+
+                                                <!--  ── 亮度 Slider（所有非 None 方式生效；Pattern/ImageTexture 暂禁用） ──  -->
+                                                <Grid Margin="0,4,0,2">
+                                                    <Grid.Style>
+                                                        <Style TargetType="Grid">
+                                                            <Setter Property="IsEnabled" Value="False" />
+                                                            <Setter Property="Opacity" Value="0.5" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding SelectedItem.FillStyle}" Value="{x:Static models:FillStyle.Solid}">
+                                                                    <Setter Property="IsEnabled" Value="True" />
+                                                                    <Setter Property="Opacity" Value="1.0" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding SelectedItem.FillStyle}" Value="{x:Static models:FillStyle.Gradient}">
+                                                                    <Setter Property="IsEnabled" Value="True" />
+                                                                    <Setter Property="Opacity" Value="1.0" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding SelectedItem.FillStyle}" Value="{x:Static models:FillStyle.MonochromeGradient}">
+                                                                    <Setter Property="IsEnabled" Value="True" />
+                                                                    <Setter Property="Opacity" Value="1.0" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Grid.Style>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock
+                                                        Grid.Column="0"
+                                                        VerticalAlignment="Center"
+                                                        FontSize="10"
+                                                        Foreground="{StaticResource Brush.Text.Secondary}"
+                                                        Text="亮度" />
+                                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                        <Slider
+                                                            x:Name="FillBrightnessSlider"
+                                                            Width="100"
+                                                            VerticalAlignment="Center"
+                                                            Minimum="0"
+                                                            Maximum="100"
+                                                            TickFrequency="10"
+                                                            Value="{Binding SelectedItem.FillBrightness, Mode=TwoWay}" />
+                                                        <Border
+                                                            Margin="6,0,0,0"
+                                                            VerticalAlignment="Center"
+                                                            Padding="6,1"
+                                                            BorderBrush="{StaticResource Brush.Border.Mid}"
+                                                            BorderThickness="1"
+                                                            CornerRadius="2">
+                                                            <TextBlock
+                                                                FontSize="9"
+                                                                Foreground="{StaticResource Brush.Text.Primary}"
+                                                                Text="{Binding SelectedItem.FillBrightness, StringFormat={}{0:0}%}" />
+                                                        </Border>
+                                                    </StackPanel>
+                                                </Grid>
+
+                                                <!--  ── 透明度 Slider（同上） ──  -->
+                                                <Grid Margin="0,4,0,0">
+                                                    <Grid.Style>
+                                                        <Style TargetType="Grid">
+                                                            <Setter Property="IsEnabled" Value="False" />
+                                                            <Setter Property="Opacity" Value="0.5" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding SelectedItem.FillStyle}" Value="{x:Static models:FillStyle.Solid}">
+                                                                    <Setter Property="IsEnabled" Value="True" />
+                                                                    <Setter Property="Opacity" Value="1.0" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding SelectedItem.FillStyle}" Value="{x:Static models:FillStyle.Gradient}">
+                                                                    <Setter Property="IsEnabled" Value="True" />
+                                                                    <Setter Property="Opacity" Value="1.0" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding SelectedItem.FillStyle}" Value="{x:Static models:FillStyle.MonochromeGradient}">
+                                                                    <Setter Property="IsEnabled" Value="True" />
+                                                                    <Setter Property="Opacity" Value="1.0" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Grid.Style>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock
+                                                        Grid.Column="0"
+                                                        VerticalAlignment="Center"
+                                                        FontSize="10"
+                                                        Foreground="{StaticResource Brush.Text.Secondary}"
+                                                        Text="透明度" />
+                                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                        <Slider
+                                                            x:Name="FillOpacitySlider"
+                                                            Width="100"
+                                                            VerticalAlignment="Center"
+                                                            Minimum="0"
+                                                            Maximum="100"
+                                                            TickFrequency="10"
+                                                            Value="{Binding SelectedItem.FillOpacity, Mode=TwoWay}" />
+                                                        <Border
+                                                            Margin="6,0,0,0"
+                                                            VerticalAlignment="Center"
+                                                            Padding="6,1"
+                                                            BorderBrush="{StaticResource Brush.Border.Mid}"
+                                                            BorderThickness="1"
+                                                            CornerRadius="2">
+                                                            <TextBlock
+                                                                FontSize="9"
+                                                                Foreground="{StaticResource Brush.Text.Primary}"
+                                                                Text="{Binding SelectedItem.FillOpacity, StringFormat={}{0:0}%}" />
+                                                        </Border>
+                                                    </StackPanel>
+                                                </Grid>
                                             </StackPanel>
                                         </Border>
 

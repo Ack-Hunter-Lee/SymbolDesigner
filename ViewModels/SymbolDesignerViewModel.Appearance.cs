@@ -19,11 +19,17 @@ public partial class SymbolDesignerViewModel
         new AppearanceOption("点划线", StrokeDashStyle.DashDot),
     };
 
-    /// <summary>填充方式选项。（无 / 单色 / 线性渐变）</summary>
+    /// <summary>填充方式选项（属性面板"填充"组 RadioButton 列表数据源）。
+    /// 6 种：与 FillStyle 枚举一一对应（无 / 单色 / 渐变 / 单色渐变 / 图案 / 图片或纹理）。
+    /// 后两种（图案 / 图片）当前 UI 框架已就位,具体渲染逻辑后续迭代实现——选中后 FillBrush 返回 null,
+    /// 渲染层只画描边不画填充（视觉提示"该方式待实现"）。</summary>
     public IReadOnlyList<AppearanceOption> FillOptions { get; } = new[]
     {
-        new AppearanceOption("无填充",     FillStyle.None),
-        new AppearanceOption("单色填充",   FillStyle.Solid),
-        new AppearanceOption("线性渐变",   FillStyle.Gradient),
+        new AppearanceOption("无填充",         FillStyle.None),
+        new AppearanceOption("单色填充",       FillStyle.Solid),
+        new AppearanceOption("渐变填充",       FillStyle.Gradient),
+        new AppearanceOption("单色渐变填充",   FillStyle.MonochromeGradient),
+        new AppearanceOption("图案填充",       FillStyle.Pattern),
+        new AppearanceOption("图片或纹理填充", FillStyle.ImageTexture),
     };
 }

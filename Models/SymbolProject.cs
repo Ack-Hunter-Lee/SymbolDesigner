@@ -131,6 +131,12 @@ public class PrimitiveItemDto
     public string? GradientStartColor { get; set; }
     /// <summary>线性渐变结束色 hex。</summary>
     public string? GradientEndColor { get; set; }
+    /// <summary>填充亮度百分比 0~100（缺省 null → 100）。作用于填充色的 RGB 通道。
+    /// 老工程缺省 → 100（不影响原观感）。</summary>
+    public double? FillBrightness { get; set; }
+    /// <summary>填充透明度百分比 0~100（缺省 null → 100）。作用于填充色的 alpha。
+    /// 老工程缺省 → 100（完全不透明）。注意与元素整体 Opacity（作用于整个图元）是两个独立维度。</summary>
+    public double? FillOpacity { get; set; }
 }
 
 /// <summary>逐顶点接缝样式覆盖（稀疏存储）。Index 指向 VertexThicknesses 中的顶点序号。</summary>

@@ -97,22 +97,43 @@ public partial class PrimitiveItem : ObservableObject
     /// <summary>线条虚线样式（实线/虚线/点线/点划线）。</summary>
     [ObservableProperty] private StrokeDashStyle _strokeDashStyle = StrokeDashStyle.Solid;
 
-    /// <summary>填充方式：无 / 单色 / 线性渐变。</summary>
+    /// <summary>填充方式：无 / 单色 / 线性渐变 / 单色渐变 / 图案 / 图片或纹理。</summary>
     [ObservableProperty] private FillStyle _fillStyle = FillStyle.None;
-    /// <summary>单色填充颜色（FillStyle=Solid 时用）。</summary>
+    /// <summary>单色填充颜色（FillStyle=Solid/MonochromeGradient 时用）。</summary>
     [ObservableProperty] private string _fillColor = "#40FFFFFF";
     /// <summary>线性渐变起始色（FillStyle=Gradient 时用）。</summary>
     [ObservableProperty] private string _gradientStartColor = "#FFFFFFFF";
     /// <summary>线性渐变结束色（FillStyle=Gradient 时用）。</summary>
     [ObservableProperty] private string _gradientEndColor = "#40000000";
 
+    /// <summary>填充亮度百分比 0~100（默认 100 = 原色不变）。
+    /// 作用于 FillColor / GradientStartColor / GradientEndColor（按 RGB 通道 × 系数），不影响描边。
+    /// Pattern / ImageTexture 当前为占位渲染,本字段不参与（待图案/图片引擎接入后再接）。</summary>
+    [ObservableProperty] private double _fillBrightness = 100.0;
+    /// <summary>填充透明度百分比 0~100（默认 100 = 完全不透明）。
+    /// 作用于上述同组色（按 alpha × 系数）。注意：与 PrimitiveItem.Opacity（元素整体透明度）是两条独立链路：
+    /// 本字段只影响填充,不透明度乘法上元素整体仍受 Opacity 控制。</summary>
+    [ObservableProperty] private double _fillOpacity = 100.0;
+
     /// <summary>线条画刷（绑 Stroke）。</summary>
     public System.Windows.Media.Brush? StrokeBrush => Converters.ColorUtil.ParseHex(StrokeColor);
-    /// <summary>填充画刷（绑 Fill）：None → null（WPF 视同不填充，等价透明）。</summary>
+    /// <summary>填充画刷（绑 Fill）：按 FillStyle 分派到不同合成路径。
+    /// None → null（WPF 视同不填充,等价透明）。
+    /// Solid / Gradient / MonochromeGradient → 走"亮度+透明度"合成。
+    /// Pattern / ImageTexture → 当前 UI 框架已就位,具体渲染后续迭代,此处返回 null（不画填充但保留描边）。</summary>
     public System.Windows.Media.Brush? FillBrush => FillStyle switch
     {
-        FillStyle.Solid => Converters.ColorUtil.ParseHex(FillColor),
-        FillStyle.Gradient => Converters.ColorUtil.BuildLinearGradient(GradientStartColor, GradientEndColor),
+        FillStyle.None => null,
+        FillStyle.Solid => Converters.ColorUtil.ParseHex(
+            Converters.ColorUtil.ApplyBrightnessAndOpacity(FillColor, FillBrightness, FillOpacity)),
+        FillStyle.Gradient => Converters.ColorUtil.BuildLinearGradient(
+            Converters.ColorUtil.ApplyBrightnessAndOpacity(GradientStartColor, FillBrightness, FillOpacity),
+            Converters.ColorUtil.ApplyBrightnessAndOpacity(GradientEndColor, FillBrightness, FillOpacity)),
+        // 单色渐变：起始色 = FillColor 经合成；终止色 = 派生（同色更暗 + 更透）。两个色都跟着亮度/透明度走。
+        FillStyle.MonochromeGradient => Converters.ColorUtil.BuildLinearGradient(
+            Converters.ColorUtil.ApplyBrightnessAndOpacity(FillColor, FillBrightness, FillOpacity),
+            Converters.ColorUtil.DeriveMonochromeEnd(FillColor, FillBrightness, FillOpacity)),
+        // Pattern / ImageTexture：框架就位，渲染后续迭代实现 → 暂不画填充
         _ => null,
     };
     /// <summary>线条虚线数组（绑 StrokeDashArray）：Solid → null（实线）。</summary>
@@ -129,6 +150,8 @@ public partial class PrimitiveItem : ObservableObject
     partial void OnFillStyleChanged(FillStyle value) => OnPropertyChanged(nameof(FillBrush));
     partial void OnGradientStartColorChanged(string value) => OnPropertyChanged(nameof(FillBrush));
     partial void OnGradientEndColorChanged(string value) => OnPropertyChanged(nameof(FillBrush));
+    partial void OnFillBrightnessChanged(double value) => OnPropertyChanged(nameof(FillBrush));
+    partial void OnFillOpacityChanged(double value) => OnPropertyChanged(nameof(FillBrush));
     partial void OnStrokeDashStyleChanged(StrokeDashStyle value) => OnPropertyChanged(nameof(StrokeDashArray));
 
     /// <summary>元素可见性（默认 true 可见）。false = 画布上整个元素隐藏

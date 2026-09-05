@@ -23,4 +23,14 @@ public enum FillStyle
     Solid,
     /// <summary>线性渐变填充（GradientStart → GradientEnd）。</summary>
     Gradient,
+    /// <summary>单色渐变填充：起始色=FillColor，结束色自动按亮度衰减 50% 派生。
+    /// 与线性渐变共享起止色渲染管道,但用户只需选一个色——避免"渐变选什么结束色"的困惑。
+    /// 适用于"想看出立体感但不想再选色"的场景。</summary>
+    MonochromeGradient,
+    /// <summary>图案填充（斜线/网格/点阵等 TileBrush）。当前 UI 框架已就位,具体图案后续迭代实现。
+    /// 选中时 FillBrush 返回 null,渲染层不画填充但保留描边(避免元素看不见)。</summary>
+    Pattern,
+    /// <summary>图片或纹理填充（导入本地图片作为 FillBrush）。当前 UI 框架已就位,导入逻辑后续迭代实现。
+    /// 选中时 FillBrush 返回 null,渲染层不画填充但保留描边。</summary>
+    ImageTexture,
 }

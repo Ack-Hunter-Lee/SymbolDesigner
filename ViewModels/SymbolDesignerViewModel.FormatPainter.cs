@@ -76,6 +76,9 @@ public partial class SymbolDesignerViewModel
         target.FillColor = src.FillColor ?? target.FillColor;
         target.GradientStartColor = src.GradientStartColor ?? target.GradientStartColor;
         target.GradientEndColor = src.GradientEndColor ?? target.GradientEndColor;
+        // 亮度/透明度：DTO 是 double?，快照里没存就保持目标现状（保护默认 100）
+        if (src.FillBrightness.HasValue) target.FillBrightness = System.Math.Clamp(src.FillBrightness.Value, 0, 100);
+        if (src.FillOpacity.HasValue) target.FillOpacity = System.Math.Clamp(src.FillOpacity.Value, 0, 100);
 
         EndEdit();
         // 单次模式：应用完退出；连刷模式（Ctrl+按钮）保持激活

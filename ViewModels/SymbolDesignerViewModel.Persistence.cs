@@ -235,6 +235,8 @@ public partial class SymbolDesignerViewModel
             FillColor = p.FillColor,
             GradientStartColor = p.GradientStartColor,
             GradientEndColor = p.GradientEndColor,
+            FillBrightness = p.FillBrightness,
+            FillOpacity = p.FillOpacity,
         };
         if (p.BooleanSourceIds.Count > 0)
         {
@@ -408,6 +410,8 @@ public partial class SymbolDesignerViewModel
             FillColor = string.IsNullOrEmpty(dto.FillColor) ? "#40FFFFFF" : dto.FillColor,
             GradientStartColor = string.IsNullOrEmpty(dto.GradientStartColor) ? "#FFFFFFFF" : dto.GradientStartColor,
             GradientEndColor = string.IsNullOrEmpty(dto.GradientEndColor) ? "#40000000" : dto.GradientEndColor,
+            FillBrightness = dto.FillBrightness is { } b ? System.Math.Clamp(b, 0, 100) : 100.0,
+            FillOpacity = dto.FillOpacity is { } o ? System.Math.Clamp(o, 0, 100) : 100.0,
         };
         // 先设整体 Thickness（触发同步时 VertexThicknesses 尚未填充，不会覆盖任何顶点厚度）
         item.Thickness = dto.Thickness;
