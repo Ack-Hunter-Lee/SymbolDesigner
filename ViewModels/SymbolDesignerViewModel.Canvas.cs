@@ -97,4 +97,96 @@ public partial class SymbolDesignerViewModel
     // 画布尺寸变化时,属性面板的"厚度" Slider 上限需重算(依赖短边)
     partial void OnCanvasWidthChanged(double value) => RecomputeSelectedThicknessMax();
     partial void OnCanvasHeightChanged(double value) => RecomputeSelectedThicknessMax();
+
+    // ============== 屏幕恒定尺寸 token（反缩放后） ==============
+    // 用途：任何缩放下，手柄/提示线在屏幕上的物理尺寸恒为 token 值（屏幕像素）。
+    // 由 CanvasScale 变化时统一重算并 RaisePropertyChanged，
+    // XAML 引用方式：Width="{Binding HandleSizeM}"、StrokeThickness="{Binding StrokeWidthM}" 等，
+    // 不再每处手写 {Binding CanvasScale, Converter={StaticResource DivByScale}, ConverterParameter=X.X}。
+
+    // ── 手柄边长（画布坐标） ──
+    // 档位含义：XS=草稿端点/小标记；S=顶点/普通轮廓点；M=段中点/圆环/选区缩放角；L=转角强调点
+    private double _handleSizeXs = 2.0;
+    public double HandleSizeXs => _handleSizeXs;
+    private double _handleSizeS  = 3.0;
+    public double HandleSizeS  => _handleSizeS;
+    private double _handleSizeM  = 3.5;
+    public double HandleSizeM  => _handleSizeM;
+    private double _handleSizeL  = 5.0;
+    public double HandleSizeL  => _handleSizeL;
+
+    // ── 描边粗细（画布坐标） ──
+    // 档位含义：XS=极细提示线（对象追踪贯穿虚线）；S=默认预览（草稿轨迹/选中装饰）；
+    // M=强调预览（轴对齐激活）；L=粗选中装饰（MultiDataTrigger IsArraySourceClone）
+    private double _strokeWidthXs = 0.4;
+    public double StrokeWidthXs => _strokeWidthXs;
+    private double _strokeWidthS  = 0.5;
+    public double StrokeWidthS  => _strokeWidthS;
+    private double _strokeWidthM  = 1.0;
+    public double StrokeWidthM  => _strokeWidthM;
+    private double _strokeWidthL  = 2.0;
+    public double StrokeWidthL  => _strokeWidthL;
+    // 选中装饰 MultiDataTrigger 用 3.0（粗体强调），与 L 同源但更粗
+    private double _strokeWidthXl = 3.0;
+    public double StrokeWidthXl => _strokeWidthXl;
+
+    // ── 虚线 DashArray（画布坐标，已除 scale） ──
+    // 档位含义：XS=对象追踪贯穿虚线（密）；S=选中装饰虚线；M=草稿轨迹（疏）
+    private DoubleCollection _dashXs = new() { 2.0, 2.0 };
+    public DoubleCollection DashXs => _dashXs;
+    private DoubleCollection _dashS  = new() { 2.0, 1.4 };
+    public DoubleCollection DashS  => _dashS;
+    private DoubleCollection _dashM  = new() { 1.6, 1.2 };
+    public DoubleCollection DashM  => _dashM;
+
+    // ── 反缩放手柄的 RenderTransform 缩放系数（= 1/CanvasScale） ──
+    // XAML 给手柄 / 提示线套 ScaleTransform 时直接绑这个，免去每处写 InvScale 转换器。
+    private double _inverseScale = 1.0;
+    public double InverseScale => _inverseScale;
+
+    /// <summary>CanvasScale 变化时：所有 token 重新按 1/scale 计算并 RaisePropertyChanged。</summary>
+    partial void OnCanvasScaleChanged(double value)
+    {
+        double s = value > 1e-9 ? value : 1.0;
+        double inv = 1.0 / s;
+        bool changed = false;
+        changed |= SetIfDifferent(ref _handleSizeXs, 2.0  * inv);
+        changed |= SetIfDifferent(ref _handleSizeS,  3.0  * inv);
+        changed |= SetIfDifferent(ref _handleSizeM,  3.5  * inv);
+        changed |= SetIfDifferent(ref _handleSizeL,  5.0  * inv);
+        changed |= SetIfDifferent(ref _strokeWidthXs, 0.4 * inv);
+        changed |= SetIfDifferent(ref _strokeWidthS,  0.5 * inv);
+        changed |= SetIfDifferent(ref _strokeWidthM,  1.0 * inv);
+        changed |= SetIfDifferent(ref _strokeWidthL,  2.0 * inv);
+        changed |= SetIfDifferent(ref _strokeWidthXl, 3.0 * inv);
+        changed |= SetIfDifferent(ref _inverseScale,  inv);
+        // DashArray 是 DoubleCollection，整体替换（XAML 绑集合不会原地刷新）
+        _dashXs = new DoubleCollection { 2.0 * inv, 2.0 * inv };
+        _dashS  = new DoubleCollection { 2.0 * inv, 1.4 * inv };
+        _dashM  = new DoubleCollection { 1.6 * inv, 1.2 * inv };
+        if (changed)
+        {
+            OnPropertyChanged(nameof(HandleSizeXs));
+            OnPropertyChanged(nameof(HandleSizeS));
+            OnPropertyChanged(nameof(HandleSizeM));
+            OnPropertyChanged(nameof(HandleSizeL));
+            OnPropertyChanged(nameof(StrokeWidthXs));
+            OnPropertyChanged(nameof(StrokeWidthS));
+            OnPropertyChanged(nameof(StrokeWidthM));
+            OnPropertyChanged(nameof(StrokeWidthL));
+            OnPropertyChanged(nameof(StrokeWidthXl));
+            OnPropertyChanged(nameof(InverseScale));
+        }
+        // 集合属性变化一定要通知（哪怕 changed=false，scale 变了 dash 数值就变了）
+        OnPropertyChanged(nameof(DashXs));
+        OnPropertyChanged(nameof(DashS));
+        OnPropertyChanged(nameof(DashM));
+    }
+
+    private static bool SetIfDifferent(ref double field, double newValue)
+    {
+        if (System.Math.Abs(field - newValue) < 1e-9) return false;
+        field = newValue;
+        return true;
+    }
 }

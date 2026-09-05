@@ -1368,11 +1368,11 @@
                                 <Path.Style>
                                     <Style TargetType="Path">
                                         <Setter Property="Stroke" Value="{StaticResource Brush.State.Accent}" />
-                                        <Setter Property="StrokeThickness" Value="{Binding CanvasScale, Converter={StaticResource DivByScale}, ConverterParameter=0.5}" />
+                                        <Setter Property="StrokeThickness" Value="{Binding StrokeWidthS}" />
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding IsPathSnappingActive}" Value="True">
                                                 <Setter Property="Stroke" Value="{StaticResource Brush.State.Success}" />
-                                                <Setter Property="StrokeThickness" Value="{Binding CanvasScale, Converter={StaticResource DivByScale}, ConverterParameter=1.0}" />
+                                                <Setter Property="StrokeThickness" Value="{Binding StrokeWidthM}" />
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
@@ -1391,8 +1391,8 @@
                                 IsHitTestVisible="False"
                                 Stretch="None"
                                 Stroke="{StaticResource Brush.State.Warn}"
-                                StrokeDashArray="{Binding CanvasScale, Converter={StaticResource DivDashByScale}, ConverterParameter='2.0,2.0'}"
-                                StrokeThickness="{Binding CanvasScale, Converter={StaticResource DivByScale}, ConverterParameter=0.4}"
+                                StrokeDashArray="{Binding DashXs}"
+                                StrokeThickness="{Binding StrokeWidthXs}"
                                 X1="{Binding ObjectSnapTrackingX}"
                                 X2="{Binding ObjectSnapTrackingX}"
                                 Y1="0"
@@ -1402,8 +1402,8 @@
                                 IsHitTestVisible="False"
                                 Stretch="None"
                                 Stroke="{StaticResource Brush.State.Warn}"
-                                StrokeDashArray="{Binding CanvasScale, Converter={StaticResource DivDashByScale}, ConverterParameter='2.0,2.0'}"
-                                StrokeThickness="{Binding CanvasScale, Converter={StaticResource DivByScale}, ConverterParameter=0.4}"
+                                StrokeDashArray="{Binding DashXs}"
+                                StrokeThickness="{Binding StrokeWidthXs}"
                                 X1="0"
                                 X2="{Binding CanvasWidth}"
                                 Y1="{Binding ObjectSnapTrackingY}"
@@ -1425,7 +1425,7 @@
                                 IsHitTestVisible="False"
                                 Stretch="None"
                                 Stroke="{StaticResource Brush.State.AccentBorder}"
-                                StrokeThickness="{Binding CanvasScale, Converter={StaticResource DivByScale}, ConverterParameter=1.2}"
+                                StrokeThickness="{Binding StrokeWidthM}"
                                 Visibility="{Binding IsShapePreviewVisible, Converter={StaticResource BoolToVis}}" />
 
                             <!--
@@ -1467,8 +1467,8 @@
                                             StrokeThickness="0.1">
                                             <Rectangle.RenderTransform>
                                                 <ScaleTransform
-                                                    ScaleX="{Binding CurrentScale, RelativeSource={RelativeSource AncestorType=controls:ZoomPanViewport}, Converter={StaticResource InvScale}}"
-                                                    ScaleY="{Binding CurrentScale, RelativeSource={RelativeSource AncestorType=controls:ZoomPanViewport}, Converter={StaticResource InvScale}}" />
+                                                    ScaleX="{Binding InverseScale}"
+                                                    ScaleY="{Binding InverseScale}" />
                                             </Rectangle.RenderTransform>
                                         </Rectangle>
                                     </DataTemplate>
@@ -1743,8 +1743,8 @@
                                             ToolTip="拖拽以编辑顶点">
                                             <Rectangle.RenderTransform>
                                                 <ScaleTransform
-                                                    ScaleX="{Binding CurrentScale, RelativeSource={RelativeSource AncestorType=controls:ZoomPanViewport}, Converter={StaticResource InvScale}}"
-                                                    ScaleY="{Binding CurrentScale, RelativeSource={RelativeSource AncestorType=controls:ZoomPanViewport}, Converter={StaticResource InvScale}}" />
+                                                    ScaleX="{Binding InverseScale}"
+                                                    ScaleY="{Binding InverseScale}" />
                                             </Rectangle.RenderTransform>
                                         </Rectangle>
                                     </DataTemplate>
@@ -1791,8 +1791,8 @@
                                             ToolTip="拖拽以平移整段线段（保持长度）">
                                             <Rectangle.RenderTransform>
                                                 <ScaleTransform
-                                                    ScaleX="{Binding CurrentScale, RelativeSource={RelativeSource AncestorType=controls:ZoomPanViewport}, Converter={StaticResource InvScale}}"
-                                                    ScaleY="{Binding CurrentScale, RelativeSource={RelativeSource AncestorType=controls:ZoomPanViewport}, Converter={StaticResource InvScale}}" />
+                                                    ScaleX="{Binding InverseScale}"
+                                                    ScaleY="{Binding InverseScale}" />
                                             </Rectangle.RenderTransform>
                                         </Rectangle>
                                     </DataTemplate>
@@ -1839,8 +1839,8 @@
                                             StrokeThickness="0.1">
                                             <Path.RenderTransform>
                                                 <ScaleTransform
-                                                    ScaleX="{Binding CurrentScale, RelativeSource={RelativeSource AncestorType=controls:ZoomPanViewport}, Converter={StaticResource InvScale}}"
-                                                    ScaleY="{Binding CurrentScale, RelativeSource={RelativeSource AncestorType=controls:ZoomPanViewport}, Converter={StaticResource InvScale}}" />
+                                                    ScaleX="{Binding InverseScale}"
+                                                    ScaleY="{Binding InverseScale}" />
                                             </Path.RenderTransform>
                                             <Path.Style>
                                                 <Style TargetType="Path">
@@ -1902,8 +1902,8 @@
                                             StrokeThickness="0.1">
                                             <Rectangle.RenderTransform>
                                                 <ScaleTransform
-                                                    ScaleX="{Binding CurrentScale, RelativeSource={RelativeSource AncestorType=controls:ZoomPanViewport}, Converter={StaticResource InvScale}}"
-                                                    ScaleY="{Binding CurrentScale, RelativeSource={RelativeSource AncestorType=controls:ZoomPanViewport}, Converter={StaticResource InvScale}}" />
+                                                    ScaleX="{Binding InverseScale}"
+                                                    ScaleY="{Binding InverseScale}" />
                                             </Rectangle.RenderTransform>
                                             <Rectangle.Style>
                                                 <Style TargetType="Rectangle">
@@ -1968,8 +1968,8 @@
                                         <Grid Cursor="Hand" RenderTransformOrigin="0.5,0.5" Tag="{Binding Index}">
                                             <Grid.RenderTransform>
                                                 <ScaleTransform
-                                                    ScaleX="{Binding CurrentScale, RelativeSource={RelativeSource AncestorType=controls:ZoomPanViewport}, Converter={StaticResource InvScale}}"
-                                                    ScaleY="{Binding CurrentScale, RelativeSource={RelativeSource AncestorType=controls:ZoomPanViewport}, Converter={StaticResource InvScale}}" />
+                                                    ScaleX="{Binding InverseScale}"
+                                                    ScaleY="{Binding InverseScale}" />
                                             </Grid.RenderTransform>
                                             <Grid.Style>
                                                 <Style TargetType="Grid">
@@ -2047,7 +2047,7 @@
                                     StrokeEndLineCap="Round"
                                     StrokeLineJoin="Round"
                                     StrokeStartLineCap="Round"
-                                    StrokeThickness="{Binding CanvasScale, Converter={StaticResource DivByScale}, ConverterParameter=0.8}" />
+                                    StrokeThickness="{Binding StrokeWidthM}" />
                             </Canvas>
 
                             <!--
@@ -2106,8 +2106,8 @@
                                             StrokeThickness="0.1">
                                             <Rectangle.RenderTransform>
                                                 <ScaleTransform
-                                                    ScaleX="{Binding CurrentScale, RelativeSource={RelativeSource AncestorType=controls:ZoomPanViewport}, Converter={StaticResource InvScale}}"
-                                                    ScaleY="{Binding CurrentScale, RelativeSource={RelativeSource AncestorType=controls:ZoomPanViewport}, Converter={StaticResource InvScale}}" />
+                                                    ScaleX="{Binding InverseScale}"
+                                                    ScaleY="{Binding InverseScale}" />
                                             </Rectangle.RenderTransform>
                                         </Rectangle>
                                     </DataTemplate>
