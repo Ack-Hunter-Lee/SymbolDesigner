@@ -241,6 +241,21 @@ public partial class SymbolDesignerViewModel
 
     // —— 缩放手势：DragStarted / DragDelta / DragCompleted 三阶段 ——
 
+    /// <summary>多选整体平移：拖动 MultiSelected 中任一元件 → 全体成员同增量平移（相对位置不变）。
+    /// 仅当 MultiSelected.Count ≥ 2 且目标在其中时生效；否则返回 false，由 DraggablePrimitive 走单图元拖动。
+    /// 整体平移语义下不应用单图元约束（相切/重合等）；X/Y 绑定自动刷新画布位置 + 选区包围盒。</summary>
+    public bool TryMoveMultiSelection(PrimitiveItem primary, double dx, double dy)
+    {
+        if (MultiSelected.Count < 2 || !MultiSelected.Contains(primary)) return false;
+        foreach (var p in MultiSelected)
+        {
+            p.X += dx;
+            p.Y += dy;
+        }
+        RefreshScaleSelectionHandles();
+        return true;
+    }
+
     /// <summary>缩放手势开始：快照所有目标图元几何 + 保存对角锚点 + 起始鼠标距离。
     /// 一次性 BeginEdit,整个拖动手势合并为一次撤销步骤。</summary>
     public void BeginScaleSelection(ScaleCorner corner, Point anchor, Point startMouse)

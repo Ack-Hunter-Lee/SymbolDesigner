@@ -77,6 +77,11 @@ public class DraggablePrimitive : ContentControl
             return;
         }
 
+        // 多选整体平移：拖动 MultiSelected 中任一成员 → 全体同增量移动（相对位置保持不变）。
+        // 该成员本身也由 TryMoveMultiSelection 平移,避免与下面单图元移动重复。
+        if (vm is not null && vm.TryMoveMultiSelection(item, e.HorizontalChange, e.VerticalChange))
+            return;
+
         // 直接改数据源（OneWay Binding 会自动把 Canvas.Left/Top 同步过来）
         item.X += e.HorizontalChange;
         item.Y += e.VerticalChange;
