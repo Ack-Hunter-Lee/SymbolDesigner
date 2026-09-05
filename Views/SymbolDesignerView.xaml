@@ -920,32 +920,32 @@
                         IsEnabled 绑 CanPickFormat（未选中图元时禁用，文字框聚焦时也不拦截 Ctrl+C/V）。
                     -->
                     <Border
-                        BorderBrush="#FF0000"
-                        BorderThickness="1"
+                        IsEnabled="{Binding CanPickFormat}"
                         MouseLeftButtonDown="OnFormatPainterClick"
                         Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
                         ToolTip="格式刷 (选中图元后点此按钮吸取样式, 再点其它图元即应用。Ctrl+点击进入连刷模式)">
-                        <!--  直接走 Style="..." 属性简化（之前用 Border.Style 嵌套 Style.BasedOn 会让 Style.Trigger 与属性值求值顺序混乱）  -->
                         <Border.Style>
                             <Style BasedOn="{StaticResource ToolIconButton}" TargetType="Border">
                                 <Style.Triggers>
                                     <Trigger Property="IsEnabled" Value="False">
                                         <Setter Property="Opacity" Value="0.35" />
                                     </Trigger>
-                                    <!--  激活态：背景变深蓝灰 + 边框亮蓝（与左侧绘图工具激活态一致）  -->
+                                    <!--  激活态：背景变深蓝灰（与左侧绘图工具激活态一致）  -->
                                     <DataTrigger Binding="{Binding IsFormatPainterActive}" Value="True">
-                                        <Setter Property="Background" Value="#1a2a3a" />
+                                        <Setter Property="Background" Value="{StaticResource Brush.Tool.HoverBlue}" />
                                         <Setter Property="Opacity" Value="1.0" />
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </Border.Style>
-                        <!--
-                            字符图标：E8B6 = EditMirrored（画笔形）。
-                            用 Segoe MDL2 字符而不用 Viewbox 自绘 — Viewbox + Canvas 在
-                            ItemsControl + WrapPanel 嵌套下某些 WPF 渲染路径图标不可见。
-                        -->
-                        <TextBlock Style="{StaticResource ToolIconGlyph}" Text="&#xE8B6;" />
+                        <!--  格式刷图标（用户自绘）：刷头 + 斜刷柄 + 手柄，Viewbox 等比缩放撑满 16×16。  -->
+                        <Viewbox Width="16" Height="16" Stretch="Uniform">
+                            <Canvas Width="40.19" Height="67.82">
+                                <Rectangle Canvas.Left="0" Canvas.Top="0" Width="33.34" Height="9.59" Panel.ZIndex="0" Fill="#a8c4d8" Stroke="#5a7a8c" StrokeThickness="0.8" />
+                                <Path Canvas.Left="17.81" Canvas.Top="4.11" Data="M15.53,0L22.38,0 22.38,10.28 0,18.04 0,31.51" Panel.ZIndex="1" Stroke="#5a7a8c" StrokeThickness="0.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Stretch="None" />
+                                <Rectangle Canvas.Left="14.16" Canvas.Top="35.62" Width="7.31" Height="32.2" Panel.ZIndex="2" Fill="#a8c4d8" Stroke="#5a7a8c" StrokeThickness="0.8" />
+                            </Canvas>
+                        </Viewbox>
                     </Border>
 
                     <!--  视觉分隔  -->
