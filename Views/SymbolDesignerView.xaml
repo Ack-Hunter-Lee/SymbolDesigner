@@ -963,6 +963,15 @@
                         ToolTip="加载工程 (.sym.json)">
                         <TextBlock Style="{StaticResource ToolIconGlyph}" Text="&#xE8E5;" />
                     </Border>
+                    <!--  导入 SVG：支持基本几何 + 折线 + path（曲线自动降采样）。
+                          仅导入几何,不导入渐变/滤镜/文字。toolTip="导入 SVG 文件"  -->
+                    <Border
+                        MouseLeftButtonDown="OnImportSvgClick"
+                        Style="{StaticResource ToolIconButton}"
+                        Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
+                        ToolTip="导入 SVG (支持 rect/circle/ellipse/line/polyline/polygon/path,曲线自动降采样)">
+                        <TextBlock Style="{StaticResource ToolIconGlyph}" Text="&#xE8B5;" />
+                    </Border>
                     <!--  保存: Segoe MDL2 Assets E74E (Save)  -->
                     <Border
                         MouseLeftButtonDown="OnSaveProjectClick"

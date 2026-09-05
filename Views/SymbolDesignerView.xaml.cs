@@ -287,6 +287,22 @@ public partial class SymbolDesignerView : UserControl
             vm.LoadProjectCommand.Execute(null);
     }
 
+    /// <summary>导入 SVG 按钮：弹文件选择框 → 调 VM.ImportSvgCommand 解析入画布。
+    /// MVP 范围:仅基本几何元素(矩形/圆/椭圆/线/折线/路径),曲线自动降采样。
+    /// 不支持(留作后续迭代):渐变/滤镜/图案/文字/图片。</summary>
+    private void OnImportSvgClick(object sender, MouseButtonEventArgs e)
+    {
+        if (DataContext is not SymbolDesignerViewModel vm) return;
+
+        var dlg = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "导入 SVG 文件",
+            Filter = "SVG 文件 (*.svg)|*.svg|所有文件 (*.*)|*.*",
+        };
+        if (dlg.ShowDialog(Window.GetWindow(this)) != true) return;
+        vm.ImportSvgCommand.Execute(dlg.FileName);
+    }
+
     // ============== 背景参考图 ==============
 
     /// <summary>导入背景图：弹文件选择框 → 调用 VM.LoadBackgroundImage。</summary>
