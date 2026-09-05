@@ -463,16 +463,18 @@
                     </Path>
                     <!--
                         闭合形态：骨架点直连单环，形成可填充的闭合多边形（复用 ThickPolyline 的 OutlineGeometry 管道，
-                        仅轮廓点生成方式不同——Polyline 无厚度偏移）。填充半透明白 + 细描边，与粗折线观感一致。
+                        仅轮廓点生成方式不同——Polyline 无厚度偏移）。
+                        绑 FillBrush / StrokeBrush：与 ThickPolyline 同一管道，属性面板调填充色/描边色都能实时反映。
                     -->
                     <Path Data="{Binding OutlineGeometry}" Stretch="None">
                         <Path.Style>
                             <Style TargetType="Path">
                                 <Setter Property="Visibility" Value="Collapsed" />
-                                <Setter Property="Stroke" Value="{StaticResource Brush.Outline.Stroke}" />
-                                <Setter Property="StrokeThickness" Value="0.2" />
+                                <Setter Property="Stroke" Value="{Binding StrokeBrush}" />
+                                <Setter Property="StrokeThickness" Value="{Binding StrokeWidth}" />
+                                <Setter Property="StrokeDashArray" Value="{Binding StrokeDashArray}" />
                                 <Setter Property="StrokeLineJoin" Value="Miter" />
-                                <Setter Property="Fill" Value="{StaticResource Brush.Outline.Fill}" />
+                                <Setter Property="Fill" Value="{Binding FillBrush}" />
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsClosed}" Value="True">
                                         <Setter Property="Visibility" Value="Visible" />
@@ -3363,7 +3365,7 @@
                                             <CheckBox
                                                 Margin="0,2,0,4"
                                                 VerticalAlignment="Center"
-                                                Content="闭合形状（填充多边形）"
+                                                Content="闭合形状（可填充多边形）"
                                                 FontSize="10"
                                                 Foreground="#a8c4d8"
                                                 IsChecked="{Binding SelectedItem.IsClosed, Mode=TwoWay}" />
