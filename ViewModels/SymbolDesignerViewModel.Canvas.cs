@@ -26,6 +26,27 @@ public partial class SymbolDesignerViewModel
     /// 放在 VM 上是因 XAML Style Setter 内不能用 ElementName 绑定，只能绑 DataContext 属性。</summary>
     [ObservableProperty] private double _canvasScale = 1.0;
 
+    // ============== 状态栏只读信息（CAD 风格：缩放/平移/视口/渲染/光标位置，实时刷新） ==============
+
+    /// <summary>视口物理像素宽（= ZoomPanViewport.ActualWidth，中间列实际宽度）。code-behind 同步。</summary>
+    [ObservableProperty] private double _viewportWidth = 0;
+
+    /// <summary>视口物理像素高。</summary>
+    [ObservableProperty] private double _viewportHeight = 0;
+
+    /// <summary>画布渲染像素宽（= CanvasWidth × CanvasScale）。</summary>
+    [ObservableProperty] private double _renderWidth = 0;
+
+    /// <summary>画布渲染像素高。</summary>
+    [ObservableProperty] private double _renderHeight = 0;
+
+    /// <summary>鼠标在画布逻辑坐标系下的 X 坐标（= (屏幕 X - 居中偏移 - PanX) / scale）。
+    /// code-behind 在 CanvasHost.MouseMove 时同步。null = 鼠标不在画布上。</summary>
+    [ObservableProperty] private double? _cursorX;
+
+    /// <summary>鼠标在画布逻辑坐标系下的 Y 坐标。</summary>
+    [ObservableProperty] private double? _cursorY;
+
     // ============== 画布背景色(用户可切换;默认跟随主题 Brush.Bg.Canvas) ==============
 
     /// <summary>画布背景颜色(hex)。默认 = 主题 Brush.Bg.Canvas 色值。

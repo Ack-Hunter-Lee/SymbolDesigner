@@ -48,14 +48,64 @@ public partial class SymbolDesignerView : UserControl
 
     private void OnCurrentScaleChanged(object? sender, EventArgs e) => SyncCanvasScale();
 
-    /// <summary>把 ZoomPanViewport.CurrentScale 同步到 VM.CanvasScale（值变化才写，避免无效通知）。</summary>
+    /// <summary>把 ZoomPanViewport 状态同步到 VM（CanvasScale + 状态栏字段）。
+    /// 任何缩放/平移/窗口尺寸变化都通过 CurrentScale 回调触发，状态栏保持实时。</summary>
     private void SyncCanvasScale()
     {
-        if (ZoomPan is Controls.ZoomPanViewport { CurrentScale: var s } zp &&
-            DataContext is ViewModels.SymbolDesignerViewModel vm)
-        {
-            if (Math.Abs(s - vm.CanvasScale) > 1e-9) vm.CanvasScale = s;
-        }
+        if (ZoomPan is not Controls.ZoomPanViewport zp ||
+            DataContext is not ViewModels.SymbolDesignerViewModel vm) return;
+
+        double s = zp.CurrentScale;
+        if (Math.Abs(s - vm.CanvasScale) > 1e-9) vm.CanvasScale = s;
+
+        // 视口尺寸（availW/availH）
+        if (Math.Abs(zp.ActualWidth - vm.ViewportWidth) > 0.5) vm.ViewportWidth = zp.ActualWidth;
+        if (Math.Abs(zp.ActualHeight - vm.ViewportHeight) > 0.5) vm.ViewportHeight = zp.ActualHeight;
+
+        // 画布渲染尺寸（cw*s × ch*s）
+        double cw = zp.ContentWidth;
+        double ch = zp.ContentHeight;
+        double renderW = cw * s;
+        double renderH = ch * s;
+        if (Math.Abs(renderW - vm.RenderWidth) > 0.5) vm.RenderWidth = renderW;
+        if (Math.Abs(renderH - vm.RenderHeight) > 0.5) vm.RenderHeight = renderH;
+
+        // 鼠标画布逻辑坐标（如有已记录的屏幕坐标，这里再算一遍）
+        UpdateCursorFromLastScreen();
+    }
+
+    private System.Windows.Point _lastCanvasScreen;
+    private bool _hasLastCursor;
+
+    /// <summary>在 CanvasHost.MouseMove 中调用，记录鼠标屏幕位置；同时计算并同步到 VM 的 CursorX/Y。</summary>
+    public void OnCanvasCursorMove(System.Windows.Point screenPos)
+    {
+        _lastCanvasScreen = screenPos;
+        _hasLastCursor = true;
+        UpdateCursorFromLastScreen();
+    }
+
+    /// <summary>用最新的屏幕坐标和当前 ZoomPan 状态算出画布逻辑坐标，写到 VM。
+    /// 公式：logicX = (screenX - cx - PanX) / scale，cx = (availW - cw*scale) * 0.5。</summary>
+    private void UpdateCursorFromLastScreen()
+    {
+        if (!_hasLastCursor) return;
+        if (ZoomPan is not Controls.ZoomPanViewport zp ||
+            DataContext is not ViewModels.SymbolDesignerViewModel vm) return;
+
+        double availW = zp.ActualWidth;
+        double availH = zp.ActualHeight;
+        double cw = zp.ContentWidth;
+        double ch = zp.ContentHeight;
+        double scale = zp.CurrentScale;
+        if (availW <= 0 || availH <= 0 || cw <= 0 || ch <= 0 || scale <= 1e-9) return;
+
+        double cx = (availW - cw * scale) * 0.5;
+        double cy = (availH - ch * scale) * 0.5;
+        double lx = (_lastCanvasScreen.X - cx - zp.PanX) / scale;
+        double ly = (_lastCanvasScreen.Y - cy - zp.PanY) / scale;
+        if (Math.Abs(lx - (vm.CursorX ?? double.NaN)) > 0.5) vm.CursorX = lx;
+        if (Math.Abs(ly - (vm.CursorY ?? double.NaN)) > 0.5) vm.CursorY = ly;
     }
 
     /// <summary>VM 触发"快速定位"事件 → 把视口中心平移到该元素画布中心。
@@ -573,6 +623,10 @@ public partial class SymbolDesignerView : UserControl
     /// 否则画线模式下更新橡皮线终点（实时预览下一段）。右键框选中则更新选区矩形。</summary>
     private void OnCanvasDrawMouseMove(object sender, MouseEventArgs e)
     {
+        // 状态栏光标位置：把鼠标在画布坐标系下的逻辑坐标写到 VM（任何时候都更新，不影响主流程）
+        if (sender is System.Windows.IInputElement ie && ZoomPan is not null)
+            OnCanvasCursorMove(e.GetPosition(ZoomPan));
+
         // 右键框选中：优先更新选区矩形（不经过左键平移/画线分支）
         if (_isMarqueeSelecting)
         {

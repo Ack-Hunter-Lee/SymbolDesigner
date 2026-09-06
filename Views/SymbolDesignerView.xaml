@@ -1317,15 +1317,6 @@
                                     </Style.Triggers>
                                 </Style>
                             </Grid.Style>
-
-                            <!--
-                                背景参考图（描图用的底层图片）。
-                                作为 CanvasHost 的第一个子元素 → 位于所有元素最下层；
-                                IsHitTestVisible=False → 不接收鼠标事件，不会干扰拖入/选择。
-                                Stretch 默认 Uniform → 按画布比例缩放（贴边不裁切）。
-                                CanvasSize 模式：Width/Height 绑定画布尺寸，整张图填满画布。
-                                ImageSize 模式：Width/Height 解绑 → 按图片 1:1 显示。
-                            -->
                             <Image
                                 IsHitTestVisible="False"
                                 Opacity="{Binding BackgroundOpacity}"
@@ -1353,12 +1344,6 @@
                                 </Image.Style>
                             </Image>
 
-                            <!--
-                                画线工具的实时草稿预览（ThickPolyline / Line 模式下显示）。
-                                默认蓝青色（Brush.State.Accent）；当接近水平/竖直吸附（IsPathSnappingActive=true）时
-                                变绿色（Brush.State.Success）+ 加粗（1.0），让用户感知到"现在被锁定到水平/竖直"。
-                                形状模式有独立预览 Path，不走这里。
-                            -->
                             <Path
                                 Data="{Binding DraftPathData}"
                                 Fill="Transparent"
@@ -2407,12 +2392,35 @@
                 </Grid>
             </Border>
 
-            <TextBlock
+            <!--  底栏：实时状态信息（CAD 风格：缩放 / 平移 / 视口 / 渲染 / 光标位置）  -->
+            <Border
                 Grid.Row="2"
-                Margin="4,8,0,0"
-                FontSize="10"
-                Foreground="#546e7a"
-                Text="提示：从左侧 L1 / L2 工具栏拖入图形到右侧画布，点击图形可选中，工具栏可删除选中或全部清空。" />
+                Margin="4,4,4,0"
+                Padding="8,4"
+                Background="{StaticResource Brush.Bg.Panel}"
+                BorderBrush="{StaticResource Brush.Border.Subtle}"
+                BorderThickness="0,1,0,0"
+                CornerRadius="2">
+                <StackPanel Orientation="Horizontal">
+                    <!--  缩放倍率  -->
+                    <TextBlock FontSize="10" Foreground="{StaticResource Brush.Text.Secondary}" VerticalAlignment="Center">
+                        <Run Text="缩放 " /><Run FontWeight="Bold" Text="{Binding ZoomLevel, Mode=OneWay, StringFormat={}{0:P0}}" />
+                    </TextBlock>
+                    <TextBlock Margin="12,0,0,0" FontSize="10" Foreground="{StaticResource Brush.Text.Secondary}" VerticalAlignment="Center">
+                        <Run Text="平移 " /><Run FontWeight="Bold" Text="{Binding PanX, Mode=OneWay, StringFormat={}{0:0}}" /><Run Text=", " /><Run FontWeight="Bold" Text="{Binding PanY, Mode=OneWay, StringFormat={}{0:0}}" />
+                    </TextBlock>
+                    <TextBlock Margin="12,0,0,0" FontSize="10" Foreground="{StaticResource Brush.Text.Secondary}" VerticalAlignment="Center">
+                        <Run Text="视口 " /><Run FontWeight="Bold" Text="{Binding ViewportWidth, Mode=OneWay, StringFormat={}{0:0}}" /><Run Text=" × " /><Run FontWeight="Bold" Text="{Binding ViewportHeight, Mode=OneWay, StringFormat={}{0:0}}" />
+                    </TextBlock>
+                    <TextBlock Margin="12,0,0,0" FontSize="10" Foreground="{StaticResource Brush.Text.Secondary}" VerticalAlignment="Center">
+                        <Run Text="渲染 " /><Run FontWeight="Bold" Text="{Binding RenderWidth, Mode=OneWay, StringFormat={}{0:0}}" /><Run Text=" × " /><Run FontWeight="Bold" Text="{Binding RenderHeight, Mode=OneWay, StringFormat={}{0:0}}" />
+                    </TextBlock>
+                    <TextBlock Margin="12,0,0,0" FontSize="10" Foreground="{StaticResource Brush.Text.Secondary}" VerticalAlignment="Center">
+                        <Run Text="光标 " /><Run FontWeight="Bold" Text="{Binding CursorX, Mode=OneWay, StringFormat={}{0:0}}" /><Run Text=", " /><Run FontWeight="Bold" Text="{Binding CursorY, Mode=OneWay, StringFormat={}{0:0}}" />
+                    </TextBlock>
+                    <TextBlock Margin="12,0,0,0" FontSize="10" Foreground="{StaticResource Brush.Text.Secondary}" VerticalAlignment="Center" Text="提示：从左侧 L1 / L2 工具栏拖入图形到右侧画布，点击图形可选中，工具栏可删除选中或全部清空。" />
+                </StackPanel>
+            </Border>
         </Grid>
 
         <!--  右侧：属性 / 元素 两页（抽屉式：窄把手 + 可伸缩内容区。元素页用于排查画布上不可见的多余元素）  -->
