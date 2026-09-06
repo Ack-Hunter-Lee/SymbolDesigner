@@ -30,6 +30,16 @@ public class ToolboxEntry
 /// <summary>
 /// 画布上的单个图形实例。每个元件（设备）由多个 PrimitiveItem 组合而成。
 /// X/Y/Width/Height 均为画布坐标（默认画布 1920×1080）。
+///
+/// 画布形式（CAD 风格，与 PowerPoint/Visio 一致）：
+/// - 画布逻辑尺寸固定 1920×1080（不论主窗口多大，逻辑坐标永远不变）
+/// - "作画区域" = 主窗口中间列，由 Grid.* 列宽自动适配主窗口大小
+/// - 画布物理渲染尺寸 = 作画区域内 FitRatio×作画区域（默认 FitRatio=1.0，完全铺满）
+/// - 缩放控制：滚轮/工具栏缩放 ZoomLevel（0.25~4.0）
+/// - 平移：Space+拖动 / 中键拖动（按 PanX/PanY）
+/// - 缩放/平移通过 RenderTransform 实现（不是 Viewbox）
+///
+/// 调试：实时可用视口尺寸 + 缩放/平移值显示在右下角调试标签。
 /// </summary>
 public partial class PrimitiveItem : ObservableObject
 {

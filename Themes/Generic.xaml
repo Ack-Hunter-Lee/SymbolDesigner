@@ -23,28 +23,10 @@
     </LinearGradientBrush>
 
     <!--
-        ZoomPanViewport 默认样式：Border(裁剪) + ContentPresenter(PART_ContentHost)。
-        ContentPresenter 应用 RenderTransform 实现缩放/平移；Left/Top 对齐保证变换锚点在内容左上角。
+        ZoomPanViewport 现在是 Decorator：没有 ControlTemplate，Child 即传入内容。
+        如果未来需要默认样式（Border/Background/ClipToBounds 等），可在调用方用 Border 包裹 ZoomPanViewport，
+        或重新添加此 Style。
     -->
-    <Style TargetType="{x:Type controls:ZoomPanViewport}">
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="{x:Type controls:ZoomPanViewport}">
-                    <Border Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            ClipToBounds="True">
-                        <ContentPresenter x:Name="PART_ContentHost"
-                                          HorizontalAlignment="Left"
-                                          VerticalAlignment="Top"
-                                          RenderTransformOrigin="0,0"
-                                          Content="{TemplateBinding Content}"
-                                          ContentTemplate="{TemplateBinding ContentTemplate}" />
-                    </Border>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
 
     <!--
         DraggablePrimitive 默认样式：内含 Thumb（拖动手柄）+ ContentPresenter（图形）+ 选中高亮边框。
