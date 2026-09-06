@@ -40,6 +40,13 @@ public partial class SymbolDesignerViewModel
     /// <summary>画布渲染像素高。</summary>
     [ObservableProperty] private double _renderHeight = 0;
 
+    /// <summary>画布在视口内的物理左偏移（真实"左边距"，px）= 自动居中偏移 cx + 用户平移 PanX。
+    /// code-behind 根据视口尺寸/缩放/平移实时计算。打开即反映画布相对视口的实际位置，不再固定 0。</summary>
+    [ObservableProperty] private double _canvasLeft = 0;
+
+    /// <summary>画布在视口内的物理上偏移（真实"上边距"，px）= 自动居中偏移 cy + 用户平移 PanY。</summary>
+    [ObservableProperty] private double _canvasTop = 0;
+
     /// <summary>鼠标在画布逻辑坐标系下的 X 坐标（= (屏幕 X - 居中偏移 - PanX) / scale）。
     /// code-behind 在 CanvasHost.MouseMove 时同步。null = 鼠标不在画布上。</summary>
     [ObservableProperty] private double? _cursorX;

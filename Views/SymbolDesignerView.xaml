@@ -2406,8 +2406,8 @@
                     <TextBlock FontSize="10" Foreground="{StaticResource Brush.Text.Secondary}" VerticalAlignment="Center">
                         <Run Text="缩放 " /><Run FontWeight="Bold" Text="{Binding ZoomLevel, Mode=OneWay, StringFormat={}{0:P0}}" />
                     </TextBlock>
-                    <TextBlock Margin="12,0,0,0" FontSize="10" Foreground="{StaticResource Brush.Text.Secondary}" VerticalAlignment="Center">
-                        <Run Text="平移 " /><Run FontWeight="Bold" Text="{Binding PanX, Mode=OneWay, StringFormat={}{0:0}}" /><Run Text=", " /><Run FontWeight="Bold" Text="{Binding PanY, Mode=OneWay, StringFormat={}{0:0}}" />
+                    <TextBlock Margin="12,0,0,0" FontSize="10" Foreground="{StaticResource Brush.Text.Secondary}" VerticalAlignment="Center" ToolTip="画布在视口内的真实左边距 / 上边距（含自动居中偏移，单位 px）。居中时四周留白，值为正。">
+                        <Run Text="平移 " /><Run FontWeight="Bold" Text="{Binding CanvasLeft, Mode=OneWay, StringFormat={}{0:0}}" /><Run Text=", " /><Run FontWeight="Bold" Text="{Binding CanvasTop, Mode=OneWay, StringFormat={}{0:0}}" />
                     </TextBlock>
                     <TextBlock Margin="12,0,0,0" FontSize="10" Foreground="{StaticResource Brush.Text.Secondary}" VerticalAlignment="Center">
                         <Run Text="视口 " /><Run FontWeight="Bold" Text="{Binding ViewportWidth, Mode=OneWay, StringFormat={}{0:0}}" /><Run Text=" × " /><Run FontWeight="Bold" Text="{Binding ViewportHeight, Mode=OneWay, StringFormat={}{0:0}}" />

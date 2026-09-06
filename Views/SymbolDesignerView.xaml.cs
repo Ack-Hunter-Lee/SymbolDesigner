@@ -38,15 +38,25 @@ public partial class SymbolDesignerView : UserControl
         };
         // ZoomPanViewport.CurrentScale → VM.CanvasScale 同步（预览线/端点"视觉恒定反缩放"）。
         // 不能用 Style Setter 的 ElementName 绑定，这里用 DP 变更回调桥接。
+        // 缩放、平移 PanX/Y、视口尺寸任一变化都要重算状态栏（含真实左/上偏移），所以统一走 SyncCanvasScale。
         _scaleDescriptor = System.ComponentModel.DependencyPropertyDescriptor.FromProperty(
             Controls.ZoomPanViewport.CurrentScaleProperty, typeof(Controls.ZoomPanViewport));
-        _scaleDescriptor.AddValueChanged(ZoomPan, OnCurrentScaleChanged);
+        _scaleDescriptor.AddValueChanged(ZoomPan, OnTransformChanged);
+        _panXDescriptor = System.ComponentModel.DependencyPropertyDescriptor.FromProperty(
+            Controls.ZoomPanViewport.PanXProperty, typeof(Controls.ZoomPanViewport));
+        _panXDescriptor.AddValueChanged(ZoomPan, OnTransformChanged);
+        _panYDescriptor = System.ComponentModel.DependencyPropertyDescriptor.FromProperty(
+            Controls.ZoomPanViewport.PanYProperty, typeof(Controls.ZoomPanViewport));
+        _panYDescriptor.AddValueChanged(ZoomPan, OnTransformChanged);
+        ZoomPan.SizeChanged += (_, _) => SyncCanvasScale();  // 视口尺寸变化（窗口缩放/抽屉开合）
         Loaded += (_, _) => SyncCanvasScale();  // 首帧布局后把初始 scale 同步过去
     }
 
     private readonly System.ComponentModel.DependencyPropertyDescriptor _scaleDescriptor;
+    private readonly System.ComponentModel.DependencyPropertyDescriptor _panXDescriptor;
+    private readonly System.ComponentModel.DependencyPropertyDescriptor _panYDescriptor;
 
-    private void OnCurrentScaleChanged(object? sender, EventArgs e) => SyncCanvasScale();
+    private void OnTransformChanged(object? sender, EventArgs e) => SyncCanvasScale();
 
     /// <summary>把 ZoomPanViewport 状态同步到 VM（CanvasScale + 状态栏字段）。
     /// 任何缩放/平移/窗口尺寸变化都通过 CurrentScale 回调触发，状态栏保持实时。</summary>
@@ -69,6 +79,15 @@ public partial class SymbolDesignerView : UserControl
         double renderH = ch * s;
         if (Math.Abs(renderW - vm.RenderWidth) > 0.5) vm.RenderWidth = renderW;
         if (Math.Abs(renderH - vm.RenderHeight) > 0.5) vm.RenderHeight = renderH;
+
+        // 画布真实左/上偏移 = 自动居中偏移( (availW-cw*s)/2 ) + 用户平移( PanX/PanY )
+        // 这就是"画布在视口内的左边距/上边距"：打开即显示真实位置（居中时四周留白，值非 0）。
+        double cx = (zp.ActualWidth - cw * s) * 0.5;
+        double cy = (zp.ActualHeight - ch * s) * 0.5;
+        double left = cx + zp.PanX;
+        double top = cy + zp.PanY;
+        if (Math.Abs(left - vm.CanvasLeft) > 0.5) vm.CanvasLeft = left;
+        if (Math.Abs(top - vm.CanvasTop) > 0.5) vm.CanvasTop = top;
 
         // 鼠标画布逻辑坐标（如有已记录的屏幕坐标，这里再算一遍）
         UpdateCursorFromLastScreen();

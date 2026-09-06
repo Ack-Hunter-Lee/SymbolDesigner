@@ -97,6 +97,10 @@ public class ZoomPanViewport : Decorator
     private bool _isPanning;
     private Point _panStart;
 
+    /// <summary>子元素在"未受视口约束"条件下测量出的完整内容尺寸（逻辑单位）。
+    /// 由 MeasureOverride 记录，ArrangeOverride 用它把子级排布到全尺寸，避免被视口压缩二次缩小。</summary>
+    private Size _contentSize = Size.Empty;
+
     public ZoomPanViewport()
     {
         // Decorator 没有 Template，但 Focusable 默认 false —— 滚轮缩放需要先 focus 才能收到事件。
@@ -109,6 +113,32 @@ public class ZoomPanViewport : Decorator
     {
         base.OnRenderSizeChanged(sizeInfo);
         UpdateTransform();
+    }
+
+    /// <summary>以"无约束"方式测量子元素，拿到其完整逻辑内容尺寸（如画布 1920×1080）。
+    /// 关键：不能像默认 Decorator 那样把子级约束到 avail W/H，否则画布会被 Arrange 成视口大小，
+    /// 再套 RenderTransform 缩放时就"双重缩小"、且 cx/cy 按 ContentWidth 算就会错 → 画布既不满宽也不居中。</summary>
+    protected override Size MeasureOverride(Size availableSize)
+    {
+        _contentSize = Size.Empty;
+        if (Child is UIElement child)
+        {
+            // 无限约束测量：让显式设了 Width/Height 的子级（CanvasHost）按逻辑尺寸返回真实 DesiredSize
+            child.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            _contentSize = child.DesiredSize;
+        }
+        return availableSize;  // 视口自身仍占满可用空间
+    }
+
+    /// <summary>把子级排布到其完整内容尺寸（而非视口尺寸），这样 RenderTransform 的 scale 才能精确控制其视觉大小。</summary>
+    protected override Size ArrangeOverride(Size arrangeSize)
+    {
+        var rect = _contentSize == Size.Empty
+            ? new Rect(arrangeSize)
+            : new Rect(_contentSize);
+        if (Child is UIElement child)
+            child.Arrange(rect);
+        return arrangeSize;
     }
 
     private static void OnTransformPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
