@@ -233,6 +233,20 @@ public partial class SymbolDesignerView : UserControl
             vm.ClearAllCommand.Execute(null);
     }
 
+    /// <summary>点击"水平镜像"按钮 → 围绕选中集包围盒水平中心翻转。</summary>
+    private void OnMirrorHorizontalClick(object sender, MouseButtonEventArgs e)
+    {
+        if (DataContext is SymbolDesignerViewModel vm)
+            vm.MirrorHorizontalCommand.Execute(null);
+    }
+
+    /// <summary>点击"垂直镜像"按钮 → 围绕选中集包围盒垂直中心翻转。</summary>
+    private void OnMirrorVerticalClick(object sender, MouseButtonEventArgs e)
+    {
+        if (DataContext is SymbolDesignerViewModel vm)
+            vm.MirrorVerticalCommand.Execute(null);
+    }
+
     /// <summary>点击"格式刷"按钮 → 吸取选中图元的样式进入"应用待命"态；
     /// 已激活时再点 = 退出；Ctrl+点击 = 进入连刷模式（应用后保持激活）。
     /// 用 MouseLeftButtonDown 而非 Up 是为了拦截时 ModifierKeys 还在按下（与 Ctrl 修饰键检测一致）。

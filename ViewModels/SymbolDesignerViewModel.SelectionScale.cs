@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using SymbolDesigner.Models;
 using Point = System.Windows.Point;
 using Rect = System.Windows.Rect;
@@ -71,6 +72,11 @@ public partial class SymbolDesignerViewModel
     /// 手指标心 = 包围盒四个角点；手柄自身 2×2 逻辑像素由 View 层居中。</summary>
     public void RefreshScaleSelectionHandles()
     {
+        // 镜像命令可用态跟随当前选集（有可镜像对象才可用）
+        MirrorHorizontalCommand.NotifyCanExecuteChanged();
+        MirrorVerticalCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(HasMirrorTarget));
+
         // 手柄显示条件：仅当"正在绘制"(IsDrawing) 或"厚度/轮廓编辑模式"时隐藏。
         // Note: 选中 Polyline/ThickPolyline 会自动进入对应 DrawMode（选中联动），那不是"主动绘制"，
         // 不应清掉选区缩放手柄（否则导入 SVG 全 Polyline，框选后无法缩放）。ActiveToolKey 有值 = 用户点了工具栏开始画新图元。
@@ -433,6 +439,109 @@ public partial class SymbolDesignerViewModel
     }
 
     private static string Fmt(double v) => v.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+
+    // —— 镜像翻转：围绕选区包围盒中心做水平/垂直翻转（选中整体一起翻，轴过包围盒中心） ——
+
+    /// <summary>水平镜像（x' = 2·cx - x）。围绕当前选中整体包围盒的水平中心线翻转。</summary>
+    [RelayCommand(CanExecute = nameof(CanMirrorSelection))]
+    private void MirrorHorizontal() => MirrorSelection(horizontal: true);
+
+    /// <summary>垂直镜像（y' = 2·cy - y）。围绕当前选中整体包围盒的垂直中心线翻转。</summary>
+    [RelayCommand(CanExecute = nameof(CanMirrorSelection))]
+    private void MirrorVertical() => MirrorSelection(horizontal: false);
+
+    private bool CanMirrorSelection() => ScaleTargetItems().Count > 0;
+
+    /// <summary>是否有可镜像的选中对象（驱动工具栏镜像按钮可用态）。
+    /// 由 RefreshScaleSelectionHandles 在选集/几何变化时刷新。</summary>
+    public bool HasMirrorTarget => ScaleTargetItems().Count > 0;
+
+    /// <summary>对当前选中所有图元做整体镜像：先取选集包围盒中心，再逐个几何翻转。
+    /// 复用 BeginEdit/EndEdit 撤销框架，整个镜像 = 一次撤销步骤。</summary>
+    private void MirrorSelection(bool horizontal)
+    {
+        var items = ScaleTargetItems();
+        if (items.Count == 0) return;
+        if (GetUnionBounds(items) is not Rect b) return;
+        double cx = b.Left + b.Width * 0.5;
+        double cy = b.Top + b.Height * 0.5;
+
+        BeginEdit();
+        foreach (var item in items)
+            MirrorItem(item, cx, cy, horizontal);
+        RefreshScaleSelectionHandles();
+        EndEdit();
+    }
+
+    /// <summary>翻转单个图元：
+    /// - 矩形/圆角矩/椭圆/三角/圆环：改 X/Y（水平镜像时左侧边翻到镜像位，即 X = 2cx-(X+W)）。
+    /// - Line/Polyline/ThickPolyline：PathData 局部点整体翻转 → 重新对齐 min 角重建。
+    /// - BooleanPath：复杂多环骨架，跳过（与缩放开保持一致）。</summary>
+    private static void MirrorItem(PrimitiveItem item, double cx, double cy, bool horizontal)
+    {
+        double x = item.X, y = item.Y, w = item.Width, h = item.Height;
+        switch (item.TypeKey)
+        {
+            case nameof(L1Primitive.Rectangle):
+            case nameof(L1Primitive.RoundedRectangle):
+            case nameof(L1Primitive.Ellipse):
+            case nameof(L1Primitive.Triangle):
+            case nameof(L1Primitive.Ring):
+                if (horizontal) item.X = 2 * cx - (x + w);
+                else item.Y = 2 * cy - (y + h);
+                break;
+
+            case nameof(L1Primitive.Line):
+            case nameof(L1Primitive.Polyline):
+            case nameof(L1Primitive.ThickPolyline):
+                MirrorPathData(item, cx, cy, horizontal);
+                break;
+
+            default:
+                break;  // BooleanPath 等复杂几何不镜像
+        }
+    }
+
+    /// <summary>PathData 型图元镜像：局部点 → 画布坐标 → 翻转 → 新 min 对齐 → 重建 PathData + 更新 X/Y/W/H。
+    /// 保持顶点顺序与索引对齐（ThickPolyline 的 VertexThicknesses 无需重排）。</summary>
+    private static void MirrorPathData(PrimitiveItem item, double cx, double cy, bool horizontal)
+    {
+        var pd = item.PathData;
+        if (string.IsNullOrEmpty(pd)) return;
+        var pts = SymbolDesigner.Converters.ThickOutlineBuilder.ParsePathData(pd);
+        if (pts.Count == 0) return;
+        bool closed = pd[^1] == 'Z' || pd[^1] == 'z';
+
+        double bx1 = double.MaxValue, by1 = double.MaxValue, bx2 = double.MinValue, by2 = double.MinValue;
+        var mx = new List<Point>(pts.Count);
+        foreach (var p in pts)
+        {
+            double wx = item.X + p.X, wy = item.Y + p.Y;
+            double nx = horizontal ? 2 * cx - wx : wx;
+            double ny = horizontal ? wy : 2 * cy - wy;
+            if (nx < bx1) bx1 = nx;
+            if (ny < by1) by1 = ny;
+            if (nx > bx2) bx2 = nx;
+            if (ny > by2) by2 = ny;
+            mx.Add(new Point(nx, ny));
+        }
+
+        var sb = new System.Text.StringBuilder();
+        for (int i = 0; i < mx.Count; i++)
+        {
+            if (i == 0)
+                sb.Append('M').Append(' ').Append(Fmt(mx[i].X - bx1)).Append(',').Append(Fmt(mx[i].Y - by1));
+            else
+                sb.Append('L').Append(' ').Append(Fmt(mx[i].X - bx1)).Append(',').Append(Fmt(mx[i].Y - by1));
+        }
+        if (closed) sb.Append('Z');
+
+        item.X = bx1;
+        item.Y = by1;
+        item.Width = Math.Max(0.01, bx2 - bx1);
+        item.Height = Math.Max(0.01, by2 - by1);
+        item.PathData = sb.ToString();
+    }
 
     private void ClearScaleHandles()
     {

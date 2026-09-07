@@ -794,6 +794,46 @@
                         ToolTip="全部清空">
                         <TextBlock Style="{StaticResource ToolIconGlyph}" Text="&#xE75C;" />
                     </Border>
+                    <!--  水平镜像: 围绕选中集包围盒水平中心左右翻转（↔，Segoe UI Symbol）  -->
+                    <Border
+                        IsEnabled="{Binding HasMirrorTarget}"
+                        MouseLeftButtonDown="OnMirrorHorizontalClick"
+                        Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
+                        ToolTip="水平镜像">
+                        <Border.Style>
+                            <Style BasedOn="{StaticResource ToolIconButton}" TargetType="Border">
+                                <Style.Triggers>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter Property="Opacity" Value="0.35" />
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <TextBlock
+                            FontFamily="Segoe UI Symbol"
+                            Style="{StaticResource ToolIconGlyph}"
+                            Text="&#x2194;" />
+                    </Border>
+                    <!--  垂直镜像: 围绕选中集包围盒垂直中心上下翻转（↕，Segoe UI Symbol）  -->
+                    <Border
+                        IsEnabled="{Binding HasMirrorTarget}"
+                        MouseLeftButtonDown="OnMirrorVerticalClick"
+                        Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
+                        ToolTip="垂直镜像">
+                        <Border.Style>
+                            <Style BasedOn="{StaticResource ToolIconButton}" TargetType="Border">
+                                <Style.Triggers>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter Property="Opacity" Value="0.35" />
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <TextBlock
+                            FontFamily="Segoe UI Symbol"
+                            Style="{StaticResource ToolIconGlyph}"
+                            Text="&#x2195;" />
+                    </Border>
 
                     <!--
                         相切约束: 选中一条直线 + 一个圆后点击,圆自动移与直线相切(持久约束)。
