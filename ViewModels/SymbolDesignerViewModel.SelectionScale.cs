@@ -262,6 +262,40 @@ public partial class SymbolDesignerViewModel
         return true;
     }
 
+    /// <summary>方向键微移选中元素（每步一格，CAD 式微调）。
+    /// 目标集：有多选则整体平移多选，否则平移单选焦点（SelectedItem）。
+    /// 一次命令用 BeginEdit/EndEdit 合并为一步撤销，避免多图元各自落栈。</summary>
+    public const double NudgeStep = 1.0;
+
+    [RelayCommand]
+    private void MoveSelection(string direction)
+    {
+        double dx = 0, dy = 0;
+        switch (direction)
+        {
+            case "Left": dx = -NudgeStep; break;
+            case "Right": dx = NudgeStep; break;
+            case "Up": dy = -NudgeStep; break;
+            case "Down": dy = NudgeStep; break;
+            default: return;
+        }
+        // 目标集：多选优先（≥1 即整体平移），否则单选焦点。
+        IEnumerable<PrimitiveItem> targets;
+        if (MultiSelected.Count > 0) targets = MultiSelected;
+        else if (SelectedItem is { } single) targets = new[] { single };
+        else return;
+        if (!targets.Any()) return;
+
+        BeginEdit();
+        foreach (var p in targets)
+        {
+            p.X += dx;
+            p.Y += dy;
+        }
+        EndEdit();
+        RefreshScaleSelectionHandles();
+    }
+
     /// <summary>缩放手势开始：快照所有目标图元几何 + 保存对角锚点 + 起始鼠标距离。
     /// 一次性 BeginEdit,整个拖动手势合并为一次撤销步骤。</summary>
     public void BeginScaleSelection(ScaleCorner corner, Point anchor, Point startMouse)
