@@ -206,7 +206,9 @@ public partial class SymbolDesignerViewModel
         double dx = clamped.X - startPt.X;
         double dy = clamped.Y - startPt.Y;
         var dist = System.Math.Sqrt(dx * dx + dy * dy);
-        DraftSnapToStart = dist < CloseSnapThreshold;
+        // 容差按屏幕绝对像素固定（CloseSnapThreshold=8px，见常量定义注释），换算成画布逻辑单位
+        double scale = CanvasScale > 1e-9 ? CanvasScale : 1.0;
+        DraftSnapToStart = dist < CloseSnapThreshold / scale;
     }
 
     /// <summary>按 Esc 时的统一处理：正在绘制则放弃当前未提交的草稿(不生成图元);
@@ -450,18 +452,30 @@ public partial class SymbolDesignerViewModel
         IsObjectSnapTrackingX = false;
         IsObjectSnapTrackingY = false;
 
-        // ── 1. Object Snap Tracking：与已画点（DraftPoints + 历史选中元素上不参与，仅当前草稿内）
-        //    X / Y 同坐标吸附。容差 Xt = Yt = 6.0（画布逻辑单位，比视觉半径略大，
-        //    鼠标"经过附近"就能对齐，比终点 CloseSnapThreshold 略小避免误触发）。
-        const double snapTol = 6.0;
-        if (DraftPoints.Count >= 2)  // 至少已有 2 个已确认点（1 个点的草稿没意义）
+        // ── 1. 共线吸附（统一原 Object Snap Tracking + Polar 角度吸附为同一管道）：
+        //    扫描全部已画点（含最后一点 anchor）的 X 竖直线 / Y 水平线基准，用固定屏幕像素容差判定：
+        //    换算成画布逻辑单位 = snapTolPx / CanvasScale，缩放越大逻辑容差越小（精细操作不随缩放漂移）。
+        //    - 命中某已画点的 X/Y 基准线 → 锁定该坐标 + 橙虚线贯穿提示（对象追踪）；
+        //    - 命中的基准线来自 anchor（当前段起点）→ 段锁定竖直/水平（IsPathSnappingActive=true，
+        //      橡皮线变绿，即原"Polar 角度≤5° 吸附"的等价视觉）。
+        //    距离守卫：鼠标距 anchor < snapTol 时 anchor 不参与吸附，避免刚起笔就把橡皮线钉死在起点上。
+        const double snapTolPx = 6.0;
+        double scale = CanvasScale > 1e-9 ? CanvasScale : 1.0;
+        double snapTol = snapTolPx / scale;
+
+        if (DraftPoints.Count >= 1)  // 至少已确认 1 个点（含 anchor；画第二段时只有 anchor 一个基准也生效）
         {
-            // 跳过最后一个点（= anchor）：避免自己吸到自己；
-            // 跳过第一个点由 _draftSnapToStart 路径处理（吸附到首点，DraftSnapToStart 控制）。
+            double dxa = target.X - anchor.X;
+            double dya = target.Y - anchor.Y;
+            double distToAnchor = System.Math.Sqrt(dxa * dxa + dya * dya);
+            int anchorIndex = DraftPoints.Count - 1;
+
             double bestDx = snapTol, bestDy = snapTol;
             int hitX = -1, hitY = -1;
-            for (int i = 0; i < DraftPoints.Count - 1; i++)
+            for (int i = 0; i <= anchorIndex; i++)
             {
+                // 距离守卫：鼠标贴着 anchor 时不吸附（否则起点附近的误差会把橡皮线钉死在起点）
+                if (i == anchorIndex && distToAnchor < snapTol) continue;
                 double dxi = System.Math.Abs(target.X - DraftPoints[i].X);
                 double dyi = System.Math.Abs(target.Y - DraftPoints[i].Y);
                 if (dxi < bestDx) { bestDx = dxi; hitX = i; }
@@ -473,7 +487,8 @@ public partial class SymbolDesignerViewModel
             // 至少命中一个 → 应用吸附；都没有命中才走下一步
             if (snappedX.HasValue || snappedY.HasValue)
             {
-                // 不强制 IsPathSnappingActive：吸附只改了对应坐标，方向仍自由（与 CAD Object Snap Tracking 语义一致）
+                // 基准线来自 anchor → 段锁定竖直/水平（绿色）；否则仅坐标对齐、方向仍自由（橙色，CAD 对象追踪语义）
+                if (hitX == anchorIndex || hitY == anchorIndex) IsPathSnappingActive = true;
                 return new System.Windows.Point(
                     snappedX ?? target.X,
                     snappedY ?? target.Y);
@@ -489,25 +504,6 @@ public partial class SymbolDesignerViewModel
                 : new System.Windows.Point(anchor.X, target.Y);
         }
 
-        // ── 3. Polar Tracking 风格：按接近水平/竖直自动吸附
-        double dx = target.X - anchor.X;
-        double dy = target.Y - anchor.Y;
-        // 距离太短（鼠标几乎在 anchor 上）→ 不吸附，避免抖动
-        if (System.Math.Abs(dx) < 1e-3 && System.Math.Abs(dy) < 1e-3) return target;
-
-        // 计算当前段方向与水平/竖直的偏差角（0~90°）
-        double angle = System.Math.Atan2(System.Math.Abs(dy), System.Math.Abs(dx)) * 180.0 / System.Math.PI;
-        const double thresholdDeg = 5.0;
-        if (angle <= thresholdDeg)
-        {
-            IsPathSnappingActive = true;
-            return new System.Windows.Point(target.X, anchor.Y); // 水平
-        }
-        if (angle >= 90.0 - thresholdDeg)
-        {
-            IsPathSnappingActive = true;
-            return new System.Windows.Point(anchor.X, target.Y); // 竖直
-        }
         return target;
     }
 
