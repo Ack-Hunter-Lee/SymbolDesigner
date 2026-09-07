@@ -127,6 +127,8 @@ public partial class SymbolDesignerViewModel
         RaiseMaxChanged();
         OnPropertyChanged(nameof(CanEnterOutlineMode));
         OnPropertyChanged(nameof(CanEnterThicknessMode));
+        // 切换选中 → 重新计算非转角点圆角半径上限（依赖 SelectedItem.PathData）
+        OnPropertyChanged(nameof(CornerArcRadiusMax));
         // 选区缩放手柄随选中变化刷新（多选集合变化已由 RaiseMultiSelectChanged 处理,这里是单选焦点变化）
         RefreshScaleSelectionHandles();
         // 布尔结果选中即进入轮廓模式：轮廓点选择 + 接缝样式（Miter/Round）/圆角半径编辑入口，
@@ -186,6 +188,8 @@ public partial class SymbolDesignerViewModel
         else if (e.PropertyName == nameof(PrimitiveItem.PathData))
         {
             OnSelectedItemPathDataChanged();
+            // PathData 变 → 段长集合变 → 非转角点圆角半径上限（最短段长/2）跟着变
+            OnPropertyChanged(nameof(CornerArcRadiusMax));
         }
         else if (e.PropertyName == nameof(PrimitiveItem.X) ||
                  e.PropertyName == nameof(PrimitiveItem.Y))

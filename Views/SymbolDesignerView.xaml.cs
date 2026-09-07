@@ -976,7 +976,9 @@ public partial class SymbolDesignerView : UserControl
 
     /// <summary>把接缝面板的 CornerRadiusSlider.Value 同步为当前 SelectedOutlineCorner.CurrentRadius。
     /// Slider 没有 TwoWay 绑定，CurrentRadius 派生属性变化时不会自动推过来，必须手动同步。
-    /// 调用时机：SelectedOutlineCorner 切换时 + 接缝样式变化时 + 选中接缝半径被外部改写时。</summary>
+    /// 调用时机：SelectedOutlineCorner 切换时 + 接缝样式变化时 + 选中接缝半径被外部改写时。
+    /// 同时把 Maximum 同步为 VM 动态算的上限（与"非转角点"Slider 同源，
+    /// 跟随选中图元 PathData 最短段长自适应，几何尺寸放大时不再卡 20）。</summary>
     private void SyncCornerRadiusSlider()
     {
         if (CornerRadiusSlider is null) return;
@@ -985,6 +987,14 @@ public partial class SymbolDesignerView : UserControl
         // 避免 ValueChanged 回调里再次写回（取消订阅→设值→重订阅）
         if (Math.Abs(CornerRadiusSlider.Value - v) > 1e-9)
             CornerRadiusSlider.Value = v;
+        // 动态上限：与属性面板"非转角点"Slider 同源（最短段长/2），由 VM.CornerArcRadiusMax 暴露
+        double max = vm.CornerArcRadiusMax;
+        if (Math.Abs(CornerRadiusSlider.Maximum - max) > 1e-9)
+            CornerRadiusSlider.Maximum = max;
+        // 刻度步长：图元大时 0.5 步长会让用户拖半天，按上限 1/100 比例取，最小不低于 0.5
+        double tick = Math.Max(0.5, Math.Round(max / 100, 1));
+        if (Math.Abs(CornerRadiusSlider.TickFrequency - tick) > 1e-9)
+            CornerRadiusSlider.TickFrequency = tick;
     }
 
     /// <summary>一键圆角：把所有轮廓接缝统一应用当前圆角半径（无需逐个选中）。

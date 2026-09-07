@@ -3952,9 +3952,9 @@
                                                         </StackPanel.Style>
                                                         <Slider
                                                             IsSnapToTickEnabled="True"
-                                                            Maximum="20"
+                                                            Maximum="{Binding CornerArcRadiusMax, Mode=OneWay}"
                                                             Minimum="0.5"
-                                                            TickFrequency="0.5"
+                                                            TickFrequency="1"
                                                             Value="{Binding CornerArcRadius, Mode=TwoWay}" />
                                                     </StackPanel>
                                                     <Border
@@ -4035,9 +4035,9 @@
                                                             HorizontalAlignment="Left"
                                                             VerticalAlignment="Center"
                                                             IsSnapToTickEnabled="True"
-                                                            Maximum="20"
+                                                            Maximum="200"
                                                             Minimum="0"
-                                                            TickFrequency="0.5"
+                                                            TickFrequency="1"
                                                             ValueChanged="OnCornerRadiusSliderValueChanged">
                                                             <Slider.Style>
                                                                 <Style TargetType="Slider">

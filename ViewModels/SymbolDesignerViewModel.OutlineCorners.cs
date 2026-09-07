@@ -19,6 +19,28 @@ public partial class SymbolDesignerViewModel
     /// <summary>圆角半径（px，画布逻辑坐标）。属性面板 Slider 调整，圆角化时使用。</summary>
     [ObservableProperty] private double _cornerArcRadius = 2.0;
 
+    /// <summary>非转角点圆角半径上限（动态计算）：取选中图元 PathData 相邻点最短段长的一半（圆角弧度几何上不能超过半段长）。
+    /// 兜底 200：无选中/无 PathData/单点时给个可用上限，避免 Slider Max=0 不可调。
+    /// XAML Slider.Maximum 绑此值，几何尺寸变化（画布 1920→更大、图元放大）时自动跟随放大，不再写死 20。</summary>
+    public double CornerArcRadiusMax
+    {
+        get
+        {
+            if (SelectedItem is not { } item || string.IsNullOrEmpty(item.PathData)) return 200;
+            var pts = SymbolDesigner.Converters.ThickOutlineBuilder.ParsePathData(item.PathData);
+            if (pts.Count < 2) return 200;
+            double minLen = double.MaxValue;
+            for (int i = 1; i < pts.Count; i++)
+            {
+                double dx = pts[i].X - pts[i - 1].X;
+                double dy = pts[i].Y - pts[i - 1].Y;
+                double l = Math.Sqrt(dx * dx + dy * dy);
+                if (l > 0 && l < minLen) minLen = l;
+            }
+            return minLen == double.MaxValue ? 200 : Math.Max(1, minLen * 0.5);
+        }
+    }
+
     /// <summary>非转角点样式（轮廓属性面板"应用到全部接缝"使用）：Round / Miter。
     /// - Round：对所有非骨线转折的轮廓点应用 CornerArcRadius 圆角
     /// - Miter：清除所有非骨线转折的轮廓点圆角（恢复尖角/共线直通）</summary>
