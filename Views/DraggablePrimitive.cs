@@ -177,7 +177,7 @@ public class DraggablePrimitive : ContentControl
 
     /// <summary>判断点击的画布坐标是否落在该图元的实体几何上（而非包围盒空白处）。
     /// 按模板实际渲染几何判定：矩形/圆角矩形=矩形域；椭圆=椭圆域；三角=三角形域；
-    /// 圆环=环带（含圆心十字区，供约束拾取圆心）；直线/Polyline/ThickPolyline=骨架折线 ± 容差。
+    /// 圆环=环带（含圆心十字区，供约束拾取圆心）；直线/Polyline/BandPolyline=骨架折线 ± 容差。
     /// 未知类型默认命中（保守，不阻止选中）。</summary>
     private static bool HitEntity(PrimitiveItem item, Point canvas)
     {
@@ -228,10 +228,10 @@ public class DraggablePrimitive : ContentControl
 
             case nameof(L1Primitive.Line):
             case nameof(L1Primitive.Polyline):
-            case nameof(L1Primitive.ThickPolyline):
+            case nameof(L1Primitive.BandPolyline):
             {
                 // 用画布坐标做点到折线段距离（端点解析进的是画布坐标）
-                var pts = SymbolDesigner.Converters.ThickOutlineBuilder.ParsePathData(item.PathData);
+                var pts = SymbolDesigner.Converters.BandOutlineBuilder.ParsePathData(item.PathData);
                 if (pts.Count < 2)
                 {
                     // 无 PathData（模板对角线回退 / 矩形线）：用包围盒对角线近似
@@ -242,8 +242,8 @@ public class DraggablePrimitive : ContentControl
                     };
                 }
                 double tol = EntityHitTolerance;
-                if (item.TypeKey == nameof(L1Primitive.ThickPolyline))
-                    tol = Math.Max(EntityHitTolerance, item.Thickness / 2);
+                if (item.TypeKey == nameof(L1Primitive.BandPolyline))
+                    tol = Math.Max(EntityHitTolerance, item.BandWidth / 2);
                 for (int i = 0; i + 1 < pts.Count; i++)
                 {
                     if (DistToSegment(canvas,

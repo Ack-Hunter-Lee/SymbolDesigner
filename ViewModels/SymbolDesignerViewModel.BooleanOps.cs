@@ -39,7 +39,7 @@ public partial class SymbolDesignerViewModel
     /// 保留源图元（KeepBooleanSources=true，默认）：结果记录源 Id + 运算模式，源可继续调整，
     /// 之后选中结果"重新合并"按源当前几何重算；关闭则删除源两图元（老行为）。
     /// 结果无面积（如不相交的相交）时拒绝并提示，原图元保留。
-    /// 快照 PathData setter 内自动按环点数和同步 VertexThicknesses（圆角半径容器）。</summary>
+    /// 快照 PathData setter 内自动按环点数和同步 VertexBandWidths（圆角半径容器）。</summary>
     private void RunBooleanOp(System.Windows.Media.GeometryCombineMode mode)
     {
         if (MultiSelected.Count != 2) return;

@@ -4,7 +4,7 @@ using SymbolDesigner.Models;
 
 namespace SymbolDesigner.ViewModels;
 
-/// <summary>轮廓接缝手柄模型：对应 ThickPolyline 的一个内部接缝（vertex 1..N-2）。
+/// <summary>轮廓接缝手柄模型：对应 BandPolyline 的一个内部接缝（vertex 1..N-2）。
 /// 与 VertexHandle 的区别：
 ///   - VertexHandle 在骨架顶点（PathData 控制点）上 → 编辑骨架
 ///   - OutlineCornerHandle 在轮廓角点（miter 顶点 / 凹口中点 / 弧线中点）上 → 编辑轮廓
@@ -74,15 +74,15 @@ public partial class OutlineCornerHandle : ObservableObject
     private readonly Action<OutlineCornerHandle, double>? _setRadius;
 
     /// <summary>接缝"圆角半径"派生属性（不持久化，每次读时调 _getRadius）。
-    /// 读源：转角点 → VertexThickness[Index].JoinInnerRadius；
-    ///       非转角点 → VertexThickness[Index].LeftCornerRadius (Side="L") / RightCornerRadius (Side="R")。
-    /// 通过 OnPropertyChanged(nameof(CurrentRadius)) 触发 UI 同步（在 VertexThickness 联动回调里）。</summary>
+    /// 读源：转角点 → VertexBandWidth[Index].JoinInnerRadius；
+    ///       非转角点 → VertexBandWidth[Index].LeftCornerRadius (Side="L") / RightCornerRadius (Side="R")。
+    /// 通过 OnPropertyChanged(nameof(CurrentRadius)) 触发 UI 同步（在 VertexBandWidth 联动回调里）。</summary>
     public double CurrentRadius => _getRadius?.Invoke(this) ?? 0;
 
-    /// <summary>写"圆角半径"：调注入的 _setRadius，让 VM 把对应字段写到 VertexThickness 并刷新 OutlineGeometry。</summary>
+    /// <summary>写"圆角半径"：调注入的 _setRadius，让 VM 把对应字段写到 VertexBandWidth 并刷新 OutlineGeometry。</summary>
     public void SetRadius(double radius) => _setRadius?.Invoke(this, radius);
 
-    /// <summary>通知 CurrentRadius 已变化（VM 在 VertexThickness 联动 / 自身写入后调用，
+    /// <summary>通知 CurrentRadius 已变化（VM 在 VertexBandWidth 联动 / 自身写入后调用，
     /// 因为 ObservableObject.OnPropertyChanged 是 protected，VM 无法直接代发）。
     /// XAML OneWay 绑定 {CurrentRadius} 会重新读 getter。</summary>
     public void NotifyRadiusChanged() => OnPropertyChanged(nameof(CurrentRadius));

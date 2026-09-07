@@ -96,7 +96,7 @@
     <SolidColorBrush x:Key="Brush.Overlay.Dim"       Color="#80000000" />
     <SolidColorBrush x:Key="Brush.Overlay.Hint"      Color="#305DADE2" />
 
-    <!-- ====== 闭合/粗折线轮廓（Polyline 闭合形态与 ThickPolyline 共用） ====== -->
+    <!-- ====== 闭合/粗折线轮廓（Polyline 闭合形态与 BandPolyline 共用） ====== -->
     <SolidColorBrush x:Key="Brush.Outline.Stroke" Color="#B0B0B0" />
     <SolidColorBrush x:Key="Brush.Outline.Fill"   Color="#40FFFFFF" />
     <SolidColorBrush x:Key="Brush.Outline.Icon"   Color="#A8C4D8" />

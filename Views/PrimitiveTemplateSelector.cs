@@ -16,7 +16,7 @@ public class PrimitiveTemplateSelector : DataTemplateSelector
     public DataTemplate? L1Line { get; set; }
     public DataTemplate? L1RoundedRectangle { get; set; }
     public DataTemplate? L1Triangle { get; set; }
-    public DataTemplate? L1ThickPolyline { get; set; }
+    public DataTemplate? L1BandPolyline { get; set; }
     public DataTemplate? L1Polyline { get; set; }
     public DataTemplate? L1Ring { get; set; }
     public DataTemplate? L1BooleanPath { get; set; }
@@ -32,7 +32,7 @@ public class PrimitiveTemplateSelector : DataTemplateSelector
             "Line" => L1Line,
             "RoundedRectangle" => L1RoundedRectangle,
             "Triangle" => L1Triangle,
-            "ThickPolyline" => L1ThickPolyline,
+            "BandPolyline" => L1BandPolyline,
             "Polyline" => L1Polyline,
             "Ring" => L1Ring,
             "BooleanPath" => L1BooleanPath,

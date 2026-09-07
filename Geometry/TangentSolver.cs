@@ -29,10 +29,10 @@ public static class TangentSolver
     /// <summary>取直线的两个端点（画布坐标）。返回 false = 无法解析。</summary>
     public static bool TryGetLineEndpoints(PrimitiveItem line, out Point a, out Point b)
     {
-        // 路径类（Line/Polyline/ThickPolyline 由画线工具产生）优先用 PathData 首末点
+        // 路径类（Line/Polyline/BandPolyline 由画线工具产生）优先用 PathData 首末点
         if (!string.IsNullOrEmpty(line.PathData))
         {
-            var pts = ThickOutlineBuilder.ParsePathData(line.PathData);
+            var pts = BandOutlineBuilder.ParsePathData(line.PathData);
             if (pts.Count >= 2)
             {
                 a = new Point(line.X + pts[0].X, line.Y + pts[0].Y);
@@ -194,7 +194,7 @@ public static class TangentSolver
         p = default;
         if (!string.IsNullOrEmpty(line.PathData))
         {
-            var pts = ThickOutlineBuilder.ParsePathData(line.PathData);
+            var pts = BandOutlineBuilder.ParsePathData(line.PathData);
             if (pts.Count >= 2)
             {
                 var v = pts[index == 0 ? 0 : pts.Count - 1];
@@ -216,7 +216,7 @@ public static class TangentSolver
     public static bool SetLineEndpointAt(PrimitiveItem line, int index, Point canvasPoint)
     {
         if (string.IsNullOrEmpty(line.PathData)) return false;
-        var pts = ThickOutlineBuilder.ParsePathData(line.PathData);
+        var pts = BandOutlineBuilder.ParsePathData(line.PathData);
         int target = index == 0 ? 0 : pts.Count - 1;
 
         // 保持基准 line.X/Y 不动，只把目标端点设为该基准下的新局部坐标

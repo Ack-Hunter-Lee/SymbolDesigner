@@ -66,7 +66,7 @@ public partial class SymbolDesignerViewModel
                               value.TypeKey == nameof(L1Primitive.RoundedRectangle));
 
         HasSelectedItem = value is not null;
-        OnPropertyChanged(nameof(SelectedItemIsThickPolyline));
+        OnPropertyChanged(nameof(SelectedItemIsBandPolyline));
         OnPropertyChanged(nameof(SelectedItemIsPolyline));
         OnPropertyChanged(nameof(SelectedItemIsRing));
         OnPropertyChanged(nameof(SelectedItemIsBooleanPath));
@@ -76,24 +76,24 @@ public partial class SymbolDesignerViewModel
         // 格式刷按钮可用态：选中变化（多选累积切到单选、选中切到 null）→ 通知 PickFormatPainter 重新评估 CanExecute
         PickFormatPainterCommand.NotifyCanExecuteChanged();
 
-        // 选中 ThickPolyline / Polyline → 自动进入对应画线模式（光标变十字，CanvasHost 直接接收点击起笔）。
+        // 选中 BandPolyline / Polyline → 自动进入对应画线模式（光标变十字，CanvasHost 直接接收点击起笔）。
         // 尊重用户手动选择：若用户从 ComboBox 手动选定过模式（_userChangedDrawMode），
         // 则选中联动不再覆盖；取消选中 / 选中其它类型时，若当前正处于"自动进入"的
         // 画线模式则退回 None，避免残留绘制状态误伤后续操作。
-        var isThickPolyline = value is not null
-            && value.TypeKey == nameof(L1Primitive.ThickPolyline);
+        var isBandPolyline = value is not null
+            && value.TypeKey == nameof(L1Primitive.BandPolyline);
         var isPolyline = value is not null
             && value.TypeKey == nameof(L1Primitive.Polyline);
-        if (isThickPolyline && !_userChangedDrawMode && DrawMode != DrawMode.ThickPolyline)
+        if (isBandPolyline && !_userChangedDrawMode && DrawMode != DrawMode.BandPolyline)
         {
-            SetDrawModeFromSelection(DrawMode.ThickPolyline);
+            SetDrawModeFromSelection(DrawMode.BandPolyline);
         }
         else if (isPolyline && !_userChangedDrawMode && DrawMode != DrawMode.Polyline)
         {
             SetDrawModeFromSelection(DrawMode.Polyline);
         }
-        else if (!isThickPolyline && !isPolyline && !_userChangedDrawMode
-                 && (DrawMode == DrawMode.ThickPolyline || DrawMode == DrawMode.Polyline))
+        else if (!isBandPolyline && !isPolyline && !_userChangedDrawMode
+                 && (DrawMode == DrawMode.BandPolyline || DrawMode == DrawMode.Polyline))
         {
             SetDrawModeFromSelection(DrawMode.None);
         }
@@ -102,23 +102,23 @@ public partial class SymbolDesignerViewModel
         if (_lastSelected != null)
         {
             _lastSelected.PropertyChanged -= OnSelectedItemPropertyChanged;
-            _lastSelected.VertexThicknessDataChanged -= OnSelectedVertexThicknessDataChanged;
+            _lastSelected.VertexBandWidthDataChanged -= OnSelectedVertexBandWidthDataChanged;
         }
         _lastSelected = value;
         if (value != null)
         {
             value.PropertyChanged += OnSelectedItemPropertyChanged;
-            // 订阅顶点厚度数据变化（Slider 改 Incoming/OutgoingThickness 时刷新 ThicknessHandles/ThicknessLines）
-            value.VertexThicknessDataChanged += OnSelectedVertexThicknessDataChanged;
+            // 订阅顶点带宽数据变化（Slider 改 Incoming/OutgoingBandWidth 时刷新 BandWidthHandles/BandWidthLines）
+            value.VertexBandWidthDataChanged += OnSelectedVertexBandWidthDataChanged;
         }
         else
         {
-            // 取消选中元素：清掉所有挂在旧 item 上的子状态，避免画布残留接缝/厚度手柄和属性面板误显示
+            // 取消选中元素：清掉所有挂在旧 item 上的子状态，避免画布残留接缝/带宽手柄和属性面板误显示
             SelectedOutlineCorner = null;
             SelectedBonePointIndex = -1;
-            // ThicknessHandles / OutlineCornerHandles 集合里残留的是上一个 item 的 X/Y，
+            // BandWidthHandles / OutlineCornerHandles 集合里残留的是上一个 item 的 X/Y，
             // 必须显式刷新（Clear + SelectedItem==null return）才能让画布 ItemsControl 真正清空
-            RefreshThicknessHandles();
+            RefreshBandWidthHandles();
             RefreshRingHandles();
             if (OutlineEditMode == OutlineEditMode.Outline)
                 RefreshOutlineCornerHandles();
@@ -126,7 +126,7 @@ public partial class SymbolDesignerViewModel
 
         RaiseMaxChanged();
         OnPropertyChanged(nameof(CanEnterOutlineMode));
-        OnPropertyChanged(nameof(CanEnterThicknessMode));
+        OnPropertyChanged(nameof(CanEnterBandWidthMode));
         // 切换选中 → 重新计算非转角点圆角半径上限（依赖 SelectedItem.PathData）
         OnPropertyChanged(nameof(CornerArcRadiusMax));
         // 选区缩放手柄随选中变化刷新（多选集合变化已由 RaiseMultiSelectChanged 处理,这里是单选焦点变化）
@@ -150,12 +150,12 @@ public partial class SymbolDesignerViewModel
     /// 由 UpdateVertexPosition 主动同步手柄，避免循环）。</summary>
     private bool _suppressVertexRefresh;
 
-    /// <summary>任意顶点 Incoming/Outgoing 厚度改变 → 刷新 ThicknessHandles（端点位置）+ ThicknessLines（画布虚线）。
-    /// 链路：VertexThickness.OnIncoming/OutgoingThicknessChanged → PrimitiveItem.VertexThicknessDataChanged → 此方法。</summary>
-    private void OnSelectedVertexThicknessDataChanged(object? sender, EventArgs e)
+    /// <summary>任意顶点 Incoming/Outgoing 带宽改变 → 刷新 BandWidthHandles（端点位置）+ BandWidthLines（画布虚线）。
+    /// 链路：VertexBandWidth.OnIncoming/OutgoingBandWidthChanged → PrimitiveItem.VertexBandWidthDataChanged → 此方法。</summary>
+    private void OnSelectedVertexBandWidthDataChanged(object? sender, EventArgs e)
     {
-        if (OutlineEditMode != OutlineEditMode.Thickness) return;
-        RefreshThicknessHandles();
+        if (OutlineEditMode != OutlineEditMode.BandWidth) return;
+        RefreshBandWidthHandles();
     }
 
     private void OnSelectedItemPathDataChanged()
@@ -165,7 +165,7 @@ public partial class SymbolDesignerViewModel
         RefreshSegmentHandles();
         if (OutlineEditMode == OutlineEditMode.Outline)
             RefreshOutlineCornerHandles();
-        RefreshThicknessHandles();
+        RefreshBandWidthHandles();
     }
 
     private void OnSelectedItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -200,7 +200,7 @@ public partial class SymbolDesignerViewModel
             // 轮廓手柄位置也要同步（外尖点坐标 = item.X + 局部坐标）
             if (OutlineEditMode == OutlineEditMode.Outline)
                 RefreshOutlineCornerHandles();
-            RefreshThicknessHandles();
+            RefreshBandWidthHandles();
             // 圆环：拖圆心手柄 → X/Y 变 → 刷新圆心/外圆/内圆手柄位置
             RefreshRingHandles();
         }
@@ -218,8 +218,8 @@ public partial class SymbolDesignerViewModel
         }
         else if (e.PropertyName == nameof(PrimitiveItem.CollinearSplitPairs))
         {
-            // 合并模式切换 → 刷新厚度端点可见性（入端在共线合并顶点处隐藏）+ 属性面板骨点显示标志
-            RefreshThicknessHandles();
+            // 合并模式切换 → 刷新带宽端点可见性（入端在共线合并顶点处隐藏）+ 属性面板骨点显示标志
+            RefreshBandWidthHandles();
         }
         else if (e.PropertyName == nameof(PrimitiveItem.FillColor)
               || e.PropertyName == nameof(PrimitiveItem.StrokeColor)

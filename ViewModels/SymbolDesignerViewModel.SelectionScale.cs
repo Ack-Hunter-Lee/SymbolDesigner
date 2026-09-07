@@ -54,7 +54,7 @@ public partial class SymbolDesignerViewModel
         public double X, Y, W, H;
         public string PathData = string.Empty;
         public bool PathDataClosed;         // 原 PathData 以 Z 结尾（重建时保留）
-        public double CornerRadius, InnerRadius, Thickness;
+        public double CornerRadius, InnerRadius, BandWidth;
         public double[] VertexIn = Array.Empty<double>();
         public double[] VertexOut = Array.Empty<double>();
     }
@@ -77,10 +77,10 @@ public partial class SymbolDesignerViewModel
         MirrorVerticalCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(HasMirrorTarget));
 
-        // 手柄显示条件：仅当"正在绘制"(IsDrawing) 或"厚度/轮廓编辑模式"时隐藏。
-        // Note: 选中 Polyline/ThickPolyline 会自动进入对应 DrawMode（选中联动），那不是"主动绘制"，
+        // 手柄显示条件：仅当"正在绘制"(IsDrawing) 或"带宽/轮廓编辑模式"时隐藏。
+        // Note: 选中 Polyline/BandPolyline 会自动进入对应 DrawMode（选中联动），那不是"主动绘制"，
         // 不应清掉选区缩放手柄（否则导入 SVG 全 Polyline，框选后无法缩放）。ActiveToolKey 有值 = 用户点了工具栏开始画新图元。
-        if (IsDrawing || IsThicknessEditMode || IsOutlineEditMode || !string.IsNullOrEmpty(ActiveToolKey))
+        if (IsDrawing || IsBandWidthEditMode || IsOutlineEditMode || !string.IsNullOrEmpty(ActiveToolKey))
         {
             ClearScaleHandles();
             return;
@@ -120,13 +120,13 @@ public partial class SymbolDesignerViewModel
         => ScaleSelectionHandles.Add(new ScaleHandleInfo { Corner = corner, X = x, Y = y });
 
     /// <summary>该图元是否走 PathData 几何（ResizeThumb 的 W/H 缩放对其无效,必须用选区缩放手柄等比缩放）。
-    /// 有 PathData 或属于路径类（Line/Polyline/ThickPolyline/BooleanPath）即算。</summary>
+    /// 有 PathData 或属于路径类（Line/Polyline/BandPolyline/BooleanPath）即算。</summary>
     private static bool HasPathDataGeometry(PrimitiveItem item)
     {
         if (!string.IsNullOrEmpty(item.PathData)) return true;
         return item.TypeKey == nameof(L1Primitive.Line)
             || item.TypeKey == nameof(L1Primitive.Polyline)
-            || item.TypeKey == nameof(L1Primitive.ThickPolyline)
+            || item.TypeKey == nameof(L1Primitive.BandPolyline)
             || item.TypeKey == nameof(L1Primitive.BooleanPath);
     }
 
@@ -159,7 +159,7 @@ public partial class SymbolDesignerViewModel
         {
             if (!string.IsNullOrEmpty(item.PathData))
             {
-                var pts = SymbolDesigner.Converters.ThickOutlineBuilder.ParsePathData(item.PathData);
+                var pts = SymbolDesigner.Converters.BandOutlineBuilder.ParsePathData(item.PathData);
                 bool any = false;
                 foreach (var p in pts)
                 {
@@ -230,7 +230,7 @@ public partial class SymbolDesignerViewModel
     {
         if (!string.IsNullOrEmpty(item.PathData))
         {
-            var pts = SymbolDesigner.Converters.ThickOutlineBuilder.ParsePathData(item.PathData);
+            var pts = SymbolDesigner.Converters.BandOutlineBuilder.ParsePathData(item.PathData);
             if (pts.Count == 0) return null;
             double bx1 = pts[0].X, by1 = pts[0].Y, bx2 = pts[0].X, by2 = pts[0].Y;
             foreach (var p in pts)
@@ -289,7 +289,7 @@ public partial class SymbolDesignerViewModel
                 PathDataClosed = pd.Length > 0 && (pd[^1] == 'Z' || pd[^1] == 'z'),
                 CornerRadius = item.CornerRadius,
                 InnerRadius = item.InnerRadius,
-                Thickness = item.Thickness,
+                BandWidth = item.BandWidth,
                 VertexIn = CollectVertexIn(item),
                 VertexOut = CollectVertexOut(item),
             }));
@@ -299,17 +299,17 @@ public partial class SymbolDesignerViewModel
 
     private static double[] CollectVertexIn(PrimitiveItem item)
     {
-        var vs = item.VertexThicknesses;
+        var vs = item.VertexBandWidths;
         var a = new double[vs.Count];
-        for (int i = 0; i < vs.Count; i++) a[i] = vs[i].IncomingThickness;
+        for (int i = 0; i < vs.Count; i++) a[i] = vs[i].IncomingBandWidth;
         return a;
     }
 
     private static double[] CollectVertexOut(PrimitiveItem item)
     {
-        var vs = item.VertexThicknesses;
+        var vs = item.VertexBandWidths;
         var a = new double[vs.Count];
-        for (int i = 0; i < vs.Count; i++) a[i] = vs[i].OutgoingThickness;
+        for (int i = 0; i < vs.Count; i++) a[i] = vs[i].OutgoingBandWidth;
         return a;
     }
 
@@ -342,9 +342,9 @@ public partial class SymbolDesignerViewModel
 
     /// <summary>按快照把单个图元围绕锚点等比缩放 scale 倍。
     /// - 矩形/椭圆/三角/圆环/圆角矩：改 X/Y/W/H（锚点侧不动,对侧移动）+ 辅助量（InnerRadius/CornerRadius）。
-    /// - Line/Polyline/ThickPolyline：PathData 局部点围绕锚点缩放 → 重新对齐 minX/minY 作为新 X/Y。
+    /// - Line/Polyline/BandPolyline：PathData 局部点围绕锚点缩放 → 重新对齐 minX/minY 作为新 X/Y。
     /// - BooleanPath：跳过（复杂多环骨架,不做文本级缩放,保持原样）。
-    /// - ThickPolyline：逐顶点厚度同比例缩放（外观等比）。
+    /// - BandPolyline：逐顶点带宽同比例缩放（外观等比）。
     /// - StrokeWidth 不随几何缩放（描边保持可见,属于外观属性）。</summary>
     private static void ApplyScale(PrimitiveItem item, ScaleSnapshot snap, Point anchor, double scale)
     {
@@ -377,7 +377,7 @@ public partial class SymbolDesignerViewModel
 
             case nameof(L1Primitive.Line):
             case nameof(L1Primitive.Polyline):
-            case nameof(L1Primitive.ThickPolyline):
+            case nameof(L1Primitive.BandPolyline):
                 ScalePathData(item, snap, anchor, scale);
                 break;
 
@@ -391,7 +391,7 @@ public partial class SymbolDesignerViewModel
     private static void ScalePathData(PrimitiveItem item, ScaleSnapshot snap, Point anchor, double scale)
     {
         if (string.IsNullOrEmpty(snap.PathData)) return;
-        var pts = SymbolDesigner.Converters.ThickOutlineBuilder.ParsePathData(snap.PathData);
+        var pts = SymbolDesigner.Converters.BandOutlineBuilder.ParsePathData(snap.PathData);
 
         // 画布坐标缩放
         double bx1 = double.MaxValue, by1 = double.MaxValue;
@@ -425,15 +425,15 @@ public partial class SymbolDesignerViewModel
         item.Width = Math.Max(0.01, snap.W * scale);
         item.Height = Math.Max(0.01, snap.H * scale);
 
-        // ThickPolyline：逐顶点厚度同比例缩放（保守不处理 VertexThicknesses 数量,只缩放值）
-        if (item.TypeKey == nameof(L1Primitive.ThickPolyline))
+        // BandPolyline：逐顶点带宽同比例缩放（保守不处理 VertexBandWidths 数量,只缩放值）
+        if (item.TypeKey == nameof(L1Primitive.BandPolyline))
         {
-            item.Thickness = snap.Thickness * scale;
-            int n = Math.Min(item.VertexThicknesses.Count, snap.VertexIn.Length);
+            item.BandWidth = snap.BandWidth * scale;
+            int n = Math.Min(item.VertexBandWidths.Count, snap.VertexIn.Length);
             for (int i = 0; i < n; i++)
             {
-                item.VertexThicknesses[i].IncomingThickness = snap.VertexIn[i] * scale;
-                item.VertexThicknesses[i].OutgoingThickness = snap.VertexOut[i] * scale;
+                item.VertexBandWidths[i].IncomingBandWidth = snap.VertexIn[i] * scale;
+                item.VertexBandWidths[i].OutgoingBandWidth = snap.VertexOut[i] * scale;
             }
         }
     }
@@ -475,7 +475,7 @@ public partial class SymbolDesignerViewModel
 
     /// <summary>翻转单个图元：
     /// - 矩形/圆角矩/椭圆/三角/圆环：改 X/Y（水平镜像时左侧边翻到镜像位，即 X = 2cx-(X+W)）。
-    /// - Line/Polyline/ThickPolyline：PathData 局部点整体翻转 → 重新对齐 min 角重建。
+    /// - Line/Polyline/BandPolyline：PathData 局部点整体翻转 → 重新对齐 min 角重建。
     /// - BooleanPath：复杂多环骨架，跳过（与缩放开保持一致）。</summary>
     private static void MirrorItem(PrimitiveItem item, double cx, double cy, bool horizontal)
     {
@@ -493,7 +493,7 @@ public partial class SymbolDesignerViewModel
 
             case nameof(L1Primitive.Line):
             case nameof(L1Primitive.Polyline):
-            case nameof(L1Primitive.ThickPolyline):
+            case nameof(L1Primitive.BandPolyline):
                 MirrorPathData(item, cx, cy, horizontal);
                 break;
 
@@ -503,12 +503,12 @@ public partial class SymbolDesignerViewModel
     }
 
     /// <summary>PathData 型图元镜像：局部点 → 画布坐标 → 翻转 → 新 min 对齐 → 重建 PathData + 更新 X/Y/W/H。
-    /// 保持顶点顺序与索引对齐（ThickPolyline 的 VertexThicknesses 无需重排）。</summary>
+    /// 保持顶点顺序与索引对齐（BandPolyline 的 VertexBandWidths 无需重排）。</summary>
     private static void MirrorPathData(PrimitiveItem item, double cx, double cy, bool horizontal)
     {
         var pd = item.PathData;
         if (string.IsNullOrEmpty(pd)) return;
-        var pts = SymbolDesigner.Converters.ThickOutlineBuilder.ParsePathData(pd);
+        var pts = SymbolDesigner.Converters.BandOutlineBuilder.ParsePathData(pd);
         if (pts.Count == 0) return;
         bool closed = pd[^1] == 'Z' || pd[^1] == 'z';
 

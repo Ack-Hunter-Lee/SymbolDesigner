@@ -5,12 +5,12 @@ using SymbolDesigner.Models;
 
 namespace SymbolDesigner.ViewModels;
 
-/// <summary>编辑模式切换（骨架 Skeleton / 厚度 Thickness / 轮廓 Outline）与右侧面板（属性/元素）切换。</summary>
+/// <summary>编辑模式切换（骨架 Skeleton / 带宽 BandWidth / 轮廓 Outline）与右侧面板（属性/元素）切换。</summary>
 public partial class SymbolDesignerViewModel
 {
-    // ============== 编辑模式（骨架 / 厚度 / 轮廓） ==============
+    // ============== 编辑模式（骨架 / 带宽 / 轮廓） ==============
 
-    /// <summary>当前编辑模式（骨架 / 轮廓）。
+    /// <summary>当前编辑模式（骨架 / 带宽 / 轮廓）。
     /// 切换不影响 SelectedItem；只决定显示哪一套手柄 + 属性面板内容。
     /// 工具栏按钮 / 快捷键（Tab）切换；SelectedItem 改变不影响本字段（保持用户当前模式）。</summary>
     [ObservableProperty] private OutlineEditMode _outlineEditMode = OutlineEditMode.Skeleton;
@@ -21,28 +21,28 @@ public partial class SymbolDesignerViewModel
     /// <summary>骨架编辑模式（阶段 2/3 用于替代 IsOutlineEditMode 的反向语义判）。</summary>
     public bool IsSkeletonEditMode => OutlineEditMode == OutlineEditMode.Skeleton;
 
-    /// <summary>厚度线编辑模式（阶段 3 用：ThicknessHandles 可见性 / 属性面板厚度线分支）。</summary>
-    public bool IsThicknessEditMode => OutlineEditMode == OutlineEditMode.Thickness;
+    /// <summary>带宽线编辑模式（阶段 3 用：BandWidthHandles 可见性 / 属性面板带宽线分支）。</summary>
+    public bool IsBandWidthEditMode => OutlineEditMode == OutlineEditMode.BandWidth;
 
-    /// <summary>轮廓编辑模式下能否使用（ThickPolyline / 已闭合的 Polyline / BooleanPath 可用；
+    /// <summary>轮廓编辑模式下能否使用（BandPolyline / 已闭合的 Polyline / BooleanPath 可用；
     /// 无内部接缝时手柄集合为空，但用户仍可进入模式查看/等待编辑）。</summary>
     public bool CanEnterOutlineMode =>
         SelectedItem is { } it
-        && (it.TypeKey == nameof(L1Primitive.ThickPolyline)
+        && (it.TypeKey == nameof(L1Primitive.BandPolyline)
             || (it.TypeKey == nameof(L1Primitive.Polyline) && it.IsClosed)
             || it.TypeKey == nameof(L1Primitive.BooleanPath));
 
-    /// <summary>厚度线模式下能否使用（同 Outline：仅 ThickPolyline 可用）。</summary>
-    public bool CanEnterThicknessMode =>
+    /// <summary>带宽线模式下能否使用（同 Outline：仅 BandPolyline 可用）。</summary>
+    public bool CanEnterBandWidthMode =>
         SelectedItem is { } it2
-        && it2.TypeKey == nameof(L1Primitive.ThickPolyline);
+        && it2.TypeKey == nameof(L1Primitive.BandPolyline);
 
     partial void OnOutlineEditModeChanged(OutlineEditMode value)
     {
         // 三 bool 属性同步发通知：XAML DataTrigger 三模式分支共用同一变更信号
         OnPropertyChanged(nameof(IsOutlineEditMode));
         OnPropertyChanged(nameof(IsSkeletonEditMode));
-        OnPropertyChanged(nameof(IsThicknessEditMode));
+        OnPropertyChanged(nameof(IsBandWidthEditMode));
         // 阶段 2：刷新三模式按钮的 IsSelected（按钮高亮态）
         RefreshEditModeChoices();
         // 模式切换时清空接缝选中（避免显示陈旧的高亮）
@@ -51,7 +51,7 @@ public partial class SymbolDesignerViewModel
         RefreshVertexHandles();
         RefreshSegmentHandles();
         RefreshOutlineCornerHandles();
-        RefreshThicknessHandles();
+        RefreshBandWidthHandles();
         SelectedBonePointIndex = -1;
     }
 
@@ -103,26 +103,26 @@ public partial class SymbolDesignerViewModel
         OutlineEditMode = OutlineEditMode.Skeleton;
     }
 
-    /// <summary>切换到厚度线编辑模式（如果当前可以）。</summary>
-    public void EnterThicknessMode()
+    /// <summary>切换到带宽线编辑模式（如果当前可以）。</summary>
+    public void EnterBandWidthMode()
     {
-        if (!CanEnterThicknessMode) return;
-        OutlineEditMode = OutlineEditMode.Thickness;
+        if (!CanEnterBandWidthMode) return;
+        OutlineEditMode = OutlineEditMode.BandWidth;
     }
 
     /// <summary>三态轮转编辑模式（Tab 快捷键 / 通用翻转按钮用）：
-    /// Skeleton → Thickness → Outline → Skeleton。原先二态版本仅 Skeleton↔Outline。
-    /// 闭合 Polyline / BooleanPath 无厚度概念：Skeleton ↔ Outline 直达，跳过 Thickness。</summary>
+    /// Skeleton → BandWidth → Outline → Skeleton。原先二态版本仅 Skeleton↔Outline。
+    /// 闭合 Polyline / BooleanPath 无带宽概念：Skeleton ↔ Outline 直达，跳过 BandWidth。</summary>
     [RelayCommand]
     public void ToggleEditMode()
     {
-        bool noThickness = SelectedItem is { } sp
+        bool noBandWidth = SelectedItem is { } sp
             && ((sp.TypeKey == nameof(L1Primitive.Polyline) && sp.IsClosed)
                 || sp.TypeKey == nameof(L1Primitive.BooleanPath));
         OutlineEditMode = OutlineEditMode switch
         {
-            OutlineEditMode.Skeleton => noThickness ? OutlineEditMode.Outline : OutlineEditMode.Thickness,
-            OutlineEditMode.Thickness => OutlineEditMode.Outline,
+            OutlineEditMode.Skeleton => noBandWidth ? OutlineEditMode.Outline : OutlineEditMode.BandWidth,
+            OutlineEditMode.BandWidth => OutlineEditMode.Outline,
             _ => OutlineEditMode.Skeleton,
         };
     }
@@ -138,8 +138,8 @@ public partial class SymbolDesignerViewModel
             case OutlineEditMode.Skeleton:
                 EnterSkeletonMode();
                 break;
-            case OutlineEditMode.Thickness:
-                EnterThicknessMode();
+            case OutlineEditMode.BandWidth:
+                EnterBandWidthMode();
                 break;
             case OutlineEditMode.Outline:
                 EnterOutlineMode();
@@ -147,7 +147,7 @@ public partial class SymbolDesignerViewModel
         }
     }
 
-    /// <summary>三模式按钮集合（Skeleton / Thickness / Outline）。
+    /// <summary>三模式按钮集合（Skeleton / BandWidth / Outline）。
     /// XAML 用 ItemsControl + UniformGrid 三列渲染；CommandParameter 传 mode。</summary>
     public ReadOnlyObservableCollection<EditModeChoice> EditModeChoices { get; }
 

@@ -83,8 +83,8 @@ public static class XamlExporter
             "Triangle"
                 => TriangleElement(left, top, w, h, z, fill, stroke, sw),
 
-            "ThickPolyline"
-                => ThickPolylineElement(p, left, top, z, fill, stroke),
+            "BandPolyline"
+                => BandPolylineElement(p, left, top, z, fill, stroke),
 
             "Polyline"
                 => PolylineElement(p, left, top, z, fill, stroke),
@@ -115,16 +115,16 @@ public static class XamlExporter
     }
 
     /// <summary>
-    /// 带厚度的折线（支线渲染产物）：导出为 Path + Data（Path mini-language 字符串）。
-    /// 用 p.OutlineGeometry 直接序列化（已经按 VertexThicknesses 算好轮廓）。
+    /// 带带宽的折线（支线渲染产物）：导出为 Path + Data（Path mini-language 字符串）。
+    /// 用 p.OutlineGeometry 直接序列化（已经按 VertexBandWidths 算好轮廓）。
     /// 局部坐标（不含 X/Y 偏移），Canvas.Left/Top 负责在 Canvas 上定位。
     /// 粘贴到其他项目时只需 Path + Data + Fill/Stroke，无任何编辑器依赖。</summary>
-    private static string ThickPolylineElement(PrimitiveItem p, string left, string top, string z,
+    private static string BandPolylineElement(PrimitiveItem p, string left, string top, string z,
         string fill, string stroke)
     {
         // OutlineGeometry 为 null 时（PathData 空）退化为注释
         var geom = p.OutlineGeometry;
-        if (geom is null) return Comment($"ThickPolyline PathData 为空，无法导出");
+        if (geom is null) return Comment($"BandPolyline PathData 为空，无法导出");
 
         // StreamGeometry.ToString(IFormatProvider) 输出 Path mini-language 字符串（"M0,0L10,5Z"）
         // 用 InvariantCulture 避免小数点变逗号
@@ -140,15 +140,15 @@ public static class XamlExporter
     }
 
     /// <summary>纯折线（Polyline）导出：
-    /// - 闭合形态（IsClosed）：与 ThickPolyline 同管道导出闭合填充 Path（OutlineGeometry 已含闭合轮廓）；
+    /// - 闭合形态（IsClosed）：与 BandPolyline 同管道导出闭合填充 Path（OutlineGeometry 已含闭合轮廓）；
     /// - 开放形态：仅骨架 Path（Stroke-only，无填充），保持开放折线观感。</summary>
     private static string PolylineElement(PrimitiveItem p, string left, string top, string z,
         string fill, string stroke)
     {
         if (p.IsClosed)
         {
-            // 闭合：复用完整轮廓导出（含闭合轮廓/填充），与 ThickPolyline 一致
-            return ThickPolylineElement(p, left, top, z, fill, stroke);
+            // 闭合：复用完整轮廓导出（含闭合轮廓/填充），与 BandPolyline 一致
+            return BandPolylineElement(p, left, top, z, fill, stroke);
         }
 
         // 开放折线：骨架几何（PolylineGeometry）序列化为 open Path mini-language，仅描边无填充

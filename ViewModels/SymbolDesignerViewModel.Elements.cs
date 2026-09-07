@@ -120,7 +120,7 @@ public partial class SymbolDesignerViewModel
         if (_suppressDirty) return;
         if (e.PropertyName == nameof(PrimitiveItem.OutlineGeometry))
         {
-            // 渲染几何不标 dirty（由 PathData/Thickness 驱动），但顶点厚度等编辑仍应进入撤销历史
+            // 渲染几何不标 dirty（由 PathData/BandWidth 驱动），但顶点带宽等编辑仍应进入撤销历史
             ScheduleUndoCommit();
             return;
         }

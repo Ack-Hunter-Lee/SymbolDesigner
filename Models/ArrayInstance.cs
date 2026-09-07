@@ -35,7 +35,7 @@ public enum ArrayType
 ///   4. 导出 XAML 时直接展开（XamlExporter 阶段处理，与运行期解耦）
 ///
 /// POC 阶段约束：
-///   - 路径只支持 ThickPolyline（M/L 直线段），不做圆弧
+///   - 路径只支持 BandPolyline（M/L 直线段），不做圆弧
 ///   - 路径方向 = 起点→终点的方向；不处理闭合路径的"环"语义
 ///   - 旋转：副本绕自身中心旋转切线方向（WPF Path.RenderTransform）
 ///   - 矩形/环形：旋转 = 0（矩形）或环形切向（RotateItems 开启时）

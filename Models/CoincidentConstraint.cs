@@ -22,7 +22,7 @@ public enum CoincidentMode
 /// <summary>
 /// 重合约束（遵循 AutoCAD GCCOINCIDENT：强制一个点落在曲线/曲线上）。
 ///
-/// 参与图元固定为"直线"（Line/Polyline/ThickPolyline）与"圆"（Ellipse/Ring），两种模式：
+/// 参与图元固定为"直线"（Line/Polyline/BandPolyline）与"圆"（Ellipse/Ring），两种模式：
 ///  - EndPointOnArc：直线的某个端点（PathData 首/末点）投影到圆弧上，
 ///                    拖动圆时该端点跟随保持落在圆弧上；拖动线时该端点被拉回圆弧。
 ///  - CenterOnLine ：圆心的投影落在直线上（腰垂足），圆心只能沿直线滑动。

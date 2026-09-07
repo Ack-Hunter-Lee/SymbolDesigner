@@ -22,14 +22,14 @@ public enum L1Primitive
     /// <summary>三角形（指示箭头、警告标志、阀瓣等）</summary>
     Triangle,
 
-    /// <summary>粗折线 / 厚带状折线：折线的基础上按全局厚度向外扩充左右两条平行轮廓，
-    /// 形成带厚度的连贯图形（CAD 的 stroke outline 效果）。画线工具产物的目标类型。</summary>
-    ThickPolyline,
+    /// <summary>带状折线：折线的基础上按全局带宽（BandWidth）向外扩充左右两条平行轮廓，
+    /// 形成一条闭合轮廓带（CAD 的 stroke outline 效果）。画线工具产物的目标类型。</summary>
+    BandPolyline,
 
-    /// <summary>纯折线（无厚度）：仅骨架沿的 PathData 描边显示，不带轮廓/接缝/逐顶点厚度控制。
-    /// 与 ThickPolyline 是一对兄弟——同一份 PathData，一个带厚度一个不带。
+    /// <summary>纯折线（无带宽）：仅骨架沿的 PathData 描边显示，不带轮廓/接缝/逐顶点带宽控制。
+    /// 与 BandPolyline 是一对兄弟——同一份 PathData，一个带带宽一个不带。
     /// 适合做"参考线/工艺走向/分区辅助线"等不需要带状粗细语义的场合。
-    /// 绘制时与 ThickPolyline 共用画线状态机（ClickDraw/MoveDraw/EndDraw），
+    /// 绘制时与 BandPolyline 共用画线状态机（ClickDraw/MoveDraw/EndDraw），
     /// 仅在 EndDraw 提交时按 DrawMode 决定目标类型。</summary>
     Polyline,
 
@@ -60,10 +60,10 @@ public enum DrawMode
 {
     /// <summary>普通模式（默认）。</summary>
     None,
-    /// <summary>粗折线模式。点击鼠标逐点加入顶点，按 Enter 提交为 ThickPolyline 图元，按 Backspace 撤销上一个点，按 Esc 取消。</summary>
-    ThickPolyline,
-    /// <summary>纯折线模式。点击鼠标逐点加入顶点，按 Enter 提交为 Polyline 图元（无厚度的兄弟类型），
-    /// 按 Backspace 撤销上一个点，按 Esc 取消。与 ThickPolyline 共用画线状态机。</summary>
+    /// <summary>带状折线模式。点击鼠标逐点加入顶点，按 Enter 提交为 BandPolyline 图元，按 Backspace 撤销上一个点，按 Esc 取消。</summary>
+    BandPolyline,
+    /// <summary>纯折线模式。点击鼠标逐点加入顶点，按 Enter 提交为 Polyline 图元（无带宽的兄弟类型），
+    /// 按 Backspace 撤销上一个点，按 Esc 取消。与 BandPolyline 共用画线状态机。</summary>
     Polyline,
     /// <summary>直线模式。第一次点击确定起点，第二次点击确定终点；提交后自动退出。</summary>
     Line,

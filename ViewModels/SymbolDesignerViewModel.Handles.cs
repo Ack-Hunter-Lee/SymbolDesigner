@@ -7,19 +7,19 @@ using SymbolDesigner.Models;
 
 namespace SymbolDesigner.ViewModels;
 
-/// <summary>画布选中图元的各类拖拽手柄（顶点/段/厚度线/圆环/轮廓接缝）的集合维护与刷新。</summary>
+/// <summary>画布选中图元的各类拖拽手柄（顶点/段/带宽线/圆环/轮廓接缝）的集合维护与刷新。</summary>
 public partial class SymbolDesignerViewModel
 {
-    // ============== 顶点编辑（ThickPolyline 选中后可拖拽顶点改长度） ==============
+    // ============== 顶点编辑（BandPolyline 选中后可拖拽顶点改长度） ==============
 
-    /// <summary>当前选中 ThickPolyline 的顶点手柄集合（画布坐标）。
-    /// 仅当 SelectedItem 是 ThickPolyline 时填充，否则为空。
+    /// <summary>当前选中 BandPolyline 的顶点手柄集合（画布坐标）。
+    /// 仅当 SelectedItem 是 BandPolyline 时填充，否则为空。
     /// View 用 ItemsControl + Canvas 渲染每个手柄。</summary>
     public ObservableCollection<VertexHandle> VertexHandles { get; } = new();
 
     /// <summary>根据 SelectedItem.PathData 刷新 VertexHandles。
     /// 解析 PathData 顶点（局部坐标），加上 SelectedItem.X/Y 转画布坐标。
-    /// 适用范围：任意具有 PathData 的图元（ThickPolyline / 画线工具产物的 Polyline / Line）。
+    /// 适用范围：任意具有 PathData 的图元（BandPolyline / 画线工具产物的 Polyline / Line）。
     /// 工具栏拖入的 Line/Polyline（PathData 为空）不出端点手柄——其端点依赖 LineAxis+Rotation 解析，
     /// 拖动改 X/Y/W/H 时易与渲染错位，保持现状仅支持画线工具产物。
     /// BooleanPath：轮廓点不可拖拽（需求），骨架模式下不显示可拖手柄；
@@ -33,7 +33,7 @@ public partial class SymbolDesignerViewModel
         // BooleanPath：骨架模式不出拖拽手柄（轮廓点不允许拖拽）
         if (item.TypeKey == nameof(L1Primitive.BooleanPath)) return;
 
-        var pts = Converters.ThickOutlineBuilder.ParsePathData(item.PathData);
+        var pts = Converters.BandOutlineBuilder.ParsePathData(item.PathData);
         for (int i = 0; i < pts.Count; i++)
             VertexHandles.Add(new VertexHandle(i, item.X + pts[i].X, item.Y + pts[i].Y));
     }
@@ -57,13 +57,13 @@ public partial class SymbolDesignerViewModel
         _suppressVertexRefresh = true;
         try
         {
-            var pts = Converters.ThickOutlineBuilder.ParsePathData(item.PathData);
+            var pts = Converters.BandOutlineBuilder.ParsePathData(item.PathData);
             if (index < 0 || index >= pts.Count) return;
             pts[index] = new Point(localX, localY);
 
             item.PathData = Converters.GeometryMath.BuildPathData(pts);
-            // 顶点数不变时 SyncVertexThicknesses 为 no-op；防御性调用，避免未来加/删顶点逻辑不同步
-            item.SyncVertexThicknesses(pts.Count, item.Thickness);
+            // 顶点数不变时 SyncVertexBandWidths 为 no-op；防御性调用，避免未来加/删顶点逻辑不同步
+            item.SyncVertexBandWidths(pts.Count, item.BandWidth);
         }
         finally
         {
@@ -74,7 +74,7 @@ public partial class SymbolDesignerViewModel
         // 顶点移动后接缝外尖点也跟着变→刷新轮廓手柄
         if (OutlineEditMode == OutlineEditMode.Outline)
             RefreshOutlineCornerHandles();
-        RefreshThicknessHandles();
+        RefreshBandWidthHandles();
 
         // 顶点移动后，包围盒（X/Y/Width/Height）可能过小（顶点超出原框）。
         // 重算 bbox，让 X/Y 跟随顶点位置，确保所有顶点在可见范围内。
@@ -84,16 +84,16 @@ public partial class SymbolDesignerViewModel
         OnItemGeometryChanged(item);
     }
 
-    // ============== 段拖拽（ThickPolyline 选中后可拖拽整段线段平移） ==============
+    // ============== 段拖拽（BandPolyline 选中后可拖拽整段线段平移） ==============
 
-    /// <summary>当前选中 ThickPolyline 的段拖拽手柄集合（画布坐标的中点）。
+    /// <summary>当前选中 BandPolyline 的段拖拽手柄集合（画布坐标的中点）。
     /// 与 VertexHandles 同步刷新（同一 SelectedItem 选中时）。</summary>
     public ObservableCollection<SegmentDragHandle> SegmentHandles { get; } = new();
 
-    /// <summary>厚度线端点手柄集合：每个段 4 个（L/R × Start/End）。
-    /// 仅在 OutlineEditMode.Thickness 且 SelectedItem 是 ThickPolyline 时填充。
-    /// 阶段 3 实现：手算端点（顶点 + 段方向法向量 × 半厚度）。后续可复用 CachedOutlineSteps 取真实端点。</summary>
-    public ObservableCollection<ThicknessHandle> ThicknessHandles { get; } = new();
+    /// <summary>带宽线端点手柄集合：每个段 4 个（L/R × Start/End）。
+    /// 仅在 OutlineEditMode.BandWidth 且 SelectedItem 是 BandPolyline 时填充。
+    /// 阶段 3 实现：手算端点（顶点 + 段方向法向量 × 半带宽）。后续可复用 CachedOutlineSteps 取真实端点。</summary>
+    public ObservableCollection<BandWidthHandle> BandWidthHandles { get; } = new();
 
     /// <summary>圆环拖拽手柄集合：中心 1 + 外圆 1（东侧）+ 内圆 1（东侧）= 3 个。
     /// 简化设计：水平方向各 1 个手柄足够调节半径（拖动距离 = 半径增量），上下/半径跳跃需更复杂
@@ -102,7 +102,7 @@ public partial class SymbolDesignerViewModel
     public ObservableCollection<RingHandle> RingHandles { get; } = new();
 
     /// <summary>当前高亮的骨点序号（点击"骨点 i"组标题后高亮对应 Slider 的两个端点）。
-    /// -1 = 全部不亮。仅 Thickness 模式下有效。</summary>
+    /// -1 = 全部不亮。仅 BandWidth 模式下有效。</summary>
     [ObservableProperty] private int _selectedBonePointIndex = -1;
 
     /// <summary>刷新 SegmentHandles：每段一个，中点为该段两端顶点的平均。</summary>
@@ -110,11 +110,11 @@ public partial class SymbolDesignerViewModel
     {
         SegmentHandles.Clear();
         if (SelectedItem is not { } item) return;
-        if (item.TypeKey != nameof(L1Primitive.ThickPolyline))
+        if (item.TypeKey != nameof(L1Primitive.BandPolyline))
             return;
         if (string.IsNullOrEmpty(item.PathData)) return;
 
-        var pts = Converters.ThickOutlineBuilder.ParsePathData(item.PathData);
+        var pts = Converters.BandOutlineBuilder.ParsePathData(item.PathData);
         for (int i = 0; i < pts.Count - 1; i++)
         {
             var midX = item.X + (pts[i].X + pts[i + 1].X) * 0.5;
@@ -123,31 +123,31 @@ public partial class SymbolDesignerViewModel
         }
     }
 
-    /// <summary>刷新 ThicknessHandles：每段 4 个端点（L/R × Start/End）。
+    /// <summary>刷新 BandWidthHandles：每段 4 个端点（L/R × Start/End）。
     /// 几何：段 i 方向 d = (pts[i+1] - pts[i]).Normalize()；左侧法线 n = (d.Y, -d.X)。
-    ///   LeftStart  = pts[i]   + n × (vt[i].OutgoingThickness / 2)
-    ///   LeftEnd    = pts[i+1] + n × (vt[i+1].IncomingThickness / 2)
+    ///   LeftStart  = pts[i]   + n × (vt[i].OutgoingBandWidth / 2)
+    ///   LeftEnd    = pts[i+1] + n × (vt[i+1].IncomingBandWidth / 2)
     ///   RightStart = pts[i]   - n × ...
     ///   RightEnd   = pts[i+1] - n × ...
-    /// 缺 vt[i]/vt[i+1] 时回退 item.Thickness（与 OutlineGeometry 兜底一致）。
-    /// 阶段 3 仅显示，不带拖拽；坐标更新 = SelectedItem 变化 / PathData 改 / 厚度改 / 模式切到 Thickness。</summary>
-    private void RefreshThicknessHandles()
+    /// 缺 vt[i]/vt[i+1] 时回退 item.BandWidth（与 OutlineGeometry 兜底一致）。
+    /// 阶段 3 仅显示，不带拖拽；坐标更新 = SelectedItem 变化 / PathData 改 / 带宽改 / 模式切到 BandWidth。</summary>
+    private void RefreshBandWidthHandles()
     {
-        ThicknessHandles.Clear();
+        BandWidthHandles.Clear();
         if (SelectedItem is not { } item) return;
-        if (item.TypeKey != nameof(L1Primitive.ThickPolyline))
+        if (item.TypeKey != nameof(L1Primitive.BandPolyline))
             return;
         if (string.IsNullOrEmpty(item.PathData)) return;
-        if (item.Thickness <= 0) return;
+        if (item.BandWidth <= 0) return;
 
-        var pts = Converters.ThickOutlineBuilder.ParsePathData(item.PathData);
+        var pts = Converters.BandOutlineBuilder.ParsePathData(item.PathData);
         if (pts.Count < 2) return;
 
         int n = pts.Count;
-        // 优先使用逐顶点厚度（与 OutlineGeometry 同一来源）；不足回退整体 Thickness
-        var vt = item.VertexThicknesses;
-        double HalfAt(int vi) => (vi >= 0 && vi < vt.Count ? vt[vi].OutgoingThickness : item.Thickness) * 0.5;
-        double HalfIncoming(int vi) => (vi >= 0 && vi < vt.Count ? vt[vi].IncomingThickness : item.Thickness) * 0.5;
+        // 优先使用逐顶点带宽（与 OutlineGeometry 同一来源）；不足回退整体 BandWidth
+        var vt = item.VertexBandWidths;
+        double HalfAt(int vi) => (vi >= 0 && vi < vt.Count ? vt[vi].OutgoingBandWidth : item.BandWidth) * 0.5;
+        double HalfIncoming(int vi) => (vi >= 0 && vi < vt.Count ? vt[vi].IncomingBandWidth : item.BandWidth) * 0.5;
 
         // 同步每个顶点的"入端/出端"显示标志：
         // - 首顶点：无入端；末顶点：无出端
@@ -178,26 +178,26 @@ public partial class SymbolDesignerViewModel
             // 左侧法线（顺时针 90°）= (d.Y, -d.X) / len
             double nx = dy / len;
             double ny = -dx / len;
-            double halfStart = HalfAt(i);          // 段 i 首端厚度半值（= vt[i].Outgoing）
-            double halfEnd = HalfIncoming(i + 1);  // 段 i 末端厚度半值（= vt[i+1].Incoming）
+            double halfStart = HalfAt(i);          // 段 i 首端带宽半值（= vt[i].Outgoing）
+            double halfEnd = HalfIncoming(i + 1);  // 段 i 末端带宽半值（= vt[i+1].Incoming）
 
             // Left Start（映射骨点 i，出端 ▼）
-            ThicknessHandles.Add(new ThicknessHandle(i, "L", "Start", i,
+            BandWidthHandles.Add(new BandWidthHandle(i, "L", "Start", i,
                 item.X + pts[i].X + nx * halfStart,
                 item.Y + pts[i].Y + ny * halfStart));
             // Right Start（出端 ▼）
-            ThicknessHandles.Add(new ThicknessHandle(i, "R", "Start", i,
+            BandWidthHandles.Add(new BandWidthHandle(i, "R", "Start", i,
                 item.X + pts[i].X - nx * halfStart,
                 item.Y + pts[i].Y - ny * halfStart));
             // 入端端点（▲）：顶点 i+1 的入端被隐藏（首顶点 / 合并共线顶点）时整体跳过
             bool showIn = i + 1 < vt.Count && vt[i + 1].ShowIncoming;
             if (!showIn) continue;
             // Left End（映射骨点 i+1，入端 ▲）
-            ThicknessHandles.Add(new ThicknessHandle(i, "L", "End", i + 1,
+            BandWidthHandles.Add(new BandWidthHandle(i, "L", "End", i + 1,
                 item.X + pts[i + 1].X + nx * halfEnd,
                 item.Y + pts[i + 1].Y + ny * halfEnd));
             // Right End（入端 ▲）
-            ThicknessHandles.Add(new ThicknessHandle(i, "R", "End", i + 1,
+            BandWidthHandles.Add(new BandWidthHandle(i, "R", "End", i + 1,
                 item.X + pts[i + 1].X - nx * halfEnd,
                 item.Y + pts[i + 1].Y - ny * halfEnd));
         }
@@ -307,26 +307,26 @@ public partial class SymbolDesignerViewModel
 
     // ============== 轮廓接缝编辑（OutlineEditMode.Outline 模式下显示） ==============
 
-    /// <summary>当前选中 ThickPolyline 的轮廓接缝手柄集合（画布坐标）。
-    /// 仅在 OutlineEditMode.Outline 且 SelectedItem 是 ThickPolyline 且至少一个内部接缝时填充。
+    /// <summary>当前选中 BandPolyline 的轮廓接缝手柄集合（画布坐标）。
+    /// 仅在 OutlineEditMode.Outline 且 SelectedItem 是 BandPolyline 且至少一个内部接缝时填充。
     /// 每个手柄对应一个内部接缝的外尖点（miter 顶点）。点击手柄 → SelectedOutlineCorner = handle。</summary>
     public ObservableCollection<OutlineCornerHandle> OutlineCornerHandles { get; } = new();
 
-    /// <summary>根据 SelectedItem.PathData + Thickness 刷新 OutlineCornerHandles。
+    /// <summary>根据 SelectedItem.PathData + BandWidth 刷新 OutlineCornerHandles。
     /// 调用 BuildOutlineVertices 获取轮廓线所有连接点，每个点创建一个手柄。</summary>
     private void RefreshOutlineCornerHandles()
     {
         OutlineCornerHandles.Clear();
         if (SelectedItem is not { } item) return;
-        bool isThick = item.TypeKey == nameof(L1Primitive.ThickPolyline);
+        bool isBand = item.TypeKey == nameof(L1Primitive.BandPolyline);
         bool isClosedPolyline = item.TypeKey == nameof(L1Primitive.Polyline) && item.IsClosed;
         bool isBoolean = item.TypeKey == nameof(L1Primitive.BooleanPath);
-        // 轮廓手柄：ThickPolyline（厚度双环）/ 已闭合的 Polyline（单环骨架点）/ BooleanPath（多环骨架）可用
-        if (!isThick && !isClosedPolyline && !isBoolean) return;
+        // 轮廓手柄：BandPolyline（带宽双环）/ 已闭合的 Polyline（单环骨架点）/ BooleanPath（多环骨架）可用
+        if (!isBand && !isClosedPolyline && !isBoolean) return;
         if (string.IsNullOrEmpty(item.PathData)) return;
-        if (item.Thickness <= 0 && !isClosedPolyline && !isBoolean) return;
+        if (item.BandWidth <= 0 && !isClosedPolyline && !isBoolean) return;
 
-        var pts = Converters.ThickOutlineBuilder.ParsePathData(item.PathData);
+        var pts = Converters.BandOutlineBuilder.ParsePathData(item.PathData);
         int n;
         if (isBoolean)
         {
@@ -341,8 +341,8 @@ public partial class SymbolDesignerViewModel
         }
 
         // 直接复用渲染用的缓存步骤（CachedOutlineSteps）：每个步骤的 Point 就是轮廓上的真实点，
-        // 已包含逐顶点厚度 / 接缝样式 / 圆角化改动，与画布上看到的轮廓保证一致，无需再按厚度重算。
-        // 先强制触发一次 OutlineGeometry：若输入（厚度/样式/PathData）已变，getter 会先重算步骤再返回。
+        // 已包含逐顶点带宽 / 接缝样式 / 圆角化改动，与画布上看到的轮廓保证一致，无需再按带宽重算。
+        // 先强制触发一次 OutlineGeometry：若输入（带宽/样式/PathData）已变，getter 会先重算步骤再返回。
         var _ = item.OutlineGeometry;
         var steps = item.CachedOutlineSteps;
         if (steps is null || steps.Count == 0)
@@ -351,19 +351,19 @@ public partial class SymbolDesignerViewModel
             if (isBoolean)
             {
                 // 布尔结果：骨架点步骤（段端点，弧不摊平）——仅作手柄定位，不参与渲染
-                steps = Converters.ThickOutlineBuilder.BuildClosedShapeSegmentsSteps(item.PathData, null);
+                steps = Converters.BandOutlineBuilder.BuildClosedShapeSegmentsSteps(item.PathData, null);
             }
             else if (isClosedPolyline)
             {
-                steps = Converters.ThickOutlineBuilder.BuildClosedShapeSteps(item.PathData, null);
+                steps = Converters.BandOutlineBuilder.BuildClosedShapeSteps(item.PathData, null);
             }
             else
             {
-                // 厚度必须用逐顶点值（与 OutlineGeometry 相同逻辑），否则共享顶点两侧等厚 → 偏移点重合 → 手柄少显示。
-                var vt = new VertexThickness[n];
-                if (item.VertexThicknesses.Count == n)
+                // 带宽必须用逐顶点值（与 OutlineGeometry 相同逻辑），否则共享顶点两侧等宽 → 偏移点重合 → 手柄少显示。
+                var vt = new VertexBandWidth[n];
+                if (item.VertexBandWidths.Count == n)
                 {
-                    for (int i = 0; i < n; i++) vt[i] = item.VertexThicknesses[i];
+                    for (int i = 0; i < n; i++) vt[i] = item.VertexBandWidths[i];
                 }
                 else
                 {
@@ -371,7 +371,7 @@ public partial class SymbolDesignerViewModel
                     {
                         bool isStart = i == 0;
                         bool isEnd = i == n - 1;
-                        vt[i] = new VertexThickness(i, item.Thickness, item.Thickness, isStart, isEnd);
+                        vt[i] = new VertexBandWidth(i, item.BandWidth, item.BandWidth, isStart, isEnd);
                     }
                 }
                 var jss = new JoinStyle[n];
@@ -382,7 +382,7 @@ public partial class SymbolDesignerViewModel
                     else
                         jss[i] = item.GetVertexJoinStyle(i) ?? item.OutlineJoinStyle;
                 }
-                steps = Converters.ThickOutlineBuilder.BuildOutlineSteps(item.PathData, vt, jss, item.CollinearSplitPairs);
+                steps = Converters.BandOutlineBuilder.BuildOutlineSteps(item.PathData, vt, jss, item.CollinearSplitPairs);
             }
         }
 
@@ -399,7 +399,7 @@ public partial class SymbolDesignerViewModel
 
             // 估算对应骨架顶点 vi：优先用步骤自带的 BoneIndex（ComputeMiterOutline 显式记录）。
             // 旧公式 i→i / n-1-(i-halfSteps) 在拆双对模式下（lefts 长 2n-2 > n）会越界/错位，
-            // 导致手柄绑定到错误的 VertexThickness 半径字段。
+            // 导致手柄绑定到错误的 VertexBandWidth 半径字段。
             int vi = step.BoneIndex;
             if (vi < 0)
                 vi = i < halfSteps ? i : (n - 1 - (i - halfSteps));
@@ -432,12 +432,12 @@ public partial class SymbolDesignerViewModel
             JoinStyle? perStyle = item.GetVertexJoinStyle(vi);
             JoinStyle effectiveStyle = perStyle ?? item.OutlineJoinStyle;
             // 圆角半径 getter/setter：lambda 捕获 item，按 IsCorner/Side 路由到不同源字段。
-            // XAML TwoWay 写值时调 ApplyRadiusToSelectedHandle → 改 VertexThickness 字段 + 刷 OutlineGeometry。
+            // XAML TwoWay 写值时调 ApplyRadiusToSelectedHandle → 改 VertexBandWidth 字段 + 刷 OutlineGeometry。
             Func<OutlineCornerHandle, double> getRadius = h =>
             {
                 int v = h.Index;
-                if (v < 0 || v >= item.VertexThicknesses.Count) return 0;
-                var vt = item.VertexThicknesses[v];
+                if (v < 0 || v >= item.VertexBandWidths.Count) return 0;
+                var vt = item.VertexBandWidths[v];
                 if (h.IsCorner) return vt.JoinInnerRadius;
                 return h.Side == "L" ? vt.LeftCornerRadius : vt.RightCornerRadius;
             };
@@ -451,9 +451,9 @@ public partial class SymbolDesignerViewModel
                 else item.SetVertexJoinStyle(h.Index, js);
                 // 非 Round → 清该接缝对应顶点的圆角半径字段（Corner 点 JoinInnerRadius；Normal 点 L/R CornerRadius），
                 // 视觉立即恢复尖角，不残留"样式变了但圆弧还在"的状态。
-                if (js != JoinStyle.Round && h.Index >= 0 && h.Index < item.VertexThicknesses.Count)
+                if (js != JoinStyle.Round && h.Index >= 0 && h.Index < item.VertexBandWidths.Count)
                 {
-                    var vtr = item.VertexThicknesses[h.Index];
+                    var vtr = item.VertexBandWidths[h.Index];
                     if (h.IsCorner)
                     {
                         if (vtr.JoinInnerRadius != 0) vtr.JoinInnerRadius = 0;
@@ -479,13 +479,13 @@ public partial class SymbolDesignerViewModel
                 i, stepKind, inDir, outDir,
                 isCorner: step.Kind == Converters.OutlinePointKind.Corner,
                 getRadius: getRadius, setRadius: setRadius, setCurrentStyle: setStyle);
-            // 订阅对应 VertexThickness 字段变化 → 联动发 CurrentRadius 属性通知给 UI（属性面板数值/Slider 实时跟随）
+            // 订阅对应 VertexBandWidth 字段变化 → 联动发 CurrentRadius 属性通知给 UI（属性面板数值/Slider 实时跟随）
             AttachCornerRadiusAutoSync(handle, item);
             OutlineCornerHandles.Add(handle);
         }
 
         // Refresh 末尾：按等价键 (Index + Side + StepIndex + IsCorner) 把 SelectedOutlineCorner 重指到新 handle，
-        // 避免 XAML 绑定的属性面板 ComboBox/Slider 在 PathData/Thickness/样式变化后指向游离对象而显示陈旧值。
+        // 避免 XAML 绑定的属性面板 ComboBox/Slider 在 PathData/BandWidth/样式变化后指向游离对象而显示陈旧值。
         if (_selectedCornerKey is { } k)
         {
             var match = OutlineCornerHandles.FirstOrDefault(h =>
@@ -499,7 +499,7 @@ public partial class SymbolDesignerViewModel
     private (int Index, string Side, int StepIndex, bool IsCorner)? _selectedCornerKey;
 
     /// <summary>写入接缝"圆角半径"（接缝属性面板 Slider TwoWay 用）：
-    /// 按 IsCorner/Side 把值落到 VertexThickness 对应字段，触发 OutlineGeometry 重算。
+    /// 按 IsCorner/Side 把值落到 VertexBandWidth 对应字段，触发 OutlineGeometry 重算。
     /// 半径字段与样式（CurrentStyle）是两个独立属性：
     /// - 样式只控制转角点（Corner）的 join 行为（Round/Miter/Bevel）
     /// - 半径字段只控制非转角点（Normal，端点偏移 / 段末端 / 共线直通点）的圆角
@@ -508,8 +508,8 @@ public partial class SymbolDesignerViewModel
     {
         if (radius < 0) return;
         int v = h.Index;
-        if (v < 0 || v >= item.VertexThicknesses.Count) return;
-        var vt = item.VertexThicknesses[v];
+        if (v < 0 || v >= item.VertexBandWidths.Count) return;
+        var vt = item.VertexBandWidths[v];
         if (h.IsCorner)
         {
             if (vt.JoinInnerRadius != radius) vt.JoinInnerRadius = radius;
@@ -527,19 +527,19 @@ public partial class SymbolDesignerViewModel
         item.NotifyOutlineGeometryChanged();
     }
 
-    /// <summary>把手柄对应的 VertexThickness 字段变化映射到 OutlineCornerHandle.CurrentRadius 通知。
-    /// 订阅 VertexThicknesses[vi].PropertyChanged（JoinInnerRadius/Left/RightCornerRadius 任一变化 → 通知 UI 重新读）。
+    /// <summary>把手柄对应的 VertexBandWidth 字段变化映射到 OutlineCornerHandle.CurrentRadius 通知。
+    /// 订阅 VertexBandWidths[vi].PropertyChanged（JoinInnerRadius/Left/RightCornerRadius 任一变化 → 通知 UI 重新读）。
     /// 闭包持有 h/vt 引用，旧手柄 Refresh 后随 OutlineCornerHandles.Clear() 一起被 GC，自动解绑，无需手动反订阅。</summary>
     private static void AttachCornerRadiusAutoSync(OutlineCornerHandle h, PrimitiveItem item)
     {
         int v = h.Index;
-        if (v < 0 || v >= item.VertexThicknesses.Count) return;
-        var vt = item.VertexThicknesses[v];
+        if (v < 0 || v >= item.VertexBandWidths.Count) return;
+        var vt = item.VertexBandWidths[v];
         vt.PropertyChanged += (s, e) =>
         {
-            if (e.PropertyName is nameof(VertexThickness.JoinInnerRadius)
-                or nameof(VertexThickness.LeftCornerRadius)
-                or nameof(VertexThickness.RightCornerRadius))
+            if (e.PropertyName is nameof(VertexBandWidth.JoinInnerRadius)
+                or nameof(VertexBandWidth.LeftCornerRadius)
+                or nameof(VertexBandWidth.RightCornerRadius))
             {
                 h.NotifyRadiusChanged();
             }
@@ -554,7 +554,7 @@ public partial class SymbolDesignerViewModel
         if (SelectedItem is not { } item) return;
         if (string.IsNullOrEmpty(item.PathData)) return;
 
-        var pts = Converters.ThickOutlineBuilder.ParsePathData(item.PathData);
+        var pts = Converters.BandOutlineBuilder.ParsePathData(item.PathData);
         if (segmentIndex < 0 || segmentIndex >= pts.Count - 1) return;
 
         // 段 i 两端画布坐标
@@ -597,7 +597,7 @@ public partial class SymbolDesignerViewModel
         try
         {
             item.PathData = Converters.GeometryMath.BuildPathData(pts);
-            item.SyncVertexThicknesses(pts.Count, item.Thickness);
+            item.SyncVertexBandWidths(pts.Count, item.BandWidth);
         }
         finally
         {

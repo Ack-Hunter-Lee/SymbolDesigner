@@ -46,7 +46,7 @@ public partial class SymbolDesignerViewModel
     }
 
     /// <summary>画布鼠标点击（CAD 风格连续绘制）：
-    /// 路径类（Polyline/ThickPolyline/Line）：首次点击起笔，后续每次点击追加一个点；Esc 结束。
+    /// 路径类（Polyline/BandPolyline/Line）：首次点击起笔，后续每次点击追加一个点；Esc 结束。
     /// 形状类（Rectangle/Ellipse/Ring/Triangle/RoundedRectangle）：两次点击 = 中心点 + 第二点（对角点/圆周点/角点）；
     /// 第二次点击立即提交并退出绘制。
     /// Esc 取消未提交草稿。</summary>
@@ -116,7 +116,7 @@ public partial class SymbolDesignerViewModel
         UpdateDraftPathData();
 
         // Line 模式只需要两个点：第二次点击直接提交并退出绘制。
-        // Polyline/ThickPolyline 走 Enter 手动结束。
+        // Polyline/BandPolyline 走 Enter 手动结束。
         if (DrawMode == DrawMode.Line && DraftPoints.Count >= 2)
         {
             EndDraw();
@@ -188,8 +188,8 @@ public partial class SymbolDesignerViewModel
 
     /// <summary>起点吸附判定：Polyline 绘制中，鼠标位置与首顶点距离 &lt; 阈值 → DraftSnapToStart=true。
     /// 仅当已画了 2 个以上点（有可闭合的边）时参与吸附，避免起笔点附近也会误触发高亮。
-    /// 注意：闭合语义只对 Polyline 生效（ThickPolyline 的 IsClosed 仍走开放式轮廓管道），
-    /// 因此 ThickPolyline 绘制时不启用本吸附，防止"点击起点却得到重合点"。</summary>
+    /// 注意：闭合语义只对 Polyline 生效（BandPolyline 的 IsClosed 仍走开放式轮廓管道），
+    /// 因此 BandPolyline 绘制时不启用本吸附，防止"点击起点却得到重合点"。</summary>
     private void UpdateDraftStartSnap(System.Windows.Point clamped)
     {
         if (DrawMode != DrawMode.Polyline)
@@ -248,7 +248,7 @@ public partial class SymbolDesignerViewModel
         // 无绘制且无选中 → 什么都不做
     }
 
-    /// <summary>按 Enter 时的处理:正在绘制则把当前草稿提交为正式图元(ThickPolyline)。
+    /// <summary>按 Enter 时的处理:正在绘制则把当前草稿提交为正式图元(BandPolyline)。
     /// Enter 永远表示"完成/提交",绝不取消。</summary>
     [RelayCommand]
     public void FinishDraw()
@@ -363,15 +363,15 @@ public partial class SymbolDesignerViewModel
 
             var pathData = Converters.GeometryMath.BuildPathData(shifted);
             // 画线工具提交：根据 DrawMode 决定目标 primitive 类型。
-            //   DrawMode.ThickPolyline → ThickPolyline（带厚度的连贯图形）
-            //   DrawMode.Polyline      → Polyline（无厚度的兄弟类型，纯描边骨架）
-            //   DrawMode.Line          → 暂未实现，预留
+            //   DrawMode.BandPolyline → BandPolyline（带带宽的连贯图形）
+            //   DrawMode.Polyline     → Polyline（无带宽的兄弟类型，纯描边骨架）
+            //   DrawMode.Line         → 暂未实现，预留
             var primitive = DrawMode switch
             {
                 DrawMode.Line          => L1Primitive.Line,
                 DrawMode.Polyline      => L1Primitive.Polyline,
-                DrawMode.ThickPolyline => L1Primitive.ThickPolyline,
-                _                       => L1Primitive.ThickPolyline,
+                DrawMode.BandPolyline  => L1Primitive.BandPolyline,
+                _                      => L1Primitive.BandPolyline,
             };
 
             var item = PrimitiveItem.Create(primitive, minX, minY, w, h);
@@ -379,18 +379,18 @@ public partial class SymbolDesignerViewModel
             // 画线工具产物的 LineAxis：统一设为 Free（精确的折线/直线由 Path 渲染，
             // 模板里的 Line 几何只在工具栏拖入的 Line 上用，避免重叠显示两条）。
             item.LineAxis = LineAxisMode.Free;
-            if (primitive == L1Primitive.ThickPolyline)
+            if (primitive == L1Primitive.BandPolyline)
             {
-                item.Thickness = 6; // 默认厚度 6（与 LinePath 默认对齐）
+                item.BandWidth = 6; // 默认带宽 6（与 LinePath 默认对齐）
                 item.ZIndex = Primitives.Count;
-                // 初始化 VertexThicknesses（每顶点一个 VertexThickness，顶点数 = 段数 + 1）
-                // 首顶点 IsStart、末顶点 IsEnd 自动标记；厚度默认 6
-                item.SyncVertexThicknesses(shifted.Count, item.Thickness);
+                // 初始化 VertexBandWidths（每顶点一个 VertexBandWidth，顶点数 = 段数 + 1）
+                // 首顶点 IsStart、末顶点 IsEnd 自动标记；带宽默认 6
+                item.SyncVertexBandWidths(shifted.Count, item.BandWidth);
             }
             else if (primitive == L1Primitive.Polyline)
             {
-                // Polyline 不带厚度：Thickness 保持 0、VertexThicknesses 留空。
-                item.Thickness = 0;
+                // Polyline 不带带宽：BandWidth 保持 0、VertexBandWidths 留空。
+                item.BandWidth = 0;
                 item.ZIndex = Primitives.Count;
                 // 起点吸附点击 → 绘制的折线首尾闭合（骨架点直连单环，可填充）
                 if (_draftCloseRequested)
@@ -398,8 +398,8 @@ public partial class SymbolDesignerViewModel
             }
             else if (primitive == L1Primitive.Line)
             {
-                // Line 是单段直线，无厚度概念（LineGeometry 直接画）；Thickness=0、VertexThicknesses 留空。
-                item.Thickness = 0;
+                // Line 是单段直线，无带宽概念（LineGeometry 直接画）；BandWidth=0、VertexBandWidths 留空。
+                item.BandWidth = 0;
                 item.ZIndex = Primitives.Count;
             }
             Primitives.Add(item);

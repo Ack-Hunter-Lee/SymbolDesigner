@@ -221,7 +221,7 @@ public partial class SymbolDesignerViewModel
             ZIndex = p.ZIndex,
             LineAxis = p.LineAxis.ToString(),
             PathData = p.PathData,
-            Thickness = p.Thickness,
+            Thickness = p.BandWidth,
             OutlineJoinStyle = p.OutlineJoinStyle.ToString(),
             CollinearSplitPairs = p.CollinearSplitPairs,
             Opacity = p.Opacity,
@@ -245,12 +245,12 @@ public partial class SymbolDesignerViewModel
                 .Select(g => g.ToString())
                 .ToList();
         }
-        foreach (var v in p.VertexThicknesses)
+        foreach (var v in p.VertexBandWidths)
             dto.VertexThicknesses.Add(new VertexThicknessDto
             {
                 Index = v.Index,
-                IncomingThickness = v.IncomingThickness,
-                OutgoingThickness = v.OutgoingThickness,
+                IncomingThickness = v.IncomingBandWidth,
+                OutgoingThickness = v.OutgoingBandWidth,
                 JoinInnerRadius = v.JoinInnerRadius,
                 LeftCornerRadius = v.LeftCornerRadius,
                 RightCornerRadius = v.RightCornerRadius,
@@ -384,16 +384,17 @@ public partial class SymbolDesignerViewModel
     }
 
     /// <summary>从 DTO 重建单个 PrimitiveItem（撤销/重做恢复与工程加载复用）。
-    /// 注意：Thickness 必须在填充 VertexThicknesses 之前赋值——Thickness 是 [ObservableProperty]，
-    /// 赋值会触发 OnThicknessChanged 把所有顶点厚度覆盖为整体值；先赋（此时集合为空）则同步循环空转不覆盖。
-    /// 之前顺序写反导致加载后各段厚度被抹平成整体 Thickness（加载丢厚度 bug 根因）。</summary>
+    /// 注意：BandWidth 必须在填充 VertexBandWidths 之前赋值——BandWidth 是 [ObservableProperty]，
+    /// 赋值会触发 OnBandWidthChanged 把所有顶点带宽覆盖为整体值；先赋（此时集合为空）则同步循环空转不覆盖。
+    /// 之前顺序写反导致加载后各段带宽被抹平成整体 BandWidth（加载丢带宽 bug 根因）。</summary>
     private static PrimitiveItem CreateFromDto(PrimitiveItemDto dto)
     {
         var item = new PrimitiveItem
         {
             // 旧版 dto.Kind (L1/L2) 字段被忽略——所有图元身份仅由 TypeKey 决定；保留 dto.Kind 仅做向后兼容解析。
             Id = Guid.TryParse(dto.Id, out var g) ? g : Guid.NewGuid(), // 老文件无 Id → 分配新
-            TypeKey = dto.TypeKey,
+            // TypeKey 兼容：旧工程文件存的是 "ThickPolyline"，新命名体系下是 "BandPolyline" → 加载时映射
+            TypeKey = dto.TypeKey == "ThickPolyline" ? nameof(L1Primitive.BandPolyline) : dto.TypeKey,
             X = dto.X,
             Y = dto.Y,
             Width = dto.Width,
@@ -418,16 +419,16 @@ public partial class SymbolDesignerViewModel
             FillBrightness = dto.FillBrightness is { } b ? System.Math.Clamp(b, 0, 100) : 100.0,
             FillOpacity = dto.FillOpacity is { } o ? System.Math.Clamp(o, 0, 100) : 100.0,
         };
-        // 先设整体 Thickness（触发同步时 VertexThicknesses 尚未填充，不会覆盖任何顶点厚度）
-        item.Thickness = dto.Thickness;
-        // 再填逐顶点厚度（per-vertex 独立值，覆盖整体 Thickness 的位置）
+        // 先设整体 BandWidth（触发同步时 VertexBandWidths 尚未填充，不会覆盖任何顶点带宽）
+        item.BandWidth = dto.Thickness;
+        // 再填逐顶点带宽（per-vertex 独立值，覆盖整体 BandWidth 的位置）
         int vertexCount = dto.VertexThicknesses.Count;
         for (int i = 0; i < vertexCount; i++)
         {
             var vd = dto.VertexThicknesses[i];
             bool isStart = i == 0;
             bool isEnd = i == vertexCount - 1;
-            item.VertexThicknesses.Add(new VertexThickness(
+            item.VertexBandWidths.Add(new VertexBandWidth(
                 vd.Index, vd.IncomingThickness, vd.OutgoingThickness, isStart, isEnd)
             {
                 JoinInnerRadius = vd.JoinInnerRadius,
@@ -435,15 +436,15 @@ public partial class SymbolDesignerViewModel
                 RightCornerRadius = vd.RightCornerRadius,
             });
         }
-        // VertexThicknesses 已在此前填充完毕（整体 Thickness 已在填充前赋值，见方法头注释）。
-        // 若 VertexThicknesses 为空（如旧文件/整体厚度模式），补一次 SyncVertexThicknesses
-        if (item.TypeKey == nameof(L1Primitive.ThickPolyline)
-            && item.VertexThicknesses.Count == 0
+        // VertexBandWidths 已在此前填充完毕（整体 BandWidth 已在填充前赋值，见方法头注释）。
+        // 若 VertexBandWidths 为空（如旧文件/整体带宽模式），补一次 SyncVertexBandWidths
+        if (item.TypeKey == nameof(L1Primitive.BandPolyline)
+            && item.VertexBandWidths.Count == 0
             && !string.IsNullOrEmpty(item.PathData))
         {
             // 顶点数从 PathData 解析
-            var pts = Converters.ThickOutlineBuilder.ParsePathData(item.PathData);
-            item.SyncVertexThicknesses(pts.Count, item.Thickness);
+            var pts = Converters.BandOutlineBuilder.ParsePathData(item.PathData);
+            item.SyncVertexBandWidths(pts.Count, item.BandWidth);
         }
         // 恢复逐顶点接缝样式（稀疏：只覆盖 DTO 中明确给出的项）
         if (dto.VertexJoinStyles != null && dto.VertexJoinStyles.Count > 0)
@@ -503,7 +504,7 @@ public partial class SymbolDesignerViewModel
 
     /// <summary>把传入的 PrimitiveItemDto 深拷贝一份（撤销快照专用）。
     /// 链路：临时建一个 PrimitiveItem → ToDto → CreateFromDto 重建 DTO → 拆出 Source。
-    /// 走"实例化再序列化"链路是因为 VertexThicknesses 等集合结构在 DTO 上是简单 List，
+    /// 走"实例化再序列化"链路是因为 VertexBandWidths 等集合结构在 DTO 上是简单 List，
     /// 但某些字段（如 OutlineJoinStyle 字符串）需要 Enum 解析兜底。</summary>
     private static PrimitiveItemDto ArrayInstanceCloneSource(PrimitiveItemDto source)
     {

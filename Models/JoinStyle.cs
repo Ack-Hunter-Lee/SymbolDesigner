@@ -1,7 +1,7 @@
 namespace SymbolDesigner.Models;
 
 /// <summary>
-/// 带厚度折线（ThickPolyline）的转角连接方式。控制中间顶点处左右偏移线的衔接形态。
+/// 带厚度折线（BandPolyline）的转角连接方式。控制中间顶点处左右偏移线的衔接形态。
 ///
 /// 三种风格的视觉对照（同一段两端厚度）：
 ///   - Miter：尖角，相邻两段偏移线延长相交于一点；外尖距 = half / sin(θ/2)，θ 很小时尖角很长

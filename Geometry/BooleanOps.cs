@@ -57,7 +57,7 @@ public sealed class SegData
 /// 快照 PathData 直接可被 Geometry.Parse 原生渲染（弧 = "终点+半径+大弧标志+扫掠方向"，零中间点）。
 /// 骨架点（可编辑顶点）= 每环"起点 + 各段终点"（圆∩矩形就那几个角点），拖动只改相邻段端点；
 /// 轮廓圆角 = 渲染期把 L-L 尖角烘焙成 A 命令真圆弧（BakeCornerRadii），半径存
-/// VertexThicknesses[].LeftCornerRadius（与闭合折线同一存储）。
+/// VertexBandWidths[].LeftCornerRadius（与闭合折线同一存储）。
 /// 快照可直接作为下一次布尔的输入（再次 Geometry.Parse + Combine）。
 /// </summary>
 public static class BooleanOps
@@ -309,7 +309,7 @@ public static class BooleanOps
     }
 
     /// <summary>骨架点（可编辑顶点）= 每环"起点 + 各段终点"，相邻近重合点（≤ MergeTol）合并、首尾重合去重。
-    /// 返回顺序 = 环出现顺序，环内 = 骨架点顺序（平铺即 VertexThicknesses 半径的存储序）。
+    /// 返回顺序 = 环出现顺序，环内 = 骨架点顺序（平铺即 VertexBandWidths 半径的存储序）。
     /// 环点数不足 2（退化）丢弃。</summary>
     public static List<List<Point>> GetSkeletonRings(string pathData)
     {
@@ -327,7 +327,7 @@ public static class BooleanOps
         return rings;
     }
 
-    /// <summary>全图元骨架点总数（VertexThicknesses 同步用）。</summary>
+    /// <summary>全图元骨架点总数（VertexBandWidths 同步用）。</summary>
     public static int GetSkeletonCount(string pathData)
     {
         int count = 0;

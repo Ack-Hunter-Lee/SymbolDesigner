@@ -30,11 +30,11 @@ public partial class SymbolDesignerViewModel
     }
 
     /// <summary>选中/取消选中某个骨点（点击"骨点 i"组标题时调用），高亮对应 Slider 的两个端点。
-    /// 再次点击同一骨点 → 取消高亮（回到 -1）。仅 Thickness 模式有效。</summary>
+    /// 再次点击同一骨点 → 取消高亮（回到 -1）。仅 BandWidth 模式有效。</summary>
     [RelayCommand]
     private void ToggleBonePointSelection(int index)
     {
-        if (OutlineEditMode != OutlineEditMode.Thickness) return;
+        if (OutlineEditMode != OutlineEditMode.BandWidth) return;
         SelectedBonePointIndex = (SelectedBonePointIndex == index) ? -1 : index;
     }
 

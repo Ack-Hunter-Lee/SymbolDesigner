@@ -558,10 +558,10 @@ public partial class SymbolDesignerView : UserControl
         e.Handled = true;
     }
 
-    /// <summary>是否处于轮廓编辑模式（骨架/厚度/轮廓三态之一都算编辑中,框选应让位）。</summary>
+    /// <summary>是否处于轮廓编辑模式（骨架/带宽/轮廓三态之一都算编辑中,框选应让位）。</summary>
     private bool IsEditingOutlineActive()
         => DataContext is SymbolDesignerViewModel vm
-           && (vm.OutlineEditMode == ViewModels.OutlineEditMode.Thickness
+           && (vm.OutlineEditMode == ViewModels.OutlineEditMode.BandWidth
                || vm.OutlineEditMode == ViewModels.OutlineEditMode.Outline);
 
     // ───────────── 选区缩放手柄（四角拖动 = 围绕对角锚点等比缩放选集） ─────────────
@@ -622,7 +622,7 @@ public partial class SymbolDesignerView : UserControl
 
     // ───────────── 画线工具（CAD 风格连续绘制） ─────────────
 
-    /// <summary>画布鼠标按下：CAD 模式下点击加点（ThickPolyline 或 Line）；
+    /// <summary>画布鼠标按下：CAD 模式下点击加点（BandPolyline 或 Line）；
     /// 普通模式下点击画布空白处（OriginalSource == CanvasHost 本身）→ 取消选中 + 启动左键拖拽平移。</summary>
     private void OnCanvasDrawMouseDown(object sender, MouseButtonEventArgs e)
     {
@@ -709,7 +709,7 @@ public partial class SymbolDesignerView : UserControl
         e.Handled = true;
     }
 
-    // ───────────── 顶点手柄拖拽（ThickPolyline 选中后编辑长度） ─────────────
+    // ───────────── 顶点手柄拖拽（BandPolyline 选中后编辑长度） ─────────────
 
     private VertexHandle? _draggingVertex;
     private Point _vertexDragStart;
@@ -726,8 +726,8 @@ public partial class SymbolDesignerView : UserControl
         // 事件挂在 ItemsControl 上（Preview 版本，tunneling），OriginalSource 是手柄 Rectangle
         if (e.OriginalSource is not FrameworkElement fe || fe.DataContext is not VertexHandle vh) return;
 
-        // 厚度线模式下：点击骨点 → 高亮属性面板对应骨点的 Slider 组，不进入拖拽。
-        if (vm.IsThicknessEditMode)
+        // 带宽模式下：点击骨点 → 高亮属性面板对应骨点的 Slider 组，不进入拖拽。
+        if (vm.IsBandWidthEditMode)
         {
             vm.ToggleBonePointSelectionCommand.Execute(vh.Index);
             e.Handled = true;
@@ -789,7 +789,7 @@ public partial class SymbolDesignerView : UserControl
         // 吸附闭合：拖拽的是 Polyline 的末端顶点（Index = Count-1）时，判定与起点（Index 0）的距离。
         //   - 未闭合 & 距离 < 阈值 → 吸附到起点坐标 + 置 IsClosed=true（骨架点直连单环闭合）
         //   - 已闭合 & 距离 > 阈值 → 撤消闭合（IsClosed=false，端点又变回独立可编辑）
-        // 只对 Polyline 生效（ThickPolyline 有厚度语义，闭合由轮廓管道处理，不走吸附）。
+        // 只对 Polyline 生效（BandPolyline 有带宽语义，闭合由轮廓管道处理，不走吸附）。
         if (vm.SelectedItem is { TypeKey: nameof(L1Primitive.Polyline) } pl
             && _draggingVertex.Index == vm.VertexHandles.Count - 1
             && vm.VertexHandles.Count >= 2)
@@ -829,7 +829,7 @@ public partial class SymbolDesignerView : UserControl
         _draggingVertex = null;
     }
 
-    // ───────────── 段拖拽手柄（ThickPolyline 选中后整段平移，保持长度） ─────────────
+    // ───────────── 段拖拽手柄（BandPolyline 选中后整段平移，保持长度） ─────────────
 
     private SegmentDragHandle? _draggingSegment;
     private Point _segmentDragStart;
@@ -942,9 +942,9 @@ public partial class SymbolDesignerView : UserControl
         }
     }
 
-    /// <summary>厚度线模式画布端点点击：高亮属性面板对应骨点的 Slider 组。
-    /// ThicknessHandle.VertexIndex 已映射到骨架顶点序号。</summary>
-    private void OnThicknessHandleMouseDown(object sender, MouseButtonEventArgs e)
+    /// <summary>带宽模式画布端点点击：高亮属性面板对应骨点的 Slider 组。
+    /// BandWidthHandle.VertexIndex 已映射到骨架顶点序号。</summary>
+    private void OnBandWidthHandleMouseDown(object sender, MouseButtonEventArgs e)
     {
         var vm = DataContext as ViewModels.SymbolDesignerViewModel;
         if (vm is null) return;
@@ -952,7 +952,7 @@ public partial class SymbolDesignerView : UserControl
         var fe = e.OriginalSource as FrameworkElement;
         while (fe is not null)
         {
-            if (fe.DataContext is ViewModels.ThicknessHandle handle)
+            if (fe.DataContext is ViewModels.BandWidthHandle handle)
             {
                 vm.ToggleBonePointSelectionCommand.Execute(handle.VertexIndex);
                 e.Handled = true;
@@ -963,7 +963,7 @@ public partial class SymbolDesignerView : UserControl
     }
 
     /// <summary>接缝"圆角半径"Slider 值变化：把数值写到 OutlineCornerHandle.SetRadius，
-    /// 由 VM 按 IsCorner/Side 路由到 VertexThickness 对应字段 + 触发 OutlineGeometry 重算。
+    /// 由 VM 按 IsCorner/Side 路由到 VertexBandWidth 对应字段 + 触发 OutlineGeometry 重算。
     /// Slider 的 ValueChanged 在 IsEnabled=false 时不会触发，写入路径安全。</summary>
     private void OnCornerRadiusSliderValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {

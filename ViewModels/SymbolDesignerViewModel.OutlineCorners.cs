@@ -27,7 +27,7 @@ public partial class SymbolDesignerViewModel
         get
         {
             if (SelectedItem is not { } item || string.IsNullOrEmpty(item.PathData)) return 200;
-            var pts = SymbolDesigner.Converters.ThickOutlineBuilder.ParsePathData(item.PathData);
+            var pts = Converters.BandOutlineBuilder.ParsePathData(item.PathData);
             if (pts.Count < 2) return 200;
             double minLen = double.MaxValue;
             for (int i = 1; i < pts.Count; i++)
@@ -72,7 +72,7 @@ public partial class SymbolDesignerViewModel
     {
         if (SelectedItem is not { } item) return;
         item.ClearVertexJoinStyles();
-        foreach (var v in item.VertexThicknesses)
+        foreach (var v in item.VertexBandWidths)
         {
             v.LeftCornerRadius = 0;
             v.RightCornerRadius = 0;
@@ -125,10 +125,10 @@ public partial class SymbolDesignerViewModel
             {
                 // 普通轮廓点：写 per-vertex 半径（按 L/R 侧），保存工程后可持久化/加载重建
                 int vi = h.Index;
-                if (vi >= 0 && vi < item.VertexThicknesses.Count)
+                if (vi >= 0 && vi < item.VertexBandWidths.Count)
                 {
-                    if (h.Side == "L") item.VertexThicknesses[vi].LeftCornerRadius = radius;
-                    else item.VertexThicknesses[vi].RightCornerRadius = radius;
+                    if (h.Side == "L") item.VertexBandWidths[vi].LeftCornerRadius = radius;
+                    else item.VertexBandWidths[vi].RightCornerRadius = radius;
                 }
             }
             item.NotifyOutlineGeometryChanged();
@@ -163,8 +163,8 @@ public partial class SymbolDesignerViewModel
         if (Math.Abs(det) < 1e-9)
             return "入边/出边共线（0° 或 180°）";
 
-        // 切点偏移 = 半径 × cot(半跨角)，与 ThickOutlineBuilder.AdjustForRound 同一换算
-        double len = Converters.ThickOutlineBuilder.GetArcTangentOffset(inDir, outDir, radius);
+        // 切点偏移 = 半径 × cot(半跨角)，与 BandOutlineBuilder.AdjustForRound 同一换算
+        double len = Converters.BandOutlineBuilder.GetArcTangentOffset(inDir, outDir, radius);
         Point center = step.Point;
         Point arcStart = center - inDir * len;
         Point arcEnd = center + outDir * len;
@@ -177,15 +177,15 @@ public partial class SymbolDesignerViewModel
     }
 
     /// <summary>转角点（Corner）圆角化：走骨架转角 join 系统而非替换 emit 步骤。
-    /// 半径通过 VertexThicknesses[vi].JoinInnerRadius 传入（基线机制：AdjustForRound 读它算内/外弧）。
+    /// 半径通过 VertexBandWidths[vi].JoinInnerRadius 传入（基线机制：AdjustForRound 读它算内/外弧）。
     /// per-vertex JoinStyle = Round：让 BuildOutlineSteps 走 Round 扰动（不替换为 BevelStep）。
-    /// 半径上限防御：避免用户把 Slider 拉大造成无限远端点偏移（> min(段半厚) × 2 时提示但仍允许）。</summary>
+    /// 半径上限防御：避免用户把 Slider 拉大造成无限远端点偏移（> min(段半宽) × 2 时提示但仍允许）。</summary>
     private static string? TrySetCornerJoinRound(PrimitiveItem item, OutlineCornerHandle h, double radius)
     {
         int vi = h.Index;
-        if (vi < 0 || vi >= item.VertexThicknesses.Count)
-            return $"顶点索引 {vi} 越界（顶点数 {item.VertexThicknesses.Count}）";
-        item.VertexThicknesses[vi].JoinInnerRadius = radius;
+        if (vi < 0 || vi >= item.VertexBandWidths.Count)
+            return $"顶点索引 {vi} 越界（顶点数 {item.VertexBandWidths.Count}）";
+        item.VertexBandWidths[vi].JoinInnerRadius = radius;
         item.SetVertexJoinStyle(vi, JoinStyle.Round);
         h.CurrentStyle = JoinStyle.Round;
         return null;
@@ -210,7 +210,7 @@ public partial class SymbolDesignerViewModel
             if (style != JoinStyle.Round)
             {
                 int cleared = 0;
-                foreach (var v in item.VertexThicknesses)
+                foreach (var v in item.VertexBandWidths)
                 {
                     if (v.LeftCornerRadius > 0) { v.LeftCornerRadius = 0; cleared++; }
                     if (v.RightCornerRadius > 0) { v.RightCornerRadius = 0; cleared++; }
@@ -250,10 +250,10 @@ public partial class SymbolDesignerViewModel
                     ok++;
                     // 普通轮廓点：写 per-vertex 半径（按 L/R 侧），保存工程后可持久化/加载重建
                     int vi = h.Index;
-                    if (vi >= 0 && vi < item.VertexThicknesses.Count)
+                    if (vi >= 0 && vi < item.VertexBandWidths.Count)
                     {
-                        if (h.Side == "L") item.VertexThicknesses[vi].LeftCornerRadius = radius;
-                        else item.VertexThicknesses[vi].RightCornerRadius = radius;
+                        if (h.Side == "L") item.VertexBandWidths[vi].LeftCornerRadius = radius;
+                        else item.VertexBandWidths[vi].RightCornerRadius = radius;
                     }
                 }
                 else
@@ -291,12 +291,12 @@ public partial class SymbolDesignerViewModel
         if (SelectedItem is not { } item) return;
         if (SelectedOutlineCorner is not { } h) return;
         int vi = h.Index;
-        if (vi < 0 || vi >= item.VertexThicknesses.Count) return;
+        if (vi < 0 || vi >= item.VertexBandWidths.Count) return;
 
         if (h.IsCorner)
         {
             // 转角点：清内径 + 显式回 Miter（含全局 Round 也强制尖角）
-            item.VertexThicknesses[vi].JoinInnerRadius = 0;
+            item.VertexBandWidths[vi].JoinInnerRadius = 0;
             item.SetVertexJoinStyle(vi, JoinStyle.Miter);
             item.NotifyOutlineGeometryChanged();
             h.StepKind = "PointStep";
@@ -304,12 +304,12 @@ public partial class SymbolDesignerViewModel
         }
 
         // 普通轮廓点：先清 per-vertex 半径（存在时），触发重算自然恢复 PointStep
-        double r = h.Side == "L" ? item.VertexThicknesses[vi].LeftCornerRadius
-                                 : item.VertexThicknesses[vi].RightCornerRadius;
+        double r = h.Side == "L" ? item.VertexBandWidths[vi].LeftCornerRadius
+                                 : item.VertexBandWidths[vi].RightCornerRadius;
         if (r > 0)
         {
-            if (h.Side == "L") item.VertexThicknesses[vi].LeftCornerRadius = 0;
-            else item.VertexThicknesses[vi].RightCornerRadius = 0;
+            if (h.Side == "L") item.VertexBandWidths[vi].LeftCornerRadius = 0;
+            else item.VertexBandWidths[vi].RightCornerRadius = 0;
             item.NotifyOutlineGeometryChanged();
             h.StepKind = "PointStep";
             return;

@@ -11,14 +11,14 @@ public partial class SymbolDesignerViewModel
 {
     // ============== 画线模式状态 ==============
 
-    /// <summary>画布交互模式。None=普通拖入摆放；ThickPolyline=连续画带厚度的折线；Line=单击-拖动画单条直线（预留）。</summary>
+    /// <summary>画布交互模式。None=普通拖入摆放；BandPolyline=连续画带带宽的折线；Line=单击-拖动画单条直线（预留）。</summary>
     [ObservableProperty] private DrawMode _drawMode = DrawMode.None;
 
     public bool IsDrawModeActive => DrawMode != DrawMode.None;
 
     /// <summary>用户是否从工具栏 ComboBox 手动选择过画线模式。
-    /// 为 true 时选中 ThickPolyline 不再自动切模式（尊重用户手动选择）；
-    /// 为 false 时选中 ThickPolyline 自动进入绘制模式（本轮需求）。</summary>
+    /// 为 true 时选中 BandPolyline 不再自动切模式（尊重用户手动选择）；
+    /// 为 false 时选中 BandPolyline 自动进入绘制模式（本轮需求）。</summary>
     private bool _userChangedDrawMode;
 
     /// <summary>联动代码执行 DrawMode 赋值过程中置 true，防止"选中联动 → 触发 OnDrawModeChanged → 误标记用户手动"的回环。</summary>
@@ -29,7 +29,7 @@ public partial class SymbolDesignerViewModel
     partial void OnDrawModeChanged(DrawMode value)
     {
         OnPropertyChanged(nameof(IsDrawModeActive));
-        // 联动代码改的（选中 ThickPolyline 自动进入 / 取消选中自动退出）不算用户手动选择
+        // 联动代码改的（选中 BandPolyline 自动进入 / 取消选中自动退出）不算用户手动选择
         if (!_autoSyncingDrawMode)
             _userChangedDrawMode = true;
         // 模式切换：手动选绘制工具 → 隐藏选区缩放手柄；退出绘制 → 恢复显示
@@ -71,7 +71,7 @@ public partial class SymbolDesignerViewModel
     /// <summary>绘制路径模式下"对象追踪 X 对齐"激活态：鼠标 X 与任一已画点 X 同坐标（误差范围内），
     /// XAML 画一条贯穿画布的浅色虚线提示"现在按 X 对齐到 P_i"。
     /// 与 IsPathSnappingActive（轴对齐）并行：可同时为 true——既轴对齐又对象追踪。
-    /// 仅 Polyline/ThickPolyline/Line 路径类参与。</summary>
+    /// 仅 Polyline/BandPolyline/Line 路径类参与。</summary>
     [ObservableProperty] private bool _isObjectSnapTrackingX;
 
     /// <summary>绘制路径模式下"对象追踪 Y 对齐"激活态：鼠标 Y 与任一已画点 Y 同坐标。
@@ -85,7 +85,7 @@ public partial class SymbolDesignerViewModel
     /// <summary>对象追踪命中点的 Y 坐标。语义与 ObjectSnapTrackingX 对称。</summary>
     [ObservableProperty] private double _objectSnapTrackingY;
 
-    /// <summary>起点吸附闭合激活态：绘制路径类（Polyline/ThickPolyline）时，鼠标移动到首端点附近
+    /// <summary>起点吸附闭合激活态：绘制路径类（Polyline/BandPolyline）时，鼠标移动到首端点附近
     /// （距离 &lt; CloseSnapThreshold）即置 true。
     /// XAML 绑到起点手柄高亮（变绿 + 放大）与橡皮线终点——吸附时橡皮线终点吸附到起点坐标，
     /// 提示用户"点击此处即可闭环"。</summary>
@@ -93,7 +93,7 @@ public partial class SymbolDesignerViewModel
 
     /// <summary>形状绘制模式下"中心点 → 当前鼠标"实时生成的轮廓 Path Geometry（Rectangle/RoundedRectangle/Ellipse/Ring/Triangle）。
     /// 阶段 3：让用户在第 2 次点击前就能看到即将生成的形状轮廓（半透明蓝绿色），确认后再点提交。
-    /// 路径类（Line/Polyline/ThickPolyline）下保持空字符串，避免与 DraftPathData 重复渲染。</summary>
+    /// 路径类（Line/Polyline/BandPolyline）下保持空字符串，避免与 DraftPathData 重复渲染。</summary>
     [ObservableProperty] private string _draftShapeData = string.Empty;
 
     /// <summary>形状预览图层是否可见。条件：正在绘制（IsDrawing=true）且 DrawMode 属于"中心点+第二点"两段式形状模式。
@@ -109,13 +109,13 @@ public partial class SymbolDesignerViewModel
     /// 在 SelectedItem set 时一并通知刷新,与 _selectedItemIsRect 同生命周期。</summary>
     [ObservableProperty] private bool _hasSelectedItem;
 
-    /// <summary>当前选中的是否为 ThickPolyline。属性面板显示"厚度"Slider。</summary>
-    public bool SelectedItemIsThickPolyline =>
+    /// <summary>当前选中的是否为 BandPolyline。属性面板显示"带宽"Slider。</summary>
+    public bool SelectedItemIsBandPolyline =>
         SelectedItem is not null
-        && SelectedItem.TypeKey == nameof(L1Primitive.ThickPolyline);
+        && SelectedItem.TypeKey == nameof(L1Primitive.BandPolyline);
 
-    /// <summary>当前选中的是否为 Polyline（ThickPolyline 的无厚度兄弟类型）。
-    /// 属性面板只显示类型提示，不暴露厚度控制（Polyline 永远 thickness=0）。</summary>
+    /// <summary>当前选中的是否为 Polyline（BandPolyline 的无带宽兄弟类型）。
+    /// 属性面板只显示类型提示，不暴露带宽控制（Polyline 永远 bandWidth=0）。</summary>
     public bool SelectedItemIsPolyline =>
         SelectedItem is not null
         && SelectedItem.TypeKey == nameof(L1Primitive.Polyline);
@@ -135,7 +135,7 @@ public partial class SymbolDesignerViewModel
 
     /// <summary>布尔结果骨架点诊断文本：每环每点 序号/坐标/到前一点距离/闭合距。
     /// 用于排查"轮廓点关系奇怪"（近重合簇、被 Combine 切分的贝塞尔交界点）。
-    /// 索引 = VertexThicknesses 平铺序号（跨环累计）。</summary>
+    /// 索引 = VertexBandWidths 平铺序号（跨环累计）。</summary>
     public string SelectedBooleanSkeletonInfo
     {
         get
@@ -176,30 +176,30 @@ public partial class SymbolDesignerViewModel
         }
     }
 
-    // ============== 厚度上限（属性面板 Slider） ==============
+    // ============== 带宽上限（属性面板 Slider） ==============
 
     /// <summary>
-    /// 属性面板"厚度"Slider 的动态上限。画布尺寸变大时同步放大,
-    /// 让用户在大画布(几百 px)上也能调到合适的粗线段。
+    /// 属性面板"带宽"Slider 的动态上限。画布尺寸变大时同步放大,
+    /// 让用户在大画布(几百 px)上也能调到合适的带宽。
     /// 公式:
-    ///   shortEdge = min(CanvasWidth, CanvasHeight)
-    ///   maxThickness = clamp(shortEdge * 0.3, 30, 800)
-    ///   - 小画布(短边 ≤ 100):下限 30(保持原手感)
-    ///   - 中等画布(短边 ~600):~180(短边的 30%)
-    ///   - 极大画布:上限 800(避免滑条拉太长失去手感)
+    ///   longEdge = max(CanvasWidth, CanvasHeight)
+    ///   maxBandWidth = max(30, longEdge)
+    ///   - 小画布(长边 ≤ 30):下限 30(保持原手感)
+    ///   - 普通 1920×1080 画布:上限 = 长边 1920(给足空间,想多宽调多宽)
+    ///   - 不再设额外封顶:画布尺寸本身就是合理界,带宽不可能超过画布
     /// 画布尺寸改变时通过 partial OnCanvasWidthChanged/OnCanvasHeightChanged 重新通知。
     /// 实现为 ObservableProperty 而非 get-only 计算属性,
     /// 是因为 WPF Slider.Maximum 绑定在 get-only 属性上时会推断 TwoWay 失败。
     /// </summary>
-    [ObservableProperty] private double _selectedThicknessMax = 30;
+    [ObservableProperty] private double _selectedBandWidthMax = 30;
 
-    /// <summary>画布尺寸变化时重新计算厚度上限并通知 UI 刷新。</summary>
-    private void RecomputeSelectedThicknessMax()
+    /// <summary>画布尺寸变化时重新计算带宽上限并通知 UI 刷新。</summary>
+    private void RecomputeSelectedBandWidthMax()
     {
-        var shortEdge = System.Math.Max(1, System.Math.Min(CanvasWidth, CanvasHeight));
-        var newMax = System.Math.Clamp(shortEdge * 0.3, 30, 800);
+        var longEdge = System.Math.Max(1, System.Math.Max(CanvasWidth, CanvasHeight));
+        var newMax = System.Math.Max(30, longEdge);
         // 等值时不写(避免冗余通知)
-        if (System.Math.Abs(SelectedThicknessMax - newMax) < 0.001) return;
-        SelectedThicknessMax = newMax;
+        if (System.Math.Abs(SelectedBandWidthMax - newMax) < 0.001) return;
+        SelectedBandWidthMax = newMax;
     }
 }

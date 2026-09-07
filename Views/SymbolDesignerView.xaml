@@ -31,7 +31,7 @@
         <conv:DivideByScaleConverter x:Key="DivByScale" />
         <!-- 枚举相等比较（RadioButton 列表用：当前枚举值 == 该 RadioButton 代表的枚举值 → 选中） -->
         <conv:EnumEqualsConverter x:Key="EnumEqualsConverter" />
-        <!--  ThickOutlineConverter 已重构为静态工具类 ThickOutlineBuilder，不再需要 XAML 实例  -->
+        <!--  BandOutlineBuilder 为静态工具类，不再需要 XAML 实例  -->
 
         <!--
             顶部工具栏的样式资源（图标化 + 多行布局用）。
@@ -155,9 +155,9 @@
                 StrokeStartLineCap="Round"
                 StrokeThickness="0.6" />
         </DataTemplate>
-        <DataTemplate x:Key="L1ThickPolylinePreview">
+        <DataTemplate x:Key="L1BandPolylinePreview">
             <!--
-                粗折线 ThickPolyline 预览：与 Polyline 同形，描边加粗示意"带厚度"语义。
+                带状折线 BandPolyline 预览：与 Polyline 同形，描边加粗示意"带宽"语义。
                 颜色与其他描边统一为 White，避免突兀暗色；宽度 1.2（形状类的 2x）保持可识别。
             -->
             <Path
@@ -369,15 +369,15 @@
             </views:DraggablePrimitive>
         </DataTemplate>
         <!--
-            粗折线（带厚度的连贯图形）：按顶点序列向两侧扩张形成闭合轮廓 Path。
-            不绑 Width/Height，让 Path 自然撑出超出原始包围盒的厚度轮廓。
-            Path.Data 用 MultiBinding 绑 PathData + Thickness → 任一变化都重新计算轮廓。
+            带状折线（带带宽的连贯图形）：按顶点序列向两侧扩张形成闭合轮廓 Path。
+            不绑 Width/Height，让 Path 自然撑出超出原始包围盒的带宽轮廓。
+            Path.Data 用 MultiBinding 绑 PathData + BandWidth → 任一变化都重新计算轮廓。
         -->
-        <DataTemplate x:Key="L1ThickPolylineNode" DataType="{x:Type models:PrimitiveItem}">
+        <DataTemplate x:Key="L1BandPolylineNode" DataType="{x:Type models:PrimitiveItem}">
             <views:DraggablePrimitive Opacity="{Binding Opacity}">
                 <Grid>
                     <!--
-                        带厚度的闭合轮廓：OutlineGeometry 由 PathData + Segments 段厚度计算，
+                        带带宽的闭合轮廓：OutlineGeometry 由 PathData + Segments 段带宽计算，
                         Segments/PathData 任一变化自动刷新（避免 MultiBinding 的 TypeConverter 坑）。
                         选中时通过 Style 触发器降低 Fill/Stroke opacity（变淡），
                         突出显示下方的原始 Path 中心线（"主角"是 Path）。
@@ -427,9 +427,9 @@
             </views:DraggablePrimitive>
         </DataTemplate>
         <!--
-            纯折线 Polyline（ThickPolyline 的无厚度兄弟）：仅骨架沿的 PathData 描边显示。
-            不带轮廓/接缝/逐顶点厚度控制，绑 PolylineGeometry（独立于 OutlineGeometry 缓存）。
-            与 ThickPolyline 共用顶点编辑手柄（拖动改 PathData），Thickness/VertexThicknesses 不显示/不可调。
+            纯折线 Polyline（BandPolyline 的无带宽兄弟）：仅骨架沿的 PathData 描边显示。
+            不带轮廓/接缝/逐顶点带宽控制，绑 PolylineGeometry（独立于 OutlineGeometry 缓存）。
+            与 BandPolyline 共用顶点编辑手柄（拖动改 PathData），BandWidth/VertexBandWidths 不显示/不可调。
             不绑 Width/Height，让 Path 自然撑出骨架长度。
         -->
         <DataTemplate x:Key="L1PolylineNode" DataType="{x:Type models:PrimitiveItem}">
@@ -438,7 +438,7 @@
                     <!--
                         纯骨架 stroke-only Path：PolylineGeometry 由 PathData 解析得到（开放 LineTo，无填充、无闭合）。
                         StrokeThickness 与形状类（Rect/Ellipse/Circle 等）统一为 0.8，
-                        让 Polyline 与其他图元放在一起描边宽度一致；选中态仅改颜色，不加粗（Polyline 永远不带厚度）。
+                        让 Polyline 与其他图元放在一起描边宽度一致；选中态仅改颜色，不加粗（Polyline 永远不带带宽）。
                     -->
                     <Path
                         Data="{Binding PolylineGeometry}"
@@ -462,9 +462,9 @@
                         </Path.Style>
                     </Path>
                     <!--
-                        闭合形态：骨架点直连单环，形成可填充的闭合多边形（复用 ThickPolyline 的 OutlineGeometry 管道，
-                        仅轮廓点生成方式不同——Polyline 无厚度偏移）。
-                        绑 FillBrush / StrokeBrush：与 ThickPolyline 同一管道，属性面板调填充色/描边色都能实时反映。
+                        闭合形态：骨架点直连单环，形成可填充的闭合多边形（复用 BandPolyline 的 OutlineGeometry 管道，
+                        仅轮廓点生成方式不同——Polyline 无带宽偏移）。
+                        绑 FillBrush / StrokeBrush：与 BandPolyline 同一管道，属性面板调填充色/描边色都能实时反映。
                     -->
                     <Path Data="{Binding OutlineGeometry}" Stretch="None">
                         <Path.Style>
@@ -587,7 +587,7 @@
             L1Rectangle="{StaticResource L1RectangleNode}"
             L1Ring="{StaticResource L1RingNode}"
             L1RoundedRectangle="{StaticResource L1RoundedNode}"
-            L1ThickPolyline="{StaticResource L1ThickPolylineNode}"
+            L1BandPolyline="{StaticResource L1BandPolylineNode}"
             L1Triangle="{StaticResource L1TriangleNode}" />
     </UserControl.Resources>
 
@@ -597,7 +597,7 @@
         KeyboardNavigation.TabNavigation="Cycle">
         <Grid.InputBindings>
             <KeyBinding Key="Delete" Command="{Binding DeleteSelectedCommand}" />
-            <!--  Enter:完成当前连续绘制(提交为 ThickPolyline 图元)  -->
+            <!--  Enter:完成当前连续绘制(提交为 BandPolyline 图元)  -->
             <KeyBinding Key="Enter" Command="{Binding FinishDrawCommand}" />
             <!--  Backspace:撤销最后一个顶点(画错了用)  -->
             <KeyBinding Key="Backspace" Command="{Binding UndoLastPointCommand}" />
@@ -699,8 +699,8 @@
                                                 <DataTrigger Binding="{Binding Key}" Value="L1_Polyline">
                                                     <Setter Property="ContentTemplate" Value="{StaticResource L1PolylinePreview}" />
                                                 </DataTrigger>
-                                                <DataTrigger Binding="{Binding Key}" Value="L1_ThickPolyline">
-                                                    <Setter Property="ContentTemplate" Value="{StaticResource L1ThickPolylinePreview}" />
+                                                <DataTrigger Binding="{Binding Key}" Value="L1_BandPolyline">
+                                                    <Setter Property="ContentTemplate" Value="{StaticResource L1BandPolylinePreview}" />
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
@@ -1182,7 +1182,7 @@
                     <Border Style="{StaticResource ToolSep}" />
 
                     <!--
-                        第五组：画线模式已合并到左侧"基础图形"工具栏（点击 Polyline/ThickPolyline/Line 进入绘制）。
+                        第五组：画线模式已合并到左侧"基础图形"工具栏（点击 Polyline/BandPolyline/Line 进入绘制）。
                         顶部不再需要重复选择——保留轴对齐按钮。
                     -->
                     <!--  轴对齐: Segoe MDL2 Assets E0D5 (AlignCenter)  -->
@@ -1561,14 +1561,14 @@
                                         <Setter Property="Visibility" Value="{Binding IsVisible, Converter={StaticResource BoolToVis}}" />
                                         <Style.Triggers>
                                             <!--
-                                                ThickPolyline：扩充需超出原始 Path 包围盒，
-                                                不限制 Width/Height，让 Path 自然撑出厚度轮廓
+                                                BandPolyline：扩充需超出原始 Path 包围盒，
+                                                不限制 Width/Height，让 Path 自然撑出带宽轮廓
                                             -->
-                                            <DataTrigger Binding="{Binding TypeKey}" Value="ThickPolyline">
+                                            <DataTrigger Binding="{Binding TypeKey}" Value="BandPolyline">
                                                 <Setter Property="Width" Value="NaN" />
                                                 <Setter Property="Height" Value="NaN" />
                                             </DataTrigger>
-                                            <!--  Polyline（无厚度兄弟）：同上，让 Path 自然撑出骨架长度  -->
+                                            <!--  Polyline（无带宽兄弟）：同上，让 Path 自然撑出骨架长度  -->
                                             <DataTrigger Binding="{Binding TypeKey}" Value="Polyline">
                                                 <Setter Property="Width" Value="NaN" />
                                                 <Setter Property="Height" Value="NaN" />
@@ -1652,8 +1652,8 @@
                                         -->
                                         <Setter Property="Visibility" Value="Visible" />
                                         <Style.Triggers>
-                                            <!--  ThickPolyline 克隆：扩充需超出 Path 包围盒，不限制 Width/Height  -->
-                                            <DataTrigger Binding="{Binding TypeKey}" Value="ThickPolyline">
+                                            <!--  BandPolyline 克隆：扩充需超出 Path 包围盒，不限制 Width/Height  -->
+                                            <DataTrigger Binding="{Binding TypeKey}" Value="BandPolyline">
                                                 <Setter Property="Width" Value="NaN" />
                                                 <Setter Property="Height" Value="NaN" />
                                             </DataTrigger>
@@ -1712,7 +1712,7 @@
                                             </Setter.Value>
                                         </Setter>
                                         <Style.Triggers>
-                                            <DataTrigger Binding="{Binding TypeKey}" Value="ThickPolyline">
+                                            <DataTrigger Binding="{Binding TypeKey}" Value="BandPolyline">
                                                 <Setter Property="Width" Value="NaN" />
                                                 <Setter Property="Height" Value="NaN" />
                                             </DataTrigger>
@@ -1777,7 +1777,7 @@
                             </ItemsControl>
 
                             <!--
-                                段拖拽手柄：每段一个，定位在中点。仅骨架模式下显示（厚度线/轮廓模式下隐藏）。
+                                段拖拽手柄：每段一个，定位在中点。仅骨架模式下显示（带宽/轮廓模式下隐藏）。
                                 拖拽以线段为整体平移（保持段长度不变），轴对齐时水平段只允许上下移动、竖直段只允许左右移动。
                             -->
                             <ItemsControl
@@ -1825,15 +1825,15 @@
                             </ItemsControl>
 
                             <!--
-                                厚度线端点手柄：仅厚度线模式下显示。每段 4 个（L/R × Start/End）。
-                                阶段 3 实现：仅显示，无拖拽。后续阶段可加拖拽/调整厚度。
+                                带宽线端点手柄：仅带宽模式下显示。每段 4 个（L/R × Start/End）。
+                                阶段 3 实现：仅显示，无拖拽。后续阶段可加拖拽/调整带宽。
                                 形状：左 L 蓝点，右 R 橙点；点击 → 高亮属性面板对应骨点的 Slider。
                             -->
                             <ItemsControl
                                 IsHitTestVisible="True"
-                                ItemsSource="{Binding ThicknessHandles}"
-                                PreviewMouseLeftButtonDown="OnThicknessHandleMouseDown"
-                                Visibility="{Binding IsThicknessEditMode, Converter={StaticResource BoolToVis}}">
+                                ItemsSource="{Binding BandWidthHandles}"
+                                PreviewMouseLeftButtonDown="OnBandWidthHandleMouseDown"
+                                Visibility="{Binding IsBandWidthEditMode, Converter={StaticResource BoolToVis}}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
                                         <Canvas />
@@ -1852,7 +1852,7 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <!--
-                                            厚度线端点手柄：三角形。入端 End（Incoming）尖朝上；出端 Start（Outgoing）尖朝下。
+                                            带宽线端点手柄：三角形。入端 End（Incoming）尖朝上；出端 Start（Outgoing）尖朝下。
                                             左 L 蓝 #81D4FA，右 R 橙 #FF8A65。
                                         -->
                                         <Path
@@ -1951,7 +1951,7 @@
                             </ItemsControl>
 
                             <!--
-                                轮廓接缝手柄：仅轮廓模式下显示（骨架/厚度线模式下隐藏，避免和顶点手柄混淆）。
+                                轮廓接缝手柄：仅轮廓模式下显示（骨架/带宽模式下隐藏，避免和顶点手柄混淆）。
                                 每个手柄定位在接缝的外尖点（miter 顶点），点击选中该接缝 → 属性面板显示其样式编辑。
                             -->
                             <ItemsControl
@@ -3145,7 +3145,7 @@
                                     </StackPanel>
                                 </Border>
 
-                                <!--  属性面板：仅当选中的是矩形类（Rectangle / RoundedRectangle）/ ThickPolyline / Polyline 时显示  -->
+                                <!--  属性面板：仅当选中的是矩形类（Rectangle / RoundedRectangle）/ BandPolyline / Polyline 时显示  -->
                                 <Border
                                     Padding="6"
                                     Background="#0f1820"
@@ -3159,7 +3159,7 @@
                                                 <DataTrigger Binding="{Binding SelectedItemIsRect}" Value="True">
                                                     <Setter Property="Visibility" Value="Visible" />
                                                 </DataTrigger>
-                                                <DataTrigger Binding="{Binding SelectedItemIsThickPolyline}" Value="True">
+                                                <DataTrigger Binding="{Binding SelectedItemIsBandPolyline}" Value="True">
                                                     <Setter Property="Visibility" Value="Visible" />
                                                 </DataTrigger>
                                                 <DataTrigger Binding="{Binding SelectedItemIsPolyline}" Value="True">
@@ -3319,7 +3319,7 @@
                                                         TextWrapping="Wrap" />
                                                 </StackPanel>
                                             </Border>
-                                            <!--  轮廓模式：接缝样式 + 圆角半径（布尔自己的轮廓属性面板，不借用 ThickPolyline）  -->
+                                            <!--  轮廓模式：接缝样式 + 圆角半径（布尔自己的轮廓属性面板，不借用 BandPolyline）  -->
                                             <StackPanel Margin="0,2,0,0" Visibility="{Binding IsOutlineEditMode, Converter={StaticResource BoolToVis}}">
                                                 <Grid Margin="0,0,0,2">
                                                     <TextBlock
@@ -3429,9 +3429,9 @@
                                         </StackPanel>
 
                                         <!--
-                                            纯折线属性组（仅 Polyline 时显示）：与 ThickPolyline 的区别=无厚度/无轮廓控制。
-                                            仅显示类型说明，不暴露厚度 Slider / 轮廓编辑模式（避免与兄弟类型混淆）。
-                                            顶点编辑与 ThickPolyline 共用：画布手柄拖动改 PathData，无需面板控件。
+                                            纯折线属性组（仅 Polyline 时显示）：与 BandPolyline 的区别=无带宽/无轮廓控制。
+                                            仅显示类型说明，不暴露带宽 Slider / 轮廓编辑模式（避免与兄弟类型混淆）。
+                                            顶点编辑与 BandPolyline 共用：画布手柄拖动改 PathData，无需面板控件。
                                         -->
                                         <StackPanel Visibility="{Binding SelectedItemIsPolyline, Converter={StaticResource BoolToVis}}">
                                             <TextBlock
@@ -3448,7 +3448,7 @@
                                                 FontSize="10"
                                                 Foreground="#a8c4d8"
                                                 IsChecked="{Binding SelectedItem.IsClosed, Mode=TwoWay}" />
-                                            <!--  闭合后进入轮廓编辑模式（Round/Miter/半径）：复用粗折线的轮廓分支  -->
+                                            <!--  闭合后进入轮廓编辑模式（Round/Miter/半径）：复用带状折线的轮廓分支  -->
                                             <StackPanel Margin="0,2,0,0" Visibility="{Binding SelectedItem.IsClosed, Converter={StaticResource BoolToVis}}">
                                                 <Border
                                                     Margin="0,0,0,6"
@@ -3505,9 +3505,9 @@
                                                 TextWrapping="Wrap" />
                                         </StackPanel>
 
-                                        <!--  粗折线属性组（仅 ThickPolyline 时显示）  -->
-                                        <StackPanel Visibility="{Binding SelectedItemIsThickPolyline, Converter={StaticResource BoolToVis}}">
-                                            <!--  阶段 4：标题按模式换文字（Skeleton / Thickness / Outline）  -->
+                                        <!--  带状折线属性组（仅 BandPolyline 时显示）  -->
+                                        <StackPanel Visibility="{Binding SelectedItemIsBandPolyline, Converter={StaticResource BoolToVis}}">
+                                            <!--  阶段 4：标题按模式换文字（Skeleton / BandWidth / Outline）  -->
                                             <TextBlock
                                                 Margin="0,0,0,4"
                                                 FontSize="11"
@@ -3515,10 +3515,10 @@
                                                 Foreground="#78909c">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
-                                                        <Setter Property="Text" Value="粗折线属性" />
+                                                        <Setter Property="Text" Value="带状折线属性" />
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsThicknessEditMode}" Value="True">
-                                                                <Setter Property="Text" Value="厚度线属性" />
+                                                            <DataTrigger Binding="{Binding IsBandWidthEditMode}" Value="True">
+                                                                <Setter Property="Text" Value="带宽属性" />
                                                             </DataTrigger>
                                                             <DataTrigger Binding="{Binding IsOutlineEditMode}" Value="True">
                                                                 <Setter Property="Text" Value="轮廓属性" />
@@ -3528,7 +3528,7 @@
                                                 </TextBlock.Style>
                                             </TextBlock>
                                             <!--
-                                                编辑模式段切换器：骨架 / 厚度线 / 轮廓（阶段 2：ItemsControl + UniformGrid 三列等宽，省掉三段复制）。
+                                                编辑模式段切换器：骨架 / 带宽 / 轮廓（阶段 2：ItemsControl + UniformGrid 三列等宽，省掉三段复制）。
                                                 外层 Border 提供整体圆角 + 描边；内层每项 Button 用 DataTrigger 切选中色。
                                             -->
                                             <Border
@@ -3595,26 +3595,26 @@
                                             <!--
                                                 ===== 阶段 4：属性面板三模式互斥显示 =====
                                                 各模式归属待后续讨论调整；本阶段先按"现状严格分流"原样迁入。
-                                                厚度线模式占位段：列出每段两端点的当前厚度（只读，本阶段无编辑控件）。
+                                                带宽线模式占位段：列出每段两端点的当前带宽（只读，本阶段无编辑控件）。
                                             -->
 
-                                            <!--  骨架模式：仅动骨架顶点拖拽 / PathData；厚度调整全部归厚度线模式  -->
+                                            <!--  骨架模式：仅动骨架顶点拖拽 / PathData；带宽调整全部归带宽模式  -->
                                             <StackPanel Visibility="{Binding IsSkeletonEditMode, Converter={StaticResource BoolToVis}}">
                                                 <!--
                                                     骨架几何配置：共线同向时的轮廓点拆分行为，由骨架形态决定 → 归骨架模式。
-                                                    勾选=两对轮廓点（保留厚度突变台阶，可逐侧圆角）；不勾选=合并为一对（忽略台阶）。
+                                                    勾选=两对轮廓点（保留带宽突变台阶，可逐侧圆角）；不勾选=合并为一对（忽略台阶）。
                                                 -->
                                                 <CheckBox
                                                     Content="共线同向时合并连接点"
                                                     FontSize="10"
                                                     Foreground="#a8c4d8"
                                                     IsChecked="{Binding SelectedItem.CollinearSplitPairs, Mode=TwoWay}"
-                                                    ToolTip="骨线两段共线同方向时的轮廓点数量：勾选=保留两对（厚度突变台阶，可逐侧圆角）；不勾选=合并为一对（忽略台阶）。本项属于骨架几何配置。" />
+                                                    ToolTip="骨线两段共线同方向时的轮廓点数量：勾选=保留两对（带宽突变台阶，可逐侧圆角）；不勾选=合并为一对（忽略台阶）。本项属于骨架几何配置。" />
                                             </StackPanel>
 
-                                            <!--  厚度线模式：全局厚度（独立分组）+ 骨点列表（树状结构）  -->
-                                            <StackPanel Visibility="{Binding IsThicknessEditMode, Converter={StaticResource BoolToVis}}">
-                                                <!--  全局厚度：拖动时同步所有顶点 Incoming+Outgoing（统一调整）。  -->
+                                            <!--  带宽模式：全局带宽（独立分组）+ 骨点列表（树状结构）  -->
+                                            <StackPanel Visibility="{Binding IsBandWidthEditMode, Converter={StaticResource BoolToVis}}">
+                                                <!--  全局带宽：拖动时同步所有顶点 Incoming+Outgoing（统一调整）。  -->
                                                 <StackPanel Margin="0,2,0,2">
                                                     <Grid Margin="0,0,0,2">
                                                         <TextBlock
@@ -3622,26 +3622,26 @@
                                                             VerticalAlignment="Center"
                                                             FontSize="10"
                                                             Foreground="#a8c4d8"
-                                                            Text="全局厚度" />
+                                                            Text="带宽" />
                                                         <TextBlock
                                                             HorizontalAlignment="Right"
                                                             VerticalAlignment="Center"
                                                             FontSize="10"
                                                             Foreground="#546e7a">
-                                                            <Run Text="{Binding SelectedItem.Thickness, Mode=OneWay, StringFormat={}{0:0.#}}" />
+                                                            <Run Text="{Binding SelectedItem.BandWidth, Mode=OneWay, StringFormat={}{0:0.#}}" />
                                                             <Run Text=" / " />
-                                                            <Run Text="{Binding SelectedThicknessMax, Mode=OneWay, StringFormat=F0}" />
+                                                            <Run Text="{Binding SelectedBandWidthMax, Mode=OneWay, StringFormat=F0}" />
                                                         </TextBlock>
                                                     </Grid>
-                                                    <!--  全局厚度下限 0：厚度归零时整条轮廓退化为纯折线骨架  -->
+                                                    <!--  全局带宽下限 0：带宽归零时整条轮廓退化为纯折线骨架  -->
                                                     <Slider
                                                         LargeChange="1"
-                                                        Maximum="{Binding SelectedThicknessMax, Mode=OneWay, FallbackValue=30}"
+                                                        Maximum="{Binding SelectedBandWidthMax, Mode=OneWay, FallbackValue=30}"
                                                         Minimum="0"
                                                         SmallChange="0.1"
-                                                        Value="{Binding SelectedItem.Thickness, Mode=TwoWay}" />
+                                                        Value="{Binding SelectedItem.BandWidth, Mode=TwoWay}" />
                                                 </StackPanel>
-                                                <!--  分割线：把全局厚度与骨点列表视觉分离  -->
+                                                <!--  分割线：把全局带宽与骨点列表视觉分离  -->
                                                 <Border
                                                     Height="1"
                                                     Margin="0,6,0,6"
@@ -3651,8 +3651,8 @@
                                                     Margin="0,0,0,4"
                                                     FontSize="10"
                                                     Foreground="#78909c"
-                                                    Text="骨点厚度" />
-                                                <ItemsControl ItemsSource="{Binding SelectedItem.VertexThicknesses}">
+                                                    Text="顶点带宽" />
+                                                <ItemsControl ItemsSource="{Binding SelectedItem.VertexBandWidths}">
                                                     <ItemsControl.ItemTemplate>
                                                         <DataTemplate>
                                                             <StackPanel Margin="0,2,0,6">
@@ -3725,16 +3725,16 @@
                                                                             Data="M0,7 L10,7 L5,0 Z"
                                                                             Fill="#90a4ae"
                                                                             Stretch="Fill"
-                                                                            ToolTip="入端：该骨点作为前一段末端时的厚度" />
+                                                                            ToolTip="入端：该骨点作为前一段末端时的带宽" />
                                                                         <TextBlock
                                                                             Grid.Column="1"
                                                                             HorizontalAlignment="Right"
                                                                             VerticalAlignment="Center"
                                                                             FontSize="10"
                                                                             Foreground="#546e7a">
-                                                                            <Run Text="{Binding IncomingThickness, Mode=OneWay, StringFormat={}{0:0.#}}" />
+                                                                            <Run Text="{Binding IncomingBandWidth, Mode=OneWay, StringFormat={}{0:0.#}}" />
                                                                             <Run Text=" / " />
-                                                                            <Run Text="{Binding DataContext.SelectedThicknessMax, RelativeSource={RelativeSource AncestorType=ItemsControl}, StringFormat=F0}" />
+                                                                            <Run Text="{Binding DataContext.SelectedBandWidthMax, RelativeSource={RelativeSource AncestorType=ItemsControl}, StringFormat=F0}" />
                                                                         </TextBlock>
                                                                     </Grid>
                                                                     <Border Padding="0">
@@ -3758,10 +3758,10 @@
                                                                         </Border.Style>
                                                                         <Slider
                                                                             LargeChange="1"
-                                                                            Maximum="{Binding DataContext.SelectedThicknessMax, RelativeSource={RelativeSource AncestorType=ItemsControl}, Mode=OneWay, FallbackValue=30}"
+                                                                            Maximum="{Binding DataContext.SelectedBandWidthMax, RelativeSource={RelativeSource AncestorType=ItemsControl}, Mode=OneWay, FallbackValue=30}"
                                                                             Minimum="0"
                                                                             SmallChange="0.1"
-                                                                            Value="{Binding IncomingThickness, Mode=TwoWay}" />
+                                                                            Value="{Binding IncomingBandWidth, Mode=TwoWay}" />
                                                                     </Border>
                                                                 </StackPanel>
                                                                 <!--
@@ -3794,16 +3794,16 @@
                                                                             Data="M0,0 L10,0 L5,7 Z"
                                                                             Fill="#90a4ae"
                                                                             Stretch="Fill"
-                                                                            ToolTip="出端：该骨点作为后一段首端时的厚度" />
+                                                                            ToolTip="出端：该骨点作为后一段首端时的带宽" />
                                                                         <TextBlock
                                                                             Grid.Column="1"
                                                                             HorizontalAlignment="Right"
                                                                             VerticalAlignment="Center"
                                                                             FontSize="10"
                                                                             Foreground="#546e7a">
-                                                                            <Run Text="{Binding OutgoingThickness, Mode=OneWay, StringFormat={}{0:0.#}}" />
+                                                                            <Run Text="{Binding OutgoingBandWidth, Mode=OneWay, StringFormat={}{0:0.#}}" />
                                                                             <Run Text=" / " />
-                                                                            <Run Text="{Binding DataContext.SelectedThicknessMax, RelativeSource={RelativeSource AncestorType=ItemsControl}, StringFormat=F0}" />
+                                                                            <Run Text="{Binding DataContext.SelectedBandWidthMax, RelativeSource={RelativeSource AncestorType=ItemsControl}, StringFormat=F0}" />
                                                                         </TextBlock>
                                                                     </Grid>
                                                                     <Border Padding="0">
@@ -3827,10 +3827,10 @@
                                                                         </Border.Style>
                                                                         <Slider
                                                                             LargeChange="1"
-                                                                            Maximum="{Binding DataContext.SelectedThicknessMax, RelativeSource={RelativeSource AncestorType=ItemsControl}, Mode=OneWay, FallbackValue=30}"
+                                                                            Maximum="{Binding DataContext.SelectedBandWidthMax, RelativeSource={RelativeSource AncestorType=ItemsControl}, Mode=OneWay, FallbackValue=30}"
                                                                             Minimum="0"
                                                                             SmallChange="0.1"
-                                                                            Value="{Binding OutgoingThickness, Mode=TwoWay}" />
+                                                                            Value="{Binding OutgoingBandWidth, Mode=TwoWay}" />
                                                                     </Border>
                                                                 </StackPanel>
                                                             </StackPanel>
@@ -3880,7 +3880,7 @@
                                                                 </Style.Triggers>
                                                             </Style>
                                                         </StackPanel.Style>
-                                                        <ItemsControl ItemsSource="{Binding SelectedItem.VertexThicknesses}">
+                                                        <ItemsControl ItemsSource="{Binding SelectedItem.VertexBandWidths}">
                                                             <ItemsControl.ItemTemplate>
                                                                 <DataTemplate>
                                                                     <StackPanel Margin="0,4,0,0" Visibility="{Binding IsEnd, Converter={StaticResource InverseBoolToVis}}">
@@ -4004,7 +4004,7 @@
                                                         接缝样式 ComboBox：绑 CurrentStyleEffective（非 nullable；null 继承全局已解析）。
                                                         TwoWay 写时 OutlineCornerHandle.SetCurrentStyle 会走 VM 写流程
                                                         （per-vertex override + NotifyOutlineGeometryChanged + Refresh）。
-                                                        ThickPolyline / 闭合 Polyline / BooleanPath 统一三态（布尔无厚度，Bevel 视同尖角）。
+                                                        BandPolyline / 闭合 Polyline / BooleanPath 统一三态（布尔无带宽，Bevel 视同尖角）。
                                                     -->
                                                     <ComboBox
                                                         Background="#0a0e1a"
@@ -4018,7 +4018,7 @@
                                                         <models:JoinStyle>Round</models:JoinStyle>
                                                     </ComboBox>
                                                     <!--
-                                                        圆角半径：值取自选中接缝手柄的 CurrentRadius（按 IsCorner/Side 自动路由到 VertexThickness 对应字段），
+                                                        圆角半径：值取自选中接缝手柄的 CurrentRadius（按 IsCorner/Side 自动路由到顶点带宽对应字段），
                                                         写入通过 ValueChanged 事件调手柄 SetRadius → VM 写 VertexFields + 刷 OutlineGeometry。
                                                         未选接缝时控件禁用。
                                                     -->

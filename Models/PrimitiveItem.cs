@@ -48,7 +48,7 @@ public partial class PrimitiveItem : ObservableObject
     public Guid Id { get; init; } = Guid.NewGuid();
 
     /// <summary>图元类型标识（唯一决定渲染分支、属性面板可见性）。
-    /// 当前取值：Rectangle / Ellipse / Line / RoundedRectangle / Triangle / ThickPolyline / Polyline / Ring。
+    /// 当前取值：Rectangle / Ellipse / Line / RoundedRectangle / Triangle / BandPolyline / Polyline / Ring。
     /// 旧版"PrimitiveKind(L1/L2)"分类概念已废弃——渲染分支/属性面板/选中决策一律按 TypeKey 字符串判断。</summary>
     [ObservableProperty] private string _typeKey = string.Empty;
 
@@ -102,7 +102,7 @@ public partial class PrimitiveItem : ObservableObject
 
     /// <summary>线条颜色（hex，如 "#FFFFFF"）。解析失败 → 不画描边（StrokeBrush 为 null）。</summary>
     [ObservableProperty] private string _strokeColor = "#FFFFFF";
-    /// <summary>线条粗细（设备无关单位）。与 ThickPolyline 的"体宽"Thickness 语义不同：这是图形自身的描边粗细。</summary>
+    /// <summary>线条粗细（设备无关单位）。与 BandPolyline 的"体宽"BandWidth 语义不同：这是图形自身的描边粗细。</summary>
     [ObservableProperty] private double _strokeWidth = 0.8;
     /// <summary>线条虚线样式（实线/虚线/点线/点划线）。</summary>
     [ObservableProperty] private StrokeDashStyle _strokeDashStyle = StrokeDashStyle.Solid;
@@ -223,20 +223,20 @@ public partial class PrimitiveItem : ObservableObject
     /// BooleanPath = 布尔快照（BooleanOps 的"多环骨架"M/L/Z + F 前缀，全局局部坐标）。</summary>
     [ObservableProperty] private string _pathData = string.Empty;
 
-    /// <summary>ThickPolyline 的整体厚度（保留兼容，新代码用 Segments 按段控制）。
-    /// 仅 L1 ThickPolyline 生效，其他 L1 图形此字段为 0。</summary>
-    [ObservableProperty] private double _thickness = 6;
+    /// <summary>BandPolyline 的整体带宽（保留兼容，新代码用 Segments 按段控制）。
+    /// 仅 L1 BandPolyline 生效，其他 L1 图形此字段为 0。</summary>
+    [ObservableProperty] private double _bandWidth = 6;
 
     /// <summary>轮廓线的接缝样式（控制 OutlineGeometry 的轮廓封口方式）。
     /// 通过轮廓本身直接控制接缝：Miter 尖角 / Bevel 斜切 / Round 圆弧。
     /// 默认 Miter（与老版本默认行为一致）。
-    /// 注意：虽然控制的是轮廓，但底层通过骨架线 + 厚度间接实现——这就是用户
+    /// 注意：虽然控制的是轮廓，但底层通过骨架线 + 带宽间接实现——这就是用户
     /// 想要的"轮廓线层面"的控制粒度。</summary>
     [ObservableProperty] private JoinStyle _outlineJoinStyle = JoinStyle.Miter;
 
     /// <summary>是否闭合为形状（仅 Polyline 有效）。false = 开放折线（纯描边骨架）；
     /// true = 骨架点直连单环闭合 → 生成可填充的闭合多边形（OutlineGeometry 复用，
-    /// 改用 BuildClosedShapeSteps 生成轮廓点，无厚度偏移）。闭合后每骨架点可用
+    /// 改用 BuildClosedShapeSteps 生成轮廓点，无带宽偏移）。闭合后每骨架点可用
     /// LeftCornerRadius 圆角（0=尖角 Miter，>0=圆角 Round）。</summary>
     [ObservableProperty] private bool _isClosed;
 
@@ -255,47 +255,47 @@ public partial class PrimitiveItem : ObservableObject
         OnPropertyChanged(nameof(OutlineGeometry));
         OnPropertyChanged(nameof(PolylineGeometry));
         OnPropertyChanged(nameof(SelectionGeometry));
-        // 闭合形状每顶点圆角需要 VertexThicknesses 作为半径容器（厚度恒 0，仅用 LeftCornerRadius）
+        // 闭合形状每顶点圆角需要 VertexBandWidths 作为半径容器（带宽恒 0，仅用 LeftCornerRadius）
         if (value && !string.IsNullOrEmpty(PathData))
-            SyncVertexThicknesses(Converters.ThickOutlineBuilder.ParsePathData(PathData).Count, 0);
+            SyncVertexBandWidths(Converters.BandOutlineBuilder.ParsePathData(PathData).Count, 0);
     }
 
-    /// <summary>ThickPolyline 的每顶点厚度集合（顶点数 = 段数 + 1）。
-    /// 厚度绑定到顶点（连接点），符合"承上启下"语义：
-    ///   - 首顶点：只有 OutgoingThickness（启下=段 0 首端）
-    ///   - 末顶点：只有 IncomingThickness（承上=段 N-1 末端）
-    ///   - 中间顶点：IncomingThickness（承上=前段末端）+ OutgoingThickness（启下=后段首端）
-    /// 集合元素变化（增减或某顶点厚度变化）会触发 OnPropertyChanged("OutlineGeometry")。</summary>
-    public ObservableCollection<VertexThickness> VertexThicknesses { get; } = new();
+    /// <summary>BandPolyline 的每顶点带宽集合（顶点数 = 段数 + 1）。
+    /// 带宽绑定到顶点（连接点），符合"承上启下"语义：
+    ///   - 首顶点：只有 OutgoingBandWidth（启下=段 0 首端）
+    ///   - 末顶点：只有 IncomingBandWidth（承上=段 N-1 末端）
+    ///   - 中间顶点：IncomingBandWidth（承上=前段末端）+ OutgoingBandWidth（启下=后段首端）
+    /// 集合元素变化（增减或某顶点带宽变化）会触发 OnPropertyChanged("OutlineGeometry")。</summary>
+    public ObservableCollection<VertexBandWidth> VertexBandWidths { get; } = new();
 
-    /// <summary>逐顶点接缝样式（per-vertex OutlineJoinStyle）。与 VertexThicknesses 等长对齐。
+    /// <summary>逐顶点接缝样式（per-vertex OutlineJoinStyle）。与 VertexBandWidths 等长对齐。
     /// null = 继承全局 OutlineJoinStyle；非 null = 此顶点强制使用该值。
-    /// 内部 List&lt;JoinStyle?&gt;，与 VertexThicknesses 同步增减：
-    ///   - VertexThicknesses 新增顶点 → 此列表追加 null
-    ///   - VertexThicknesses 删除顶点 → 此列表同步移除
+    /// 内部 List&lt;JoinStyle?&gt;，与 VertexBandWidths 同步增减：
+    ///   - VertexBandWidths 新增顶点 → 此列表追加 null
+    ///   - VertexBandWidths 删除顶点 → 此列表同步移除
     /// 元素变化触发 OnPropertyChanged("OutlineGeometry")。
     /// 注意：索引 0（首顶点）和 N-1（末顶点）的样式不参与接缝计算，但保留槽位以便 UI 通用。</summary>
     private readonly List<JoinStyle?> _vertexJoinStyles = new();
 
     public PrimitiveItem()
     {
-        VertexThicknesses.CollectionChanged += OnVertexThicknessesChanged;
+        VertexBandWidths.CollectionChanged += OnVertexBandWidthsChanged;
     }
 
-    /// <summary>VertexThicknesses 集合变化（增/删/重置）时刷新 OutlineGeometry。
+    /// <summary>VertexBandWidths 集合变化（增/删/重置）时刷新 OutlineGeometry。
     /// 同时同步 _vertexJoinStyles 列表长度（新增补 null，删除同步删）。</summary>
-    private void OnVertexThicknessesChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    private void OnVertexBandWidthsChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        // 订阅新项的 ThicknessChanged，退订旧项
+        // 订阅新项的 BandWidthChanged，退订旧项
         if (e.OldItems != null)
-            foreach (VertexThickness v in e.OldItems)
-                v.ThicknessChanged -= OnVertexThicknessChanged;
+            foreach (VertexBandWidth v in e.OldItems)
+                v.BandWidthChanged -= OnVertexBandWidthChanged;
         if (e.NewItems != null)
-            foreach (VertexThickness v in e.NewItems)
-                v.ThicknessChanged += OnVertexThicknessChanged;
+            foreach (VertexBandWidth v in e.NewItems)
+                v.BandWidthChanged += OnVertexBandWidthChanged;
 
         // 同步 _vertexJoinStyles 长度
-        int vtCount = VertexThicknesses.Count;
+        int vtCount = VertexBandWidths.Count;
         while (_vertexJoinStyles.Count > vtCount)
             _vertexJoinStyles.RemoveAt(_vertexJoinStyles.Count - 1);
         while (_vertexJoinStyles.Count < vtCount)
@@ -346,7 +346,7 @@ public partial class PrimitiveItem : ObservableObject
     /// <summary>逐顶点样式快照（用于序列化）。null 项不写入。</summary>
     internal IReadOnlyList<JoinStyle?> VertexJoinStylesSnapshot => _vertexJoinStyles;
 
-    /// <summary>从序列化数据恢复逐顶点样式（数量对齐 VertexThicknesses，不足补 null）。</summary>
+    /// <summary>从序列化数据恢复逐顶点样式（数量对齐 VertexBandWidths，不足补 null）。</summary>
     internal void RestoreVertexJoinStyles(IReadOnlyList<JoinStyle?>? snapshot)
     {
         // 先清空所有覆盖
@@ -362,20 +362,20 @@ public partial class PrimitiveItem : ObservableObject
     }
 
     /// <summary>单顶点 Incoming/Outgoing 变化时刷新 OutlineGeometry。</summary>
-    private void OnVertexThicknessChanged(object? sender, EventArgs e)
+    private void OnVertexBandWidthChanged(object? sender, EventArgs e)
     {
         OnPropertyChanged(nameof(OutlineGeometry));
-        // 厚度变了 → 厚度线端点位置也要变（按段方向法线 × 半厚度），通知 ViewModel 刷新 ThicknessHandles/ThicknessLines
+        // 带宽变了 → 带宽线端点位置也要变（按段方向法线 × 半带宽），通知 ViewModel 刷新 BandWidthHandles/BandWidthLines
         OnPropertyChanged(nameof(SelectionGeometry));
-        VertexThicknessDataChanged?.Invoke(this, EventArgs.Empty);
+        VertexBandWidthDataChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    /// <summary>任意 VertexThickness 的 Incoming/Outgoing 厚度改变事件。
-    /// ViewModel 订阅后刷新 ThicknessHandles（端点坐标）+ ThicknessLines（画布左右虚线）。</summary>
-    public event EventHandler? VertexThicknessDataChanged;
+    /// <summary>任意 VertexBandWidth 的 Incoming/Outgoing 带宽改变事件。
+    /// ViewModel 订阅后刷新 BandWidthHandles（端点坐标）+ BandWidthLines（画布左右虚线）。</summary>
+    public event EventHandler? VertexBandWidthDataChanged;
 
     /// <summary>PathData 变化时刷新 OutlineGeometry（顶点改了，轮廓也要重算）和 PolylineGeometry（纯折线骨架）。
-    /// BooleanPath 多环骨架 / Polyline 闭合形态：骨架点/环数变化时同步 VertexThicknesses（圆角半径容器）。</summary>
+    /// BooleanPath 多环骨架 / Polyline 闭合形态：骨架点/环数变化时同步 VertexBandWidths（圆角半径容器）。</summary>
     partial void OnPathDataChanged(string value)
     {
         if (!string.IsNullOrEmpty(value))
@@ -383,24 +383,24 @@ public partial class PrimitiveItem : ObservableObject
             if (TypeKey == nameof(L1Primitive.BooleanPath))
             {
                 // 骨架点数 = 各环"段链起点+终点"去重后的总数（段端点，弧段不摊平）
-                SyncVertexThicknesses(Converters.BooleanOps.GetSkeletonCount(value), 0);
+                SyncVertexBandWidths(Converters.BooleanOps.GetSkeletonCount(value), 0);
             }
             else if (IsClosed && TypeKey == nameof(L1Primitive.Polyline) && !string.IsNullOrEmpty(value))
-                SyncVertexThicknesses(Converters.ThickOutlineBuilder.ParsePathData(value).Count, 0);
+                SyncVertexBandWidths(Converters.BandOutlineBuilder.ParsePathData(value).Count, 0);
         }
         OnPropertyChanged(nameof(OutlineGeometry));
         OnPropertyChanged(nameof(PolylineGeometry));
         OnPropertyChanged(nameof(SelectionGeometry));
     }
 
-    /// <summary>整体 Thickness 变化时同步所有顶点厚度（统一调整），新顶点也用此值。
-    /// 顶点 Slider 单独调整时只改 VertexThickness.Incoming/Outgoing，不影响整体 Thickness。</summary>
-    partial void OnThicknessChanged(double value)
+    /// <summary>整体 BandWidth 变化时同步所有顶点带宽（统一调整），新顶点也用此值。
+    /// 顶点 Slider 单独调整时只改 VertexBandWidth.Incoming/Outgoing，不影响整体 BandWidth。</summary>
+    partial void OnBandWidthChanged(double value)
     {
-        foreach (var v in VertexThicknesses)
+        foreach (var v in VertexBandWidths)
         {
-            v.IncomingThickness = value;
-            v.OutgoingThickness = value;
+            v.IncomingBandWidth = value;
+            v.OutgoingBandWidth = value;
         }
         OnPropertyChanged(nameof(OutlineGeometry));
         OnPropertyChanged(nameof(SelectionGeometry));
@@ -414,7 +414,7 @@ public partial class PrimitiveItem : ObservableObject
     }
 
     /// <summary>共线同向直通点拆分模式：骨架两段共线同方向时，
-    /// true = 产生两对轮廓点（保留厚度突变台阶，可对每侧独立圆角）；false = 合并为一对（忽略台阶）。
+    /// true = 产生两对轮廓点（保留带宽突变台阶，可对每侧独立圆角）；false = 合并为一对（忽略台阶）。
     /// 默认 true，与老版本行为一致。属性面板可切换，持久化到工程文件。</summary>
     [ObservableProperty] private bool _collinearSplitPairs = true;
 
@@ -429,7 +429,7 @@ public partial class PrimitiveItem : ObservableObject
     private System.Collections.Generic.List<SymbolDesigner.Converters.PointStep>? _cachedSteps;
     private int _cachedStepsVersion;  // 步骤被外部（手柄拖动）就地替换时递增，触发 re-emit
     private string? _cachedPathData;
-    private double _cachedThickness;
+    private double _cachedBandWidth;
     private string? _cachedOutlineJoinStyle;
     private bool _cachedCollinearSplitPairs = true;
     private bool _cachedIsClosed;
@@ -452,9 +452,9 @@ public partial class PrimitiveItem : ObservableObject
         OnPropertyChanged(nameof(SelectionGeometry));
     }
 
-    /// <summary>带厚度的闭合轮廓 Geometry（由 PathData + VertexThicknesses 计算）。
+    /// <summary>带带宽的闭合轮廓 Geometry（由 PathData + VertexBandWidths 计算）。
     /// Path.Data 直接绑定此属性，无需 MultiBinding，避免 TypeConverter 坑。
-    /// VertexThicknesses/PathData/OutlineJoinStyle 任一变化都会触发刷新。
+    /// VertexBandWidths/PathData/OutlineJoinStyle 任一变化都会触发刷新。
     /// 加缓存：第二次 getter 直接复用第一次结果，避免重复 BuildOutline。
     /// 逐顶点接缝样式：优先用 SetVertexJoinStyle 设置的 per-vertex 值，null 槽位用全局 OutlineJoinStyle。</summary>
     public System.Windows.Media.Geometry? OutlineGeometry
@@ -473,11 +473,11 @@ public partial class PrimitiveItem : ObservableObject
             bool isDirty =
                 _outlineCache == null
                 || _cachedPathData != PathData
-                || _cachedThickness != Thickness
+                || _cachedBandWidth != BandWidth
                 || _cachedOutlineJoinStyle != OutlineJoinStyle.ToString()
                 || _cachedCollinearSplitPairs != CollinearSplitPairs
                 || _cachedIsClosed != IsClosed
-                || _cachedVTCount != VertexThicknesses.Count
+                || _cachedVTCount != VertexBandWidths.Count
                 || _cachedVTHash != vtHash
                 || _cachedVJSCount != _vertexJoinStyles.Count
                 || _cachedVJSHash != vjsHash;
@@ -508,16 +508,16 @@ public partial class PrimitiveItem : ObservableObject
             List<Converters.PointStep> steps;
             if (IsClosed && TypeKey == nameof(L1Primitive.Polyline))
             {
-                // Polyline 闭合形态：骨架点直连单环（无厚度偏移），复用同一个 emit/圆角/手柄管道。
-                // 顶点圆角半径存 VertexThicknesses[vi].LeftCornerRadius（单环无左右侧）。
-                steps = Converters.ThickOutlineBuilder.BuildClosedShapeSteps(PathData, ToVertexThicknessArray());
+                // Polyline 闭合形态：骨架点直连单环（无带宽偏移），复用同一个 emit/圆角/手柄管道。
+                // 顶点圆角半径存 VertexBandWidths[vi].LeftCornerRadius（单环无左右侧）。
+                steps = Converters.BandOutlineBuilder.BuildClosedShapeSteps(PathData, ToVertexBandWidthArray());
             }
-            else if (VertexThicknesses.Count == 0)
-                steps = Converters.ThickOutlineBuilder.BuildOutlineSteps(PathData, Thickness, CollinearSplitPairs);
+            else if (VertexBandWidths.Count == 0)
+                steps = Converters.BandOutlineBuilder.BuildOutlineSteps(PathData, BandWidth, CollinearSplitPairs);
             else
             {
-                var vs = new VertexThickness[VertexThicknesses.Count];
-                for (int i = 0; i < VertexThicknesses.Count; i++) vs[i] = VertexThicknesses[i];
+                var vs = new VertexBandWidth[VertexBandWidths.Count];
+                for (int i = 0; i < VertexBandWidths.Count; i++) vs[i] = VertexBandWidths[i];
 
                 // 计算 effective JoinStyle[]（null 用全局 OutlineJoinStyle 替换）
                 int n = vs.Length;
@@ -525,7 +525,7 @@ public partial class PrimitiveItem : ObservableObject
                 for (int i = 0; i < n; i++)
                     jsArr[i] = _vertexJoinStyles[i] ?? OutlineJoinStyle;
 
-                steps = Converters.ThickOutlineBuilder.BuildOutlineSteps(PathData, vs, jsArr, CollinearSplitPairs);
+                steps = Converters.BandOutlineBuilder.BuildOutlineSteps(PathData, vs, jsArr, CollinearSplitPairs);
             }
 
             // 把步骤合成 Geometry 缓存
@@ -534,11 +534,11 @@ public partial class PrimitiveItem : ObservableObject
             _lastEmittedStepsVersion = _cachedStepsVersion;
             _outlineCache = EmitSteps(steps);
             _cachedPathData = PathData;
-            _cachedThickness = Thickness;
+            _cachedBandWidth = BandWidth;
             _cachedOutlineJoinStyle = OutlineJoinStyle.ToString();
             _cachedCollinearSplitPairs = CollinearSplitPairs;
             _cachedIsClosed = IsClosed;
-            _cachedVTCount = VertexThicknesses.Count;
+            _cachedVTCount = VertexBandWidths.Count;
             _cachedVTHash = vtHash;
             _cachedVJSCount = _vertexJoinStyles.Count;
             _cachedVJSHash = vjsHash;
@@ -550,25 +550,25 @@ public partial class PrimitiveItem : ObservableObject
     /// （Miter/Bevel 该角不烘焙保持尖角，Round 才烘焙半径为 A 命令真圆弧），
     /// 再 Geometry.Parse 原生渲染（F0 填充规则，弧段保留——圆/椭圆边界 = 圆弧，圆弧上零中间点）。
     /// 与步骤管道隔离：骨架点（段端点）不可拖拽，渲染每次从这里重建（样式/半径变化都会命中缓存失效）。
-    /// 缓存由 PathData / VertexThicknesses / _vertexJoinStyles 内容驱动，命中直接返回。</summary>
+    /// 缓存由 PathData / VertexBandWidths / _vertexJoinStyles 内容驱动，命中直接返回。</summary>
     private System.Windows.Media.Geometry? BooleanOutlineGeometry()
     {
         int vtHash = ComputeVTHash();
         int vjsHash = ComputeVJSHash();
         bool dirty = _outlineCache == null
             || _cachedPathData != PathData
-            || _cachedVTCount != VertexThicknesses.Count
+            || _cachedVTCount != VertexBandWidths.Count
             || _cachedVTHash != vtHash
             || _cachedVJSCount != _vertexJoinStyles.Count
             || _cachedVJSHash != vjsHash;
         if (!dirty) return _outlineCache;
 
-        int n = VertexThicknesses.Count;
+        int n = VertexBandWidths.Count;
         var radii = new double[n];
         var styles = new JoinStyle[n];
         for (int i = 0; i < n; i++)
         {
-            radii[i] = VertexThicknesses[i].LeftCornerRadius;
+            radii[i] = VertexBandWidths[i].LeftCornerRadius;
             styles[i] = _vertexJoinStyles[i] ?? OutlineJoinStyle;  // null 槽位继承全局样式
         }
         string baked = Converters.BooleanOps.BakeCornerRadii(PathData, radii, styles);
@@ -587,38 +587,38 @@ public partial class PrimitiveItem : ObservableObject
         }
         _outlineCache = g;
         _cachedPathData = PathData;
-        _cachedVTCount = VertexThicknesses.Count;
+        _cachedVTCount = VertexBandWidths.Count;
         _cachedVTHash = vtHash;
         _cachedVJSCount = _vertexJoinStyles.Count;
         _cachedVJSHash = vjsHash;
         return g;
     }
 
-    /// <summary>把 VertexThicknesses 转成数组（无则返回 null）。</summary>
-    private VertexThickness[]? ToVertexThicknessArray()
+    /// <summary>把 VertexBandWidths 转成数组（无则返回 null）。</summary>
+    private VertexBandWidth[]? ToVertexBandWidthArray()
     {
-        if (VertexThicknesses.Count == 0) return null;
-        var vs = new VertexThickness[VertexThicknesses.Count];
-        for (int i = 0; i < VertexThicknesses.Count; i++) vs[i] = VertexThicknesses[i];
+        if (VertexBandWidths.Count == 0) return null;
+        var vs = new VertexBandWidth[VertexBandWidths.Count];
+        for (int i = 0; i < VertexBandWidths.Count; i++) vs[i] = VertexBandWidths[i];
         return vs;
     }
 
     private int _lastEmittedStepsVersion;  // 上次 emit 时对应的步骤版本号
 
-    /// <summary>把 emit 步骤序列拼成 StreamGeometry（多环布尔结果按 FigureIndex 逐环开 figure，委托给 ThickOutlineBuilder）。</summary>
+    /// <summary>把 emit 步骤序列拼成 StreamGeometry（多环布尔结果按 FigureIndex 逐环开 figure，委托给 BandOutlineBuilder）。</summary>
     private static System.Windows.Media.Geometry EmitSteps(System.Collections.Generic.List<SymbolDesigner.Converters.PointStep> steps)
-        => Converters.ThickOutlineBuilder.EmitSteps(steps);
+        => Converters.BandOutlineBuilder.EmitSteps(steps);
 
-    /// <summary>VertexThicknesses 内容的轻量 hash（Incoming/Outgoing + 三类圆角字段）。
-    /// 用于检测厚度数组内容变化（不只数量）。圆角字段参与 hash 是缓存失效的前提：
+    /// <summary>VertexBandWidths 内容的轻量 hash（Incoming/Outgoing + 三类圆角字段）。
+    /// 用于检测带宽数组内容变化（不只数量）。圆角字段参与 hash 是缓存失效的前提：
     /// 只改 Left/RightCornerRadius 或 JoinInnerRadius 而不让 hash 变化 → isDirty=false → 视觉不更新。</summary>
     private int ComputeVTHash()
     {
         int h = 0;
-        foreach (var v in VertexThicknesses)
+        foreach (var v in VertexBandWidths)
         {
-            h = unchecked(h * 31 + v.IncomingThickness.GetHashCode());
-            h = unchecked(h * 31 + v.OutgoingThickness.GetHashCode());
+            h = unchecked(h * 31 + v.IncomingBandWidth.GetHashCode());
+            h = unchecked(h * 31 + v.OutgoingBandWidth.GetHashCode());
             h = unchecked(h * 31 + v.JoinInnerRadius.GetHashCode());
             h = unchecked(h * 31 + v.LeftCornerRadius.GetHashCode());
             h = unchecked(h * 31 + v.RightCornerRadius.GetHashCode());
@@ -644,16 +644,16 @@ public partial class PrimitiveItem : ObservableObject
     public string TrajectoryPathData => PathData ?? string.Empty;
 
     /// <summary>纯折线（Polyline）专用几何：解析 PathData 为开放骨架的 StreamGeometry，仅描边无填充。
-    /// 与 ThickPolyline 的 OutlineGeometry 严格分离——OutlineGeometry 走"厚度偏移/接缝"逻辑（仅 ThickPolyline 用），
+    /// 与 BandPolyline 的 OutlineGeometry 严格分离——OutlineGeometry 走"带宽偏移/接缝"逻辑（仅 BandPolyline 用），
     /// PolylineGeometry 只为 Polyline 提供纯 stroke 渲染的 Geometry，完全绕开轮廓计算。
-    /// 模板绑定：L1PolylineNode 绑此属性，L1ThickPolylineNode 绑 OutlineGeometry。
+    /// 模板绑定：L1PolylineNode 绑此属性，L1BandPolylineNode 绑 OutlineGeometry。
     /// PathData 变化时刷新（见 OnPathDataChanged）。</summary>
     public System.Windows.Media.Geometry? PolylineGeometry
     {
         get
         {
             if (string.IsNullOrEmpty(PathData)) return null;
-            var pts = Converters.ThickOutlineBuilder.ParsePathData(PathData);
+            var pts = Converters.BandOutlineBuilder.ParsePathData(PathData);
             if (pts.Count < 2) return null;  // 至少两个点才能形成线段
             var stream = new System.Windows.Media.StreamGeometry();
             using (var ctx = stream.Open())
@@ -687,7 +687,7 @@ public partial class PrimitiveItem : ObservableObject
                 nameof(L1Primitive.Triangle) => BuildTriangleGeometry(),
                 nameof(L1Primitive.Ring) => RingGeometry,
                 nameof(L1Primitive.Polyline) when IsClosed => OutlineGeometry,
-                nameof(L1Primitive.ThickPolyline) => OutlineGeometry,
+                nameof(L1Primitive.BandPolyline) => OutlineGeometry,
                 nameof(L1Primitive.BooleanPath) => OutlineGeometry,  // 布尔结果 = 多环闭合骨架，走 OutlineGeometry 管道
                 _ => null,
             };
@@ -770,7 +770,7 @@ public partial class PrimitiveItem : ObservableObject
     /// <summary>选中装饰几何：贴合图元实际渲染形状的轮廓（局部坐标，以元素 X/Y 为原点，
     /// 由模板 Canvas.Left/Top 负责定位）。按 TypeKey 复用既有几何：
     /// 矩形/圆角→RectangleGeometry、椭圆→EllipseGeometry、三角→BuildTriangleGeometry、
-    /// 圆环→RingGeometry、折线→PolylineGeometry、粗折线/布尔→OutlineGeometry。
+    /// 圆环→RingGeometry、折线→PolylineGeometry、带状折线/布尔→OutlineGeometry。
     /// 与本体渲染共用同一几何 → 选中虚线永远贴形（圆是圆、三角是三角、不规则轮廓走骨架）。
     /// 相关字段（Width/Height/PathData/CornerRadius 等）变化时触发通知。 </summary>
     public System.Windows.Media.Geometry? SelectionGeometry => TypeKey switch
@@ -788,7 +788,7 @@ public partial class PrimitiveItem : ObservableObject
         nameof(L1Primitive.Line) => BuildLineSelectionGeometry(),
         nameof(L1Primitive.Polyline) when IsClosed => OutlineGeometry,
         nameof(L1Primitive.Polyline) => PolylineGeometry,
-        nameof(L1Primitive.ThickPolyline) => OutlineGeometry,
+        nameof(L1Primitive.BandPolyline) => OutlineGeometry,
         nameof(L1Primitive.BooleanPath) => OutlineGeometry,
         _ => null,
     };
@@ -815,33 +815,33 @@ public partial class PrimitiveItem : ObservableObject
         return stream;
     }
 
-    /// <summary>按顶点数同步 VertexThicknesses 数量（新增顶点用 defaultThickness 填充）。
-    /// 顶点数变化时调用，保留已有顶点厚度。新增顶点根据位置（首/中/末）设置 IsStart/IsEnd。</summary>
-    public void SyncVertexThicknesses(int vertexCount, double defaultThickness)
+    /// <summary>按顶点数同步 VertexBandWidths 数量（新增顶点用 defaultBandWidth 填充）。
+    /// 顶点数变化时调用，保留已有顶点带宽。新增顶点根据位置（首/中/末）设置 IsStart/IsEnd。</summary>
+    public void SyncVertexBandWidths(int vertexCount, double defaultBandWidth)
     {
         // 增加顶点
-        while (VertexThicknesses.Count < vertexCount)
+        while (VertexBandWidths.Count < vertexCount)
         {
-            int idx = VertexThicknesses.Count;
+            int idx = VertexBandWidths.Count;
             bool isStart = idx == 0;
             bool isEnd = idx == vertexCount - 1;
-            VertexThicknesses.Add(new ViewModels.VertexThickness(
-                idx, defaultThickness, defaultThickness, isStart, isEnd));
+            VertexBandWidths.Add(new ViewModels.VertexBandWidth(
+                idx, defaultBandWidth, defaultBandWidth, isStart, isEnd));
         }
         // 删除多余顶点
-        while (VertexThicknesses.Count > vertexCount)
-            VertexThicknesses.RemoveAt(VertexThicknesses.Count - 1);
+        while (VertexBandWidths.Count > vertexCount)
+            VertexBandWidths.RemoveAt(VertexBandWidths.Count - 1);
         // 修复末顶点的 IsEnd 标记（顶点数变化时末顶点位置变）
-        for (int i = 0; i < VertexThicknesses.Count; i++)
+        for (int i = 0; i < VertexBandWidths.Count; i++)
         {
-            var v = VertexThicknesses[i];
+            var v = VertexBandWidths[i];
             bool shouldBeStart = i == 0;
-            bool shouldBeEnd = i == VertexThicknesses.Count - 1;
+            bool shouldBeEnd = i == VertexBandWidths.Count - 1;
             if (v.IsStart != shouldBeStart || v.IsEnd != shouldBeEnd)
                 {
                     // IsStart/IsEnd 是只读属性，需重建对象（保留其他字段）
-                    VertexThicknesses[i] = new ViewModels.VertexThickness(
-                        i, v.IncomingThickness, v.OutgoingThickness, shouldBeStart, shouldBeEnd)
+                    VertexBandWidths[i] = new ViewModels.VertexBandWidth(
+                        i, v.IncomingBandWidth, v.OutgoingBandWidth, shouldBeStart, shouldBeEnd)
                     {
                         JoinInnerRadius = v.JoinInnerRadius,
                         LeftCornerRadius = v.LeftCornerRadius,

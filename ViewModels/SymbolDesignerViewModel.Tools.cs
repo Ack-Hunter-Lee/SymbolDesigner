@@ -22,7 +22,7 @@ public partial class SymbolDesignerViewModel
         new ToolboxEntry("L1_RoundedRectangle", "圆角矩形", "▢"),
         new ToolboxEntry("L1_Line",       "直线",   "／"),
         new ToolboxEntry("L1_Polyline",   "折线",   "〰"),
-        new ToolboxEntry("L1_ThickPolyline", "粗折线", "▰"),
+        new ToolboxEntry("L1_BandPolyline", "带宽折线", "▰"),
     };
 
     /// <summary>工具栏当前激活的图元 Key（点击进入模式后置位，再点同一项取消）。
@@ -52,7 +52,7 @@ public partial class SymbolDesignerViewModel
         DrawMode = key switch
         {
             "L1_Polyline"          => DrawMode.Polyline,
-            "L1_ThickPolyline"     => DrawMode.ThickPolyline,
+            "L1_BandPolyline"     => DrawMode.BandPolyline,
             "L1_Line"              => DrawMode.Line,
             "L1_Rectangle"         => DrawMode.Rectangle,
             "L1_RoundedRectangle"  => DrawMode.RoundedRectangle,

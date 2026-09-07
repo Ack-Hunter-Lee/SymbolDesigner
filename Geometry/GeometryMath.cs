@@ -13,7 +13,7 @@ public static class GeometryMath
     public static bool IsLineLike(PrimitiveItem p) =>
         p.TypeKey is nameof(L1Primitive.Line)
             or nameof(L1Primitive.Polyline)
-            or nameof(L1Primitive.ThickPolyline);
+            or nameof(L1Primitive.BandPolyline);
 
     /// <summary>是否为圆类图元（可作为相切目标）。</summary>
     public static bool IsCircleLike(PrimitiveItem p) =>
@@ -59,7 +59,7 @@ public static class GeometryMath
         return sb.ToString();
     }
 
-    /// <summary>为 PathData 型图元（Line/Polyline/ThickPolyline/BooleanPath）重算包围盒。
+    /// <summary>为 PathData 型图元（Line/Polyline/BandPolyline/BooleanPath）重算包围盒。
     /// 拖动端点后，PathData 局部坐标可能超出当前 X/Y→X+Width 范围，
     /// 导致部分线段不可见。此方法同步更新 X/Y/Width/Height，
     /// 同时把 PathData 平移到新原点。BooleanPath 多环骨架保持环结构重建（F0 前缀）。</summary>
@@ -75,7 +75,7 @@ public static class GeometryMath
         }
         else
         {
-            var pts = ThickOutlineBuilder.ParsePathData(item.PathData);
+            var pts = BandOutlineBuilder.ParsePathData(item.PathData);
             for (int i = 0; i < pts.Count; i++) flat.Add(pts[i]);
         }
         if (flat.Count == 0) return;

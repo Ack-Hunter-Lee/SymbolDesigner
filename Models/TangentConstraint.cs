@@ -11,7 +11,7 @@ namespace SymbolDesigner.Models;
 ///  - 后选的图元 = 调整对象（Follower）：建立约束时移动使其与锚相切，
 ///    后续拖动锚时跟随保持相切。
 ///
-/// 参与图元固定为一"线"一"圆"（Line/Polyline/ThickPolyline × Ellipse/Ring）：
+/// 参与图元固定为一"线"一"圆"（Line/Polyline/BandPolyline × Ellipse/Ring）：
 ///  - AnchorIsLine=true  → 锚是直线，圆被调整（圆移动到与直线相切）；
 ///  - AnchorIsLine=false → 锚是圆，直线被调整（直线移动到与圆相切）。
 ///

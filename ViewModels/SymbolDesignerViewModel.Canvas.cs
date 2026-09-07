@@ -122,9 +122,9 @@ public partial class SymbolDesignerViewModel
     partial void OnBackgroundOpacityChanged(double value) => IsDirty = true;
     partial void OnBackgroundFitModeChanged(string value) => IsDirty = true;
 
-    // 画布尺寸变化时,属性面板的"厚度" Slider 上限需重算(依赖短边)
-    partial void OnCanvasWidthChanged(double value) => RecomputeSelectedThicknessMax();
-    partial void OnCanvasHeightChanged(double value) => RecomputeSelectedThicknessMax();
+    // 画布尺寸变化时,属性面板的"带宽" Slider 上限需重算(依赖短边)
+    partial void OnCanvasWidthChanged(double value) => RecomputeSelectedBandWidthMax();
+    partial void OnCanvasHeightChanged(double value) => RecomputeSelectedBandWidthMax();
 
     // ============== 屏幕恒定尺寸 token（反缩放后） ==============
     // 用途：任何缩放下，手柄/提示线在屏幕上的物理尺寸恒为 token 值（屏幕像素）。

@@ -16,8 +16,8 @@ namespace SymbolDesigner.Converters
     /// <summary>轮廓 emit 顶点：1 个 emit 步骤。基类 + 三个具体形态（直线 / Bevel 拆点 / Round 圆弧）。
     /// 每种 emit 类型字段明确，不会跨模式混乱。
     /// 基类 Point = miter 顶点 / 圆心（接缝处的轮廓点），派生类存放各自的额外参数。
-    /// 这三个类是几何抽象，跟 ThickOutlineBuilder 的算法实现解耦。
-    /// 分段控制厚度由 VertexThickness[] 数组实现，本文件不涉及。</summary>
+    /// 这三个类是几何抽象，跟 BandOutlineBuilder 的算法实现解耦。
+    /// 分段控制带宽由 VertexBandWidth[] 数组实现，本文件不涉及。</summary>
 
     /// <summary>普通直线：ctx 当前点 → Point。</summary>
     internal class PointStep
@@ -41,7 +41,7 @@ namespace SymbolDesigner.Converters
         /// 拆双对模式下 lefts 长度 = 2n-2 > n，不能用索引公式推导，必须显式携带。
         /// 圆角重建（ApplyPerVertexCornerRadius）与手柄映射（VM）统一读它，避免越界/错位。</summary>
         internal int BoneIndex { get; }
-        /// <summary>所属闭合环序号（多环布尔结果按环分组；单环/ThickPolyline 无标记 = -1 整条序列一个 figure）。
+        /// <summary>所属闭合环序号（多环布尔结果按环分组；单环/BandPolyline 无标记 = -1 整条序列一个 figure）。
         /// EmitSteps 按相邻不同的 FigureIndex 开新 figure，保证带洞多环各自闭合、不串环连线。</summary>
         internal int FigureIndex { get; }
         internal virtual void Emit(StreamGeometryContext ctx, bool isStartOfFigure = false)

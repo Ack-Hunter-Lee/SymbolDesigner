@@ -58,7 +58,7 @@ public partial class SymbolDesignerViewModel
     /// <summary>预览态源（用户选中的图形，确认时深拷贝入 ArrayInstance）。</summary>
     private PrimitiveItem? _previewSource;
 
-    /// <summary>预览态路径（ThickPolyline，仅 Path 类型需要，确认时拷贝 PathData）。</summary>
+    /// <summary>预览态路径（BandPolyline，仅 Path 类型需要，确认时拷贝 PathData）。</summary>
     private PrimitiveItem? _previewPath;
 
     /// <summary>类型下拉选项（中文显示名 + 枚举值），供浮层 ComboBox 绑定。</summary>
@@ -136,22 +136,22 @@ public partial class SymbolDesignerViewModel
     }
 
     /// <summary>开始预览式创建。源 = 当前选中图形；类型默认取上次选择。
-    /// - 若当前选中 ThickPolyline → 自动把类型定为 Path（路径=选中折线）。
+    /// - 若当前选中 BandPolyline → 自动把类型定为 Path（路径=选中折线）。
     /// - 否则默认 Path，若画布没有可用折线 → 自动切换 Rectangular（无需参考路径即可阵列）。
     /// 立即生成预览，浮层可改类型与全套参数，✓ 确认 / ✕ 或 Esc 取消。</summary>
     [RelayCommand]
     private void StartArrayPreview()
     {
-        // 源 = 选中的非 ThickPolyline 图形（矩形/椭圆/圆环等）
-        var src = SelectedItem is { } sel && sel.TypeKey != nameof(L1Primitive.ThickPolyline)
+        // 源 = 选中的非 BandPolyline 图形（矩形/椭圆/圆环等）
+        var src = SelectedItem is { } sel && sel.TypeKey != nameof(L1Primitive.BandPolyline)
             ? sel
             : null;
-        // 路径 = 选中的 ThickPolyline；否则画布第一条可用 ThickPolyline
-        var path = SelectedItem is { } sel2 && sel2.TypeKey == nameof(L1Primitive.ThickPolyline)
+        // 路径 = 选中的 BandPolyline；否则画布第一条可用 BandPolyline
+        var path = SelectedItem is { } sel2 && sel2.TypeKey == nameof(L1Primitive.BandPolyline)
             ? sel2
             : null;
-        path ??= Primitives.FirstOrDefault(p => p.TypeKey == nameof(L1Primitive.ThickPolyline)
-            && Converters.ThickOutlineBuilder.ParsePathData(p.PathData).Count >= 2);
+        path ??= Primitives.FirstOrDefault(p => p.TypeKey == nameof(L1Primitive.BandPolyline)
+            && Converters.BandOutlineBuilder.ParsePathData(p.PathData).Count >= 2);
 
         if (src is null)
         {
@@ -308,7 +308,7 @@ public partial class SymbolDesignerViewModel
     ///   - ArrayInstances.CollectionChanged（Add/Remove）
     ///   - 工程加载/撤销恢复后
     /// 预览式创建流与正式渲染共用 BuildArrayClones，保证布局一致。
-    /// 锚点约定：所有图形统一以**包围盒中心**为锚（ThickPolyline 的 Width/Height = bbox 尺寸，
+    /// 锚点约定：所有图形统一以**包围盒中心**为锚（BandPolyline 的 Width/Height = bbox 尺寸，
     /// PathData 是局部坐标），副本旋转后的中心恰好落在 Placement 上。</summary>
     public void RebuildArrayRenderItems()
     {
