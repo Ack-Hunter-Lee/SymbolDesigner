@@ -107,6 +107,25 @@ public class ZoomPanViewport : Decorator
         // 显式 Focusable=true 让控件可接收键盘焦点，进而触发 OnMouseWheel。
         Focusable = true;
         ClipToBounds = true;
+
+        // 用 PreviewMouseWheel（隧道）处理滚轮：bubbling 的 MouseWheel 会先经过鼠标命中元素
+        // （CanvasHost/ItemsControl/绘制橡皮线等），它们 CapetureMouse 或把事件 marked Handled 后，
+        // ZoomPan 的 OnMouseWheel 就收不到 → 缩放被外部容器以画布中心代劳（表现为"中心缩放"）。
+        // Preview 在路由进入子元素前触发，锚点用屏幕坐标（GetPosition(this)），任何子层都拦不住。
+        PreviewMouseWheel += (_, e) => OnWheelZoom(e);
+    }
+
+    /// <summary>以鼠标位置为锚点的滚轮缩放（供 Preview 隧道 + 兜底 OnMouseWheel 共用）。</summary>
+    private void OnWheelZoom(MouseWheelEventArgs e)
+    {
+        if (!EnableWheelZoom) return;
+        double factor = e.Delta > 0 ? 1.15 : 1.0 / 1.15;
+        double newZoom = Math.Clamp(ZoomLevel * factor, MinZoom, MaxZoom);
+        if (Math.Abs(newZoom - ZoomLevel) < 0.001) return;
+
+        var p = e.GetPosition(this);
+        ZoomToScreenPoint(newZoom, p.X, p.Y);
+        e.Handled = true;
     }
 
     protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
@@ -171,19 +190,12 @@ public class ZoomPanViewport : Decorator
     }
 
     /// <summary>鼠标滚轮：以鼠标位置为锚点缩放。
-    /// e.GetPosition(this) 返回控件本地坐标（不含 Child RenderTransform，因为它是后代变换），
-    /// 即"屏幕坐标"，直接作为缩放锚点。</summary>
+    /// 实际逻辑在 PreviewMouseWheel（隧道）已处理；此处委托同一实现，
+    /// 仅当 Preview 被外层提前截走（几乎不会）时兜底。</summary>
     protected override void OnMouseWheel(MouseWheelEventArgs e)
     {
         base.OnMouseWheel(e);
-        if (!EnableWheelZoom) return;
-        double factor = e.Delta > 0 ? 1.15 : 1.0 / 1.15;
-        double newZoom = Math.Clamp(ZoomLevel * factor, MinZoom, MaxZoom);
-        if (Math.Abs(newZoom - ZoomLevel) < 0.001) return;
-
-        var p = e.GetPosition(this);
-        ZoomToScreenPoint(newZoom, p.X, p.Y);
-        e.Handled = true;
+        OnWheelZoom(e);
     }
 
     /// <summary>鼠标中键按下：开始拖拽平移。</summary>
