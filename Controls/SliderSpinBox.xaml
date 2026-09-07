@@ -1,0 +1,73 @@
+<UserControl x:Class="SymbolDesigner.Controls.SliderSpinBox"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:Name="Root">
+    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+        <!--  Slider：直接 TwoWay 绑外部 Value，UpdateSourceTrigger=PropertyChanged 让数值/边值实时同步  -->
+        <Slider x:Name="PART_Slider"
+                Width="100"
+                VerticalAlignment="Center"
+                FocusVisualStyle="{x:Null}"
+                IsMoveToPointEnabled="True"
+                IsSnapToTickEnabled="{Binding ElementName=Root, Path=IsSnapToTickEnabled}"
+                LargeChange="{Binding ElementName=Root, Path=LargeChange}"
+                Maximum="{Binding ElementName=Root, Path=Maximum}"
+                Minimum="{Binding ElementName=Root, Path=Minimum}"
+                SmallChange="{Binding ElementName=Root, Path=Step}"
+                TickFrequency="{Binding ElementName=Root, Path=Step}"
+                Value="{Binding ElementName=Root, Path=Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+        <!--  数值显示（小尺寸，px/%）  -->
+        <Border Margin="6,0,0,0"
+                VerticalAlignment="Center"
+                Padding="6,1"
+                BorderBrush="{StaticResource Brush.Border.Mid}"
+                BorderThickness="1"
+                CornerRadius="2">
+            <TextBlock FontSize="9"
+                       Foreground="{StaticResource Brush.Text.Primary}"
+                       Text="{Binding ElementName=Root, Path=DisplayText}" />
+        </Border>
+
+        <!--  微调 Up/Down 按钮组：每次按 Step，长按自动连续  -->
+        <Grid Margin="4,0,0,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <RepeatButton Grid.Row="0"
+                          Width="14"
+                          Height="11"
+                          Padding="0"
+                          Background="{StaticResource Brush.Bg.Surface}"
+                          BorderBrush="{StaticResource Brush.Border.Mid}"
+                          BorderThickness="1"
+                          Delay="350"
+                          Focusable="False"
+                          FontSize="8"
+                          Foreground="{StaticResource Brush.Text.Primary}"
+                          Interval="60"
+                          ToolTip="增加"
+                          Content="▲"
+                          Click="OnIncrementClick" />
+            <RepeatButton Grid.Row="1"
+                          Width="14"
+                          Height="11"
+                          Padding="0"
+                          Background="{StaticResource Brush.Bg.Surface}"
+                          BorderBrush="{StaticResource Brush.Border.Mid}"
+                          BorderThickness="1"
+                          Delay="350"
+                          Focusable="False"
+                          FontSize="8"
+                          Foreground="{StaticResource Brush.Text.Primary}"
+                          Interval="60"
+                          ToolTip="减少"
+                          Content="▼"
+                          Click="OnDecrementClick" />
+        </Grid>
+    </StackPanel>
+</UserControl>

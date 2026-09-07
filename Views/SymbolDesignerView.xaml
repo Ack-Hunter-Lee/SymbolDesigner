@@ -2706,11 +2706,11 @@
                                             </TextBlock>
                                         </Grid>
                                         <!--  范围 0.05~1.0(下限避免完全看不见),步长 0.05  -->
-                                        <Slider
-                                            LargeChange="0.1"
+                                        <controls:SliderSpinBox
                                             Maximum="1.0"
                                             Minimum="0.05"
-                                            SmallChange="0.05"
+                                            Step="0.05"
+                                            StringFormat="{}{0:0.##}"
                                             Value="{Binding SelectedItem.Opacity, Mode=TwoWay}" />
                                     </StackPanel>
                                 </Border>
@@ -2755,11 +2755,11 @@
                                                         <Run Text="{Binding SelectedItem.StrokeWidth, StringFormat={}{0:0.#}}" />
                                                     </TextBlock>
                                                 </Grid>
-                                                <Slider
-                                                    LargeChange="0.5"
+                                                <controls:SliderSpinBox
                                                     Maximum="10"
                                                     Minimum="0.1"
-                                                    SmallChange="0.1"
+                                                    Step="0.1"
+                                                    StringFormat="{}{0:0.#}"
                                                     Value="{Binding SelectedItem.StrokeWidth, Mode=TwoWay}" />
                                                 <!--  虚线  -->
                                                 <Grid Margin="0,6,0,0">
@@ -3055,12 +3055,11 @@
                                                             Foreground="{StaticResource Brush.Text.Secondary}"
                                                             Text="平铺" />
                                                         <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                                            <Slider
-                                                                Width="100"
-                                                                VerticalAlignment="Center"
+                                                            <controls:SliderSpinBox
                                                                 Maximum="40"
                                                                 Minimum="4"
-                                                                TickFrequency="2"
+                                                                Step="1"
+                                                                StringFormat="{}{0:0}px"
                                                                 Value="{Binding SelectedItem.PatternTileSize, Mode=TwoWay}" />
                                                             <Border
                                                                 Margin="6,0,0,0"
@@ -3089,27 +3088,13 @@
                                                             FontSize="10"
                                                             Foreground="{StaticResource Brush.Text.Secondary}"
                                                             Text="密度" />
-                                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                                            <Slider
-                                                                Width="100"
-                                                                VerticalAlignment="Center"
-                                                                Maximum="40"
-                                                                Minimum="1"
-                                                                TickFrequency="1"
-                                                                Value="{Binding SelectedItem.PatternSpacing, Mode=TwoWay}" />
-                                                            <Border
-                                                                Margin="6,0,0,0"
-                                                                VerticalAlignment="Center"
-                                                                Padding="6,1"
-                                                                BorderBrush="{StaticResource Brush.Border.Mid}"
-                                                                BorderThickness="1"
-                                                                CornerRadius="2">
-                                                                <TextBlock
-                                                                    FontSize="9"
-                                                                    Foreground="{StaticResource Brush.Text.Primary}"
-                                                                    Text="{Binding SelectedItem.PatternSpacing, StringFormat={}{0:0}px}" />
-                                                            </Border>
-                                                        </StackPanel>
+                                                        <controls:SliderSpinBox
+                                                            Grid.Column="1"
+                                                            Maximum="40"
+                                                            Minimum="1"
+                                                            Step="1"
+                                                            StringFormat="{}{0:0}px"
+                                                            Value="{Binding SelectedItem.PatternSpacing, Mode=TwoWay}" />
                                                     </Grid>
 
                                                     <!--  前景色（画图案线的颜色）  -->
@@ -3145,27 +3130,13 @@
                                                             FontSize="10"
                                                             Foreground="{StaticResource Brush.Text.Secondary}"
                                                             Text="亮度" />
-                                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                                            <Slider
-                                                                Width="100"
-                                                                VerticalAlignment="Center"
-                                                                Maximum="100"
-                                                                Minimum="0"
-                                                                TickFrequency="10"
-                                                                Value="{Binding SelectedItem.PatternForegroundBrightness, Mode=TwoWay}" />
-                                                            <Border
-                                                                Margin="6,0,0,0"
-                                                                VerticalAlignment="Center"
-                                                                Padding="6,1"
-                                                                BorderBrush="{StaticResource Brush.Border.Mid}"
-                                                                BorderThickness="1"
-                                                                CornerRadius="2">
-                                                                <TextBlock
-                                                                    FontSize="9"
-                                                                    Foreground="{StaticResource Brush.Text.Primary}"
-                                                                    Text="{Binding SelectedItem.PatternForegroundBrightness, StringFormat={}{0:0}%}" />
-                                                            </Border>
-                                                        </StackPanel>
+                                                        <controls:SliderSpinBox
+                                                            Grid.Column="1"
+                                                            Maximum="100"
+                                                            Minimum="0"
+                                                            Step="1"
+                                                            StringFormat="{}{0:0}%"
+                                                            Value="{Binding SelectedItem.PatternForegroundBrightness, Mode=TwoWay}" />
                                                     </Grid>
                                                     <Grid Margin="0,0,0,4">
                                                         <Grid.ColumnDefinitions>
@@ -3178,27 +3149,13 @@
                                                             FontSize="10"
                                                             Foreground="{StaticResource Brush.Text.Secondary}"
                                                             Text="透明度" />
-                                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                                            <Slider
-                                                                Width="100"
-                                                                VerticalAlignment="Center"
-                                                                Maximum="100"
-                                                                Minimum="0"
-                                                                TickFrequency="10"
-                                                                Value="{Binding SelectedItem.PatternForegroundOpacity, Mode=TwoWay}" />
-                                                            <Border
-                                                                Margin="6,0,0,0"
-                                                                VerticalAlignment="Center"
-                                                                Padding="6,1"
-                                                                BorderBrush="{StaticResource Brush.Border.Mid}"
-                                                                BorderThickness="1"
-                                                                CornerRadius="2">
-                                                                <TextBlock
-                                                                    FontSize="9"
-                                                                    Foreground="{StaticResource Brush.Text.Primary}"
-                                                                    Text="{Binding SelectedItem.PatternForegroundOpacity, StringFormat={}{0:0}%}" />
-                                                            </Border>
-                                                        </StackPanel>
+                                                        <controls:SliderSpinBox
+                                                            Grid.Column="1"
+                                                            Maximum="100"
+                                                            Minimum="0"
+                                                            Step="1"
+                                                            StringFormat="{}{0:0}%"
+                                                            Value="{Binding SelectedItem.PatternForegroundOpacity, Mode=TwoWay}" />
                                                     </Grid>
 
                                                     <!--  背景色（图案底色）  -->
@@ -3234,27 +3191,13 @@
                                                             FontSize="10"
                                                             Foreground="{StaticResource Brush.Text.Secondary}"
                                                             Text="亮度" />
-                                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                                            <Slider
-                                                                Width="100"
-                                                                VerticalAlignment="Center"
-                                                                Maximum="100"
-                                                                Minimum="0"
-                                                                TickFrequency="10"
-                                                                Value="{Binding SelectedItem.PatternBackgroundBrightness, Mode=TwoWay}" />
-                                                            <Border
-                                                                Margin="6,0,0,0"
-                                                                VerticalAlignment="Center"
-                                                                Padding="6,1"
-                                                                BorderBrush="{StaticResource Brush.Border.Mid}"
-                                                                BorderThickness="1"
-                                                                CornerRadius="2">
-                                                                <TextBlock
-                                                                    FontSize="9"
-                                                                    Foreground="{StaticResource Brush.Text.Primary}"
-                                                                    Text="{Binding SelectedItem.PatternBackgroundBrightness, StringFormat={}{0:0}%}" />
-                                                            </Border>
-                                                        </StackPanel>
+                                                        <controls:SliderSpinBox
+                                                            Grid.Column="1"
+                                                            Maximum="100"
+                                                            Minimum="0"
+                                                            Step="1"
+                                                            StringFormat="{}{0:0}%"
+                                                            Value="{Binding SelectedItem.PatternBackgroundBrightness, Mode=TwoWay}" />
                                                     </Grid>
                                                     <Grid>
                                                         <Grid.ColumnDefinitions>
@@ -3267,27 +3210,13 @@
                                                             FontSize="10"
                                                             Foreground="{StaticResource Brush.Text.Secondary}"
                                                             Text="透明度" />
-                                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                                            <Slider
-                                                                Width="100"
-                                                                VerticalAlignment="Center"
-                                                                Maximum="100"
-                                                                Minimum="0"
-                                                                TickFrequency="10"
-                                                                Value="{Binding SelectedItem.PatternBackgroundOpacity, Mode=TwoWay}" />
-                                                            <Border
-                                                                Margin="6,0,0,0"
-                                                                VerticalAlignment="Center"
-                                                                Padding="6,1"
-                                                                BorderBrush="{StaticResource Brush.Border.Mid}"
-                                                                BorderThickness="1"
-                                                                CornerRadius="2">
-                                                                <TextBlock
-                                                                    FontSize="9"
-                                                                    Foreground="{StaticResource Brush.Text.Primary}"
-                                                                    Text="{Binding SelectedItem.PatternBackgroundOpacity, StringFormat={}{0:0}%}" />
-                                                            </Border>
-                                                        </StackPanel>
+                                                        <controls:SliderSpinBox
+                                                            Grid.Column="1"
+                                                            Maximum="100"
+                                                            Minimum="0"
+                                                            Step="1"
+                                                            StringFormat="{}{0:0}%"
+                                                            Value="{Binding SelectedItem.PatternBackgroundOpacity, Mode=TwoWay}" />
                                                     </Grid>
                                                 </StackPanel>
 
@@ -3349,13 +3278,11 @@
                                                         Foreground="{StaticResource Brush.Text.Secondary}"
                                                         Text="亮度" />
                                                     <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                                        <Slider
-                                                            x:Name="FillBrightnessSlider"
-                                                            Width="100"
-                                                            VerticalAlignment="Center"
-                                                            Minimum="0"
+                                                        <controls:SliderSpinBox
                                                             Maximum="100"
-                                                            TickFrequency="10"
+                                                            Minimum="0"
+                                                            Step="1"
+                                                            StringFormat="{}{0:0}%"
                                                             Value="{Binding SelectedItem.FillBrightness, Mode=TwoWay}" />
                                                         <Border
                                                             Margin="6,0,0,0"
@@ -3405,13 +3332,11 @@
                                                         Foreground="{StaticResource Brush.Text.Secondary}"
                                                         Text="透明度" />
                                                     <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                                        <Slider
-                                                            x:Name="FillOpacitySlider"
-                                                            Width="100"
-                                                            VerticalAlignment="Center"
-                                                            Minimum="0"
+                                                        <controls:SliderSpinBox
                                                             Maximum="100"
-                                                            TickFrequency="10"
+                                                            Minimum="0"
+                                                            Step="1"
+                                                            StringFormat="{}{0:0}%"
                                                             Value="{Binding SelectedItem.FillOpacity, Mode=TwoWay}" />
                                                         <Border
                                                             Margin="6,0,0,0"
@@ -3654,18 +3579,17 @@
                                                         FontSize="10"
                                                         Foreground="#a8c4d8"
                                                         Text="圆角半径" />
-                                                    <Slider
-                                                        Width="130"
+                                                    <controls:SliderSpinBox
                                                         HorizontalAlignment="Right"
-                                                        VerticalAlignment="Center"
                                                         IsSnapToTickEnabled="True"
                                                         Maximum="20"
                                                         Minimum="0"
-                                                        TickFrequency="0.5"
+                                                        Step="0.5"
+                                                        StringFormat="{}{0:0.#}"
                                                         ValueChanged="OnCornerRadiusSliderValueChanged"
                                                         Value="{Binding SelectedOutlineCorner.CurrentRadius, Mode=OneWay, TargetNullValue=0}">
-                                                        <Slider.Style>
-                                                            <Style TargetType="Slider">
+                                                        <controls:SliderSpinBox.Style>
+                                                            <Style TargetType="controls:SliderSpinBox">
                                                                 <Setter Property="IsEnabled" Value="False" />
                                                                 <Style.Triggers>
                                                                     <MultiDataTrigger>
@@ -3677,8 +3601,8 @@
                                                                     </MultiDataTrigger>
                                                                 </Style.Triggers>
                                                             </Style>
-                                                        </Slider.Style>
-                                                    </Slider>
+                                                        </controls:SliderSpinBox.Style>
+                                                    </controls:SliderSpinBox>
                                                 </Grid>
                                             </StackPanel>
                                             <!--  轮廓点诊断列表：每环每点 序号/坐标/距前点距离，排查"奇怪的重合点"  -->
@@ -3726,12 +3650,13 @@
                                                         <Run Text="{Binding SelectedCornerRadiusMax, Mode=OneWay, StringFormat=F1}" />
                                                     </TextBlock>
                                                 </Grid>
-                                                <Slider
+                                                <controls:SliderSpinBox
                                                     x:Name="CornerSlider"
                                                     LargeChange="1"
                                                     Maximum="{Binding SelectedCornerRadiusMax}"
                                                     Minimum="0"
-                                                    SmallChange="0.1"
+                                                    Step="0.1"
+                                                    StringFormat="{}{0:0.#}"
                                                     Value="{Binding SelectedItem.CornerRadius, Mode=TwoWay}" />
                                             </StackPanel>
                                         </StackPanel>
@@ -3942,11 +3867,12 @@
                                                         </TextBlock>
                                                     </Grid>
                                                     <!--  全局带宽下限 0：带宽归零时整条轮廓退化为纯折线骨架  -->
-                                                    <Slider
+                                                    <controls:SliderSpinBox
                                                         LargeChange="1"
                                                         Maximum="{Binding SelectedBandWidthMax, Mode=OneWay, FallbackValue=30}"
                                                         Minimum="0"
-                                                        SmallChange="0.1"
+                                                        Step="0.1"
+                                                        StringFormat="{}{0:0.#}"
                                                         Value="{Binding SelectedItem.BandWidth, Mode=TwoWay}" />
                                                 </StackPanel>
                                                 <!--  分割线：把全局带宽与骨点列表视觉分离  -->
@@ -4064,11 +3990,12 @@
                                                                                 </Style.Triggers>
                                                                             </Style>
                                                                         </Border.Style>
-                                                                        <Slider
+                                                                        <controls:SliderSpinBox
                                                                             LargeChange="1"
                                                                             Maximum="{Binding DataContext.SelectedBandWidthMax, RelativeSource={RelativeSource AncestorType=ItemsControl}, Mode=OneWay, FallbackValue=30}"
                                                                             Minimum="0"
-                                                                            SmallChange="0.1"
+                                                                            Step="0.1"
+                                                                            StringFormat="{}{0:0.#}"
                                                                             Value="{Binding IncomingBandWidth, Mode=TwoWay}" />
                                                                     </Border>
                                                                 </StackPanel>
@@ -4133,11 +4060,12 @@
                                                                                 </Style.Triggers>
                                                                             </Style>
                                                                         </Border.Style>
-                                                                        <Slider
+                                                                        <controls:SliderSpinBox
                                                                             LargeChange="1"
                                                                             Maximum="{Binding DataContext.SelectedBandWidthMax, RelativeSource={RelativeSource AncestorType=ItemsControl}, Mode=OneWay, FallbackValue=30}"
                                                                             Minimum="0"
-                                                                            SmallChange="0.1"
+                                                                            Step="0.1"
+                                                                            StringFormat="{}{0:0.#}"
                                                                             Value="{Binding OutgoingBandWidth, Mode=TwoWay}" />
                                                                     </Border>
                                                                 </StackPanel>
@@ -4208,11 +4136,12 @@
                                                                                 Foreground="#546e7a"
                                                                                 Text="{Binding JoinInnerRadius, Mode=OneWay, StringFormat=F1}" />
                                                                         </Grid>
-                                                                        <Slider
+                                                                        <controls:SliderSpinBox
                                                                             LargeChange="1"
                                                                             Maximum="20"
                                                                             Minimum="0"
-                                                                            SmallChange="0.1"
+                                                                            Step="0.1"
+                                                                            StringFormat="{}{0:0.#}"
                                                                             Value="{Binding JoinInnerRadius, Mode=TwoWay}" />
                                                                     </StackPanel>
                                                                 </DataTemplate>
@@ -4258,11 +4187,12 @@
                                                                 </Style.Triggers>
                                                             </Style>
                                                         </StackPanel.Style>
-                                                        <Slider
+                                                        <controls:SliderSpinBox
                                                             IsSnapToTickEnabled="True"
                                                             Maximum="{Binding CornerArcRadiusMax, Mode=OneWay}"
                                                             Minimum="0.5"
-                                                            TickFrequency="1"
+                                                            Step="1"
+                                                            StringFormat="{}{0:0.#}"
                                                             Value="{Binding CornerArcRadius, Mode=TwoWay}" />
                                                     </StackPanel>
                                                     <Border
