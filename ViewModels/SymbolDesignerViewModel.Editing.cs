@@ -299,12 +299,18 @@ public partial class SymbolDesignerViewModel
         // 编辑源图元不可直接删除：其语义 = 删除整个阵列，需先退出编辑源（✕/点空白）再删除阵列
         if (SelectedItem is { } src && _isArraySourceEditMode && src.Id == _arraySourceEditGuid)
             return;
-        if (SelectedItem is null) return;
+
+        // 确定删除集合：多选优先（右键框选 / Ctr 多选 → 整组删）；否则退回单选焦点
+        var toRemove = MultiSelected.Count > 0
+            ? MultiSelected.ToList()
+            : (SelectedItem is { } single ? new List<PrimitiveItem> { single } : null);
+        if (toRemove is null || toRemove.Count == 0) return;
+
         // 先收口上一段未完成编辑:每次删除按钮点击 = 独立撤销步骤
         ForceCommitEdit();
-        var toRemove = SelectedItem;
-        SelectedItem = null;
-        Primitives.Remove(toRemove); // 触发 OnPrimitivesChanged → 自动记录可撤销快照
+        SelectedItem = null;   // 触发 ClearMultiSelect：清多选集合 + 复位高亮、刷新缩放手柄
+        foreach (var item in toRemove)
+            Primitives.Remove(item); // 触发 OnPrimitivesChanged → 去抖合并为一次可撤销快照
         ItemCount = Primitives.Count;
         PruneConstraints(); // 图元删除 → 清理涉及它的相切约束
         // 若删的是布尔源图元 → 相关 BooleanPath 的"重新合并"可用态失效，刷新按钮
