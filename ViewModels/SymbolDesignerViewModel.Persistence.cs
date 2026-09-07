@@ -238,6 +238,16 @@ public partial class SymbolDesignerViewModel
             GradientEndColor = p.GradientEndColor,
             FillBrightness = p.FillBrightness,
             FillOpacity = p.FillOpacity,
+            // 图案填充（仅 FillStyle=Pattern 时实际生效；老工程忽略此组字段）
+            PatternForeground = p.PatternForeground,
+            PatternBackground = p.PatternBackground,
+            PatternForegroundBrightness = p.PatternForegroundBrightness,
+            PatternForegroundOpacity = p.PatternForegroundOpacity,
+            PatternBackgroundBrightness = p.PatternBackgroundBrightness,
+            PatternBackgroundOpacity = p.PatternBackgroundOpacity,
+            PatternStyle = p.PatternStyle.ToString(),
+            PatternTileSize = p.PatternTileSize,
+            PatternSpacing = p.PatternSpacing,
         };
         if (p.BooleanSourceIds.Count > 0)
         {
@@ -291,6 +301,13 @@ public partial class SymbolDesignerViewModel
     {
         if (string.IsNullOrEmpty(s)) return Models.FillStyle.None;
         return System.Enum.TryParse<Models.FillStyle>(s, out var result) ? result : Models.FillStyle.None;
+    }
+
+    /// <summary>容错解析图案样式：老文件缺省 Diagonal（45° 斜线，最常用）。</summary>
+    private static Models.PatternStyle ParsePatternStyle(string? s)
+    {
+        if (string.IsNullOrEmpty(s)) return Models.PatternStyle.Diagonal;
+        return System.Enum.TryParse<Models.PatternStyle>(s, out var result) ? result : Models.PatternStyle.Diagonal;
     }
 
     /// <summary>从 SymbolProject 重建 Primitives 集合（清空原集合后填充）。</summary>
@@ -418,6 +435,16 @@ public partial class SymbolDesignerViewModel
             GradientEndColor = string.IsNullOrEmpty(dto.GradientEndColor) ? "#40000000" : dto.GradientEndColor,
             FillBrightness = dto.FillBrightness is { } b ? System.Math.Clamp(b, 0, 100) : 100.0,
             FillOpacity = dto.FillOpacity is { } o ? System.Math.Clamp(o, 0, 100) : 100.0,
+            // 图案填充（老工程缺省 → 模型字段默认值生效：前景深蓝/背景完全透明/Diagonal/8）
+            PatternForeground = string.IsNullOrEmpty(dto.PatternForeground) ? "#60A0FF" : dto.PatternForeground,
+            PatternBackground = string.IsNullOrEmpty(dto.PatternBackground) ? "#00000000" : dto.PatternBackground,
+            PatternForegroundBrightness = dto.PatternForegroundBrightness is { } fb ? System.Math.Clamp(fb, 0, 100) : 100.0,
+            PatternForegroundOpacity = dto.PatternForegroundOpacity is { } fo ? System.Math.Clamp(fo, 0, 100) : 100.0,
+            PatternBackgroundBrightness = dto.PatternBackgroundBrightness is { } bb ? System.Math.Clamp(bb, 0, 100) : 100.0,
+            PatternBackgroundOpacity = dto.PatternBackgroundOpacity is { } bo ? System.Math.Clamp(bo, 0, 100) : 100.0,
+            PatternStyle = ParsePatternStyle(dto.PatternStyle),
+            PatternTileSize = dto.PatternTileSize is { } ts ? System.Math.Clamp(ts, 4, 40) : 8.0,
+            PatternSpacing = dto.PatternSpacing is { } ps ? System.Math.Clamp(ps, 1, 40) : 6.0,
         };
         // 先设整体 BandWidth（触发同步时 VertexBandWidths 尚未填充，不会覆盖任何顶点带宽）
         item.BandWidth = dto.Thickness;

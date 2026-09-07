@@ -141,6 +141,26 @@ public class PrimitiveItemDto
     /// <summary>填充透明度百分比 0~100（缺省 null → 100）。作用于填充色的 alpha。
     /// 老工程缺省 → 100（完全不透明）。注意与元素整体 Opacity（作用于整个图元）是两个独立维度。</summary>
     public double? FillOpacity { get; set; }
+
+    // ===== 图案填充专属字段（仅 FillStyle=Pattern 时生效；老工程全缺省 → 视觉不变） =====
+    /// <summary>图案前景色 hex（缺省 null → "#60A0FF"）。</summary>
+    public string? PatternForeground { get; set; }
+    /// <summary>图案背景色 hex（缺省 null → "#20FFFFFF"）。</summary>
+    public string? PatternBackground { get; set; }
+    /// <summary>图案前景亮度 0~100（缺省 null → 100）。</summary>
+    public double? PatternForegroundBrightness { get; set; }
+    /// <summary>图案前景透明度 0~100（缺省 null → 100）。</summary>
+    public double? PatternForegroundOpacity { get; set; }
+    /// <summary>图案背景亮度 0~100（缺省 null → 100）。</summary>
+    public double? PatternBackgroundBrightness { get; set; }
+    /// <summary>图案背景透明度 0~100（缺省 null → 100）。</summary>
+    public double? PatternBackgroundOpacity { get; set; }
+    /// <summary>图案样式名（Diagonal/Horizontal/Vertical/Cross，缺省 null → Diagonal）。</summary>
+    public string? PatternStyle { get; set; }
+    /// <summary>图案平铺单元尺寸（逻辑像素，缺省 null → 8.0）。</summary>
+    public double? PatternTileSize { get; set; }
+    /// <summary>图案线间距（逻辑像素，控制密度；缺省 null → 6.0）。</summary>
+    public double? PatternSpacing { get; set; }
 }
 
 /// <summary>逐顶点接缝样式覆盖（稀疏存储）。Index 指向 VertexThicknesses 中的顶点序号。</summary>

@@ -34,3 +34,18 @@ public enum FillStyle
     /// 选中时 FillBrush 返回 null,渲染层不画填充但保留描边。</summary>
     ImageTexture,
 }
+
+/// <summary>图案填充样式（FillStyle=Pattern 时选用）。4 种内置基础图案，
+/// 用 DrawingBrush TileMode=Tile 平铺。属性面板"图案"下拉直接绑此枚举。
+/// 注意：本枚举与 FillStyle.Gradient 的"渐变类型"无关——图案仅指 stroke 风格的平铺样式。</summary>
+public enum PatternStyle
+{
+    /// <summary>45° 斜线网格（最常用的 hatch 风）。</summary>
+    Diagonal,
+    /// <summary>纯水平线。</summary>
+    Horizontal,
+    /// <summary>纯竖直线。</summary>
+    Vertical,
+    /// <summary>正交网格（水平 + 竖直交叉）。</summary>
+    Cross,
+}

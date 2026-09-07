@@ -125,6 +125,34 @@ public partial class PrimitiveItem : ObservableObject
     /// 本字段只影响填充,不透明度乘法上元素整体仍受 Opacity 控制。</summary>
     [ObservableProperty] private double _fillOpacity = 100.0;
 
+    // ===== 图案填充专属字段（仅 FillStyle=Pattern 时生效，与 Solid/Gradient 的颜色字段互不通用） =====
+    // 遵循"按模式各管各的颜色"原则——图案前景/背景是独立语义，不与 FillColor 混用。
+
+    /// <summary>图案前景色（Pattern 模式下画线/画点的颜色）。默认深色，对应经典 CAD hatch 风格。
+    /// 与 Solid 模式的 FillColor 互不干扰——切换模式各自保留，编辑另一组不会改变图案外观。</summary>
+    [ObservableProperty] private string _patternForeground = "#60A0FF";
+    /// <summary>图案背景色（Pattern 模式下的底色/网格内空白色）。默认完全透明——
+    /// 经典 CAD hatch 视觉是"线条 + 透空底"，让用户透过图案看到画布/下方图元；
+    /// 用户想加底色（如强调填充感）可改任意不透明颜色。仅在 alpha > 0 时画底，
+    /// "#00000000" 视为透空（PatternBrushFactory 检测后跳过背景层）。</summary>
+    [ObservableProperty] private string _patternBackground = "#00000000";
+    /// <summary>图案前景亮度 0~100（默认 100 = 原色不变）。仅作用于 PatternForeground。</summary>
+    [ObservableProperty] private double _patternForegroundBrightness = 100.0;
+    /// <summary>图案前景透明度 0~100（默认 100 = 完全不透明）。仅作用于 PatternForeground。</summary>
+    [ObservableProperty] private double _patternForegroundOpacity = 100.0;
+    /// <summary>图案背景亮度 0~100（默认 100 = 原色不变）。仅作用于 PatternBackground。</summary>
+    [ObservableProperty] private double _patternBackgroundBrightness = 100.0;
+    /// <summary>图案背景透明度 0~100（默认 100 = 完全不透明）。仅作用于 PatternBackground。</summary>
+    [ObservableProperty] private double _patternBackgroundOpacity = 100.0;
+    /// <summary>图案样式（Diagonal/Horizontal/Vertical/Cross）。默认 Diagonal。</summary>
+    [ObservableProperty] private PatternStyle _patternStyle = PatternStyle.Diagonal;
+    /// <summary>图案平铺单元尺寸（逻辑像素）。改值大小 → 图案密度随之变化。
+    /// 范围 4~40，默认 8。</summary>
+    [ObservableProperty] private double _patternTileSize = 8.0;
+    /// <summary>图案线间距（逻辑像素）：相邻两条线的垂直间距，直接控制密度。
+    /// 数值越大线越疏、密度越低；越小越密。范围 2~24，默认 6（比 tileSize 更直观地表达"疏密"）。</summary>
+    [ObservableProperty] private double _patternSpacing = 6.0;
+
     /// <summary>线条画刷（绑 Stroke）。</summary>
     public System.Windows.Media.Brush? StrokeBrush => Converters.ColorUtil.ParseHex(StrokeColor);
     /// <summary>填充画刷（绑 Fill）：按 FillStyle 分派到不同合成路径。
@@ -143,7 +171,14 @@ public partial class PrimitiveItem : ObservableObject
         FillStyle.MonochromeGradient => Converters.ColorUtil.BuildLinearGradient(
             Converters.ColorUtil.ApplyBrightnessAndOpacity(FillColor, FillBrightness, FillOpacity),
             Converters.ColorUtil.DeriveMonochromeEnd(FillColor, FillBrightness, FillOpacity)),
-        // Pattern / ImageTexture：框架就位，渲染后续迭代实现 → 暂不画填充
+        // Pattern：4 种内置图案，前景/背景各走亮度+透明度合成后平铺。
+        // 颜色字段完全独立（PatternForeground 等），与 Solid 模式的 FillColor 互不干扰。
+        FillStyle.Pattern => Converters.PatternBrushFactory.Build(
+            PatternStyle, PatternForeground,
+            PatternForegroundBrightness, PatternForegroundOpacity,
+            PatternBackground, PatternBackgroundBrightness, PatternBackgroundOpacity,
+            PatternTileSize, PatternSpacing),
+        // ImageTexture：图片引擎未接入 → 暂不画填充（保留描边）
         _ => null,
     };
     /// <summary>线条虚线数组（绑 StrokeDashArray）：Solid → null（实线）。</summary>
@@ -163,6 +198,17 @@ public partial class PrimitiveItem : ObservableObject
     partial void OnFillBrightnessChanged(double value) => OnPropertyChanged(nameof(FillBrush));
     partial void OnFillOpacityChanged(double value) => OnPropertyChanged(nameof(FillBrush));
     partial void OnStrokeDashStyleChanged(StrokeDashStyle value) => OnPropertyChanged(nameof(StrokeDashArray));
+
+    // Pattern 字段变化 → 通知 FillBrush 重算（任一字段影响图案外观）
+    partial void OnPatternForegroundChanged(string value) => OnPropertyChanged(nameof(FillBrush));
+    partial void OnPatternBackgroundChanged(string value) => OnPropertyChanged(nameof(FillBrush));
+    partial void OnPatternForegroundBrightnessChanged(double value) => OnPropertyChanged(nameof(FillBrush));
+    partial void OnPatternForegroundOpacityChanged(double value) => OnPropertyChanged(nameof(FillBrush));
+    partial void OnPatternBackgroundBrightnessChanged(double value) => OnPropertyChanged(nameof(FillBrush));
+    partial void OnPatternBackgroundOpacityChanged(double value) => OnPropertyChanged(nameof(FillBrush));
+    partial void OnPatternStyleChanged(PatternStyle value) => OnPropertyChanged(nameof(FillBrush));
+    partial void OnPatternTileSizeChanged(double value) => OnPropertyChanged(nameof(FillBrush));
+    partial void OnPatternSpacingChanged(double value) => OnPropertyChanged(nameof(FillBrush));
 
     /// <summary>元素可见性（默认 true 可见）。false = 画布上整个元素隐藏
     /// （渲染与命中测试全禁用，拖拽/选中均不可达），但元素仍保留在 Primitives 集合里 →
@@ -642,6 +688,19 @@ public partial class PrimitiveItem : ObservableObject
 
     /// <summary>轨迹线 Path 字符串（与 PathData 相同，仅作为便于绑定的属性别名）。</summary>
     public string TrajectoryPathData => PathData ?? string.Empty;
+
+    /// <summary>图元是否可填充。属性面板"图案填充"分支只对可填充图元启用：
+    ///   - Line（无填充区域）
+    ///   - BandPolyline（带宽轮廓开放形体：fill 为 null，图案平铺无意义）
+    /// 其余类型（Rectangle/Ellipse/RoundedRectangle/Triangle/Ring/BooleanPath/Polyline）都允许。
+    /// Polyline 开放时虽然 CanvasFillGeometry 返回 null，但图案分支仍可用——用户切到"图案"后
+    /// 再勾选"闭合"即可看到效果；这样避免 UI 因 IsClosed 抖动。
+    /// 公开属性而非内部标志：UI 绑定 + 序列化层不依赖，但属性面板靠它决定图案分支是否启用。</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool IsFillable => TypeKey is not nameof(L1Primitive.Line)
+        and not nameof(L1Primitive.BandPolyline);
+
+    partial void OnTypeKeyChanged(string value) => OnPropertyChanged(nameof(IsFillable));
 
     /// <summary>纯折线（Polyline）专用几何：解析 PathData 为开放骨架的 StreamGeometry，仅描边无填充。
     /// 与 BandPolyline 的 OutlineGeometry 严格分离——OutlineGeometry 走"带宽偏移/接缝"逻辑（仅 BandPolyline 用），

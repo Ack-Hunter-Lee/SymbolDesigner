@@ -2865,7 +2865,8 @@
                                                     FontSize="10"
                                                     Foreground="{StaticResource Brush.Text.Primary}"
                                                     GroupName="FillStyleGroup"
-                                                    IsChecked="{Binding SelectedItem.FillStyle, Mode=TwoWay, Converter={StaticResource EnumEqualsConverter}, ConverterParameter={x:Static models:FillStyle.Pattern}}" />
+                                                    IsChecked="{Binding SelectedItem.FillStyle, Mode=TwoWay, Converter={StaticResource EnumEqualsConverter}, ConverterParameter={x:Static models:FillStyle.Pattern}}"
+                                                    IsEnabled="{Binding SelectedItem.IsFillable}" />
                                                 <RadioButton
                                                     Margin="0,1,0,1"
                                                     VerticalAlignment="Center"
@@ -2980,7 +2981,317 @@
                                                     </TextBlock.Style>
                                                 </TextBlock>
 
-                                                <!--  ── 图案 / 图片 暂未实现提示 ──  -->
+                                                <!--  ── 图案填充控件区（仅 FillStyle=Pattern 时显示；开放图元通过上方的图案 RadioButton IsEnabled 拦截，
+                         此处的图案分支无需再校验 IsFillable，避免依赖未注册的 AndConverter） ──  -->
+                                                <StackPanel Margin="0,2,0,4">
+                                                    <StackPanel.Style>
+                                                        <Style TargetType="StackPanel">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding SelectedItem.FillStyle}" Value="{x:Static models:FillStyle.Pattern}">
+                                                                    <Setter Property="Visibility" Value="Visible" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </StackPanel.Style>
+
+                                                    <!--  图案样式（4 个 RadioButton 单选，和 FillStyle 选择风格一致）  -->
+                                                    <Grid Margin="0,0,0,2">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock
+                                                            Grid.Column="0"
+                                                            VerticalAlignment="Center"
+                                                            FontSize="10"
+                                                            Foreground="{StaticResource Brush.Text.Secondary}"
+                                                            Text="图案" />
+                                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                            <RadioButton
+                                                                VerticalAlignment="Center"
+                                                                Content="斜线"
+                                                                FontSize="9"
+                                                                Foreground="{StaticResource Brush.Text.Primary}"
+                                                                GroupName="PatternStyleGroup"
+                                                                IsChecked="{Binding SelectedItem.PatternStyle, Mode=TwoWay, Converter={StaticResource EnumEqualsConverter}, ConverterParameter={x:Static models:PatternStyle.Diagonal}}" />
+                                                            <RadioButton
+                                                                Margin="4,0,0,0"
+                                                                VerticalAlignment="Center"
+                                                                Content="水平"
+                                                                FontSize="9"
+                                                                Foreground="{StaticResource Brush.Text.Primary}"
+                                                                GroupName="PatternStyleGroup"
+                                                                IsChecked="{Binding SelectedItem.PatternStyle, Mode=TwoWay, Converter={StaticResource EnumEqualsConverter}, ConverterParameter={x:Static models:PatternStyle.Horizontal}}" />
+                                                            <RadioButton
+                                                                Margin="4,0,0,0"
+                                                                VerticalAlignment="Center"
+                                                                Content="竖直"
+                                                                FontSize="9"
+                                                                Foreground="{StaticResource Brush.Text.Primary}"
+                                                                GroupName="PatternStyleGroup"
+                                                                IsChecked="{Binding SelectedItem.PatternStyle, Mode=TwoWay, Converter={StaticResource EnumEqualsConverter}, ConverterParameter={x:Static models:PatternStyle.Vertical}}" />
+                                                            <RadioButton
+                                                                Margin="4,0,0,0"
+                                                                VerticalAlignment="Center"
+                                                                Content="网格"
+                                                                FontSize="9"
+                                                                Foreground="{StaticResource Brush.Text.Primary}"
+                                                                GroupName="PatternStyleGroup"
+                                                                IsChecked="{Binding SelectedItem.PatternStyle, Mode=TwoWay, Converter={StaticResource EnumEqualsConverter}, ConverterParameter={x:Static models:PatternStyle.Cross}}" />
+                                                        </StackPanel>
+                                                    </Grid>
+
+                                                    <!--  平铺尺寸 4~40  -->
+                                                    <Grid Margin="0,0,0,2">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock
+                                                            Grid.Column="0"
+                                                            VerticalAlignment="Center"
+                                                            FontSize="10"
+                                                            Foreground="{StaticResource Brush.Text.Secondary}"
+                                                            Text="平铺" />
+                                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                            <Slider
+                                                                Width="100"
+                                                                VerticalAlignment="Center"
+                                                                Maximum="40"
+                                                                Minimum="4"
+                                                                TickFrequency="2"
+                                                                Value="{Binding SelectedItem.PatternTileSize, Mode=TwoWay}" />
+                                                            <Border
+                                                                Margin="6,0,0,0"
+                                                                VerticalAlignment="Center"
+                                                                Padding="6,1"
+                                                                BorderBrush="{StaticResource Brush.Border.Mid}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="2">
+                                                                <TextBlock
+                                                                    FontSize="9"
+                                                                    Foreground="{StaticResource Brush.Text.Primary}"
+                                                                    Text="{Binding SelectedItem.PatternTileSize, StringFormat={}{0:0}px}" />
+                                                            </Border>
+                                                        </StackPanel>
+                                                    </Grid>
+
+                                                    <!--  密度（线间距 1~40，越大越疏）  -->
+                                                    <Grid Margin="0,0,0,2">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock
+                                                            Grid.Column="0"
+                                                            VerticalAlignment="Center"
+                                                            FontSize="10"
+                                                            Foreground="{StaticResource Brush.Text.Secondary}"
+                                                            Text="密度" />
+                                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                            <Slider
+                                                                Width="100"
+                                                                VerticalAlignment="Center"
+                                                                Maximum="40"
+                                                                Minimum="1"
+                                                                TickFrequency="1"
+                                                                Value="{Binding SelectedItem.PatternSpacing, Mode=TwoWay}" />
+                                                            <Border
+                                                                Margin="6,0,0,0"
+                                                                VerticalAlignment="Center"
+                                                                Padding="6,1"
+                                                                BorderBrush="{StaticResource Brush.Border.Mid}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="2">
+                                                                <TextBlock
+                                                                    FontSize="9"
+                                                                    Foreground="{StaticResource Brush.Text.Primary}"
+                                                                    Text="{Binding SelectedItem.PatternSpacing, StringFormat={}{0:0}px}" />
+                                                            </Border>
+                                                        </StackPanel>
+                                                    </Grid>
+
+                                                    <!--  前景色（画图案线的颜色）  -->
+                                                    <Grid Margin="0,0,0,2">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock
+                                                            Grid.Column="0"
+                                                            VerticalAlignment="Center"
+                                                            FontSize="10"
+                                                            Foreground="{StaticResource Brush.Text.Secondary}"
+                                                            Text="前景" />
+                                                        <controls:SwatchesPicker
+                                                            Grid.Column="1"
+                                                            Width="92"
+                                                            MoreColorsRequested="OnSwatchesPickerMoreColors"
+                                                            PickerRequested="OnSwatchesPickerPickerRequested"
+                                                            RecentColors="{Binding DataContext.RecentColorings, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            SelectedColor="{Binding SelectedItem.PatternForeground, Mode=TwoWay}" />
+                                                    </Grid>
+
+                                                    <!--  前景亮度 + 透明度  -->
+                                                    <Grid Margin="0,0,0,2">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock
+                                                            Grid.Column="0"
+                                                            VerticalAlignment="Center"
+                                                            FontSize="10"
+                                                            Foreground="{StaticResource Brush.Text.Secondary}"
+                                                            Text="亮度" />
+                                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                            <Slider
+                                                                Width="100"
+                                                                VerticalAlignment="Center"
+                                                                Maximum="100"
+                                                                Minimum="0"
+                                                                TickFrequency="10"
+                                                                Value="{Binding SelectedItem.PatternForegroundBrightness, Mode=TwoWay}" />
+                                                            <Border
+                                                                Margin="6,0,0,0"
+                                                                VerticalAlignment="Center"
+                                                                Padding="6,1"
+                                                                BorderBrush="{StaticResource Brush.Border.Mid}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="2">
+                                                                <TextBlock
+                                                                    FontSize="9"
+                                                                    Foreground="{StaticResource Brush.Text.Primary}"
+                                                                    Text="{Binding SelectedItem.PatternForegroundBrightness, StringFormat={}{0:0}%}" />
+                                                            </Border>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                    <Grid Margin="0,0,0,4">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock
+                                                            Grid.Column="0"
+                                                            VerticalAlignment="Center"
+                                                            FontSize="10"
+                                                            Foreground="{StaticResource Brush.Text.Secondary}"
+                                                            Text="透明度" />
+                                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                            <Slider
+                                                                Width="100"
+                                                                VerticalAlignment="Center"
+                                                                Maximum="100"
+                                                                Minimum="0"
+                                                                TickFrequency="10"
+                                                                Value="{Binding SelectedItem.PatternForegroundOpacity, Mode=TwoWay}" />
+                                                            <Border
+                                                                Margin="6,0,0,0"
+                                                                VerticalAlignment="Center"
+                                                                Padding="6,1"
+                                                                BorderBrush="{StaticResource Brush.Border.Mid}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="2">
+                                                                <TextBlock
+                                                                    FontSize="9"
+                                                                    Foreground="{StaticResource Brush.Text.Primary}"
+                                                                    Text="{Binding SelectedItem.PatternForegroundOpacity, StringFormat={}{0:0}%}" />
+                                                            </Border>
+                                                        </StackPanel>
+                                                    </Grid>
+
+                                                    <!--  背景色（图案底色）  -->
+                                                    <Grid Margin="0,0,0,2">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock
+                                                            Grid.Column="0"
+                                                            VerticalAlignment="Center"
+                                                            FontSize="10"
+                                                            Foreground="{StaticResource Brush.Text.Secondary}"
+                                                            Text="背景" />
+                                                        <controls:SwatchesPicker
+                                                            Grid.Column="1"
+                                                            Width="92"
+                                                            MoreColorsRequested="OnSwatchesPickerMoreColors"
+                                                            PickerRequested="OnSwatchesPickerPickerRequested"
+                                                            RecentColors="{Binding DataContext.RecentColorings, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            SelectedColor="{Binding SelectedItem.PatternBackground, Mode=TwoWay}" />
+                                                    </Grid>
+
+                                                    <!--  背景亮度 + 透明度  -->
+                                                    <Grid Margin="0,0,0,2">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock
+                                                            Grid.Column="0"
+                                                            VerticalAlignment="Center"
+                                                            FontSize="10"
+                                                            Foreground="{StaticResource Brush.Text.Secondary}"
+                                                            Text="亮度" />
+                                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                            <Slider
+                                                                Width="100"
+                                                                VerticalAlignment="Center"
+                                                                Maximum="100"
+                                                                Minimum="0"
+                                                                TickFrequency="10"
+                                                                Value="{Binding SelectedItem.PatternBackgroundBrightness, Mode=TwoWay}" />
+                                                            <Border
+                                                                Margin="6,0,0,0"
+                                                                VerticalAlignment="Center"
+                                                                Padding="6,1"
+                                                                BorderBrush="{StaticResource Brush.Border.Mid}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="2">
+                                                                <TextBlock
+                                                                    FontSize="9"
+                                                                    Foreground="{StaticResource Brush.Text.Primary}"
+                                                                    Text="{Binding SelectedItem.PatternBackgroundBrightness, StringFormat={}{0:0}%}" />
+                                                            </Border>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock
+                                                            Grid.Column="0"
+                                                            VerticalAlignment="Center"
+                                                            FontSize="10"
+                                                            Foreground="{StaticResource Brush.Text.Secondary}"
+                                                            Text="透明度" />
+                                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                            <Slider
+                                                                Width="100"
+                                                                VerticalAlignment="Center"
+                                                                Maximum="100"
+                                                                Minimum="0"
+                                                                TickFrequency="10"
+                                                                Value="{Binding SelectedItem.PatternBackgroundOpacity, Mode=TwoWay}" />
+                                                            <Border
+                                                                Margin="6,0,0,0"
+                                                                VerticalAlignment="Center"
+                                                                Padding="6,1"
+                                                                BorderBrush="{StaticResource Brush.Border.Mid}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="2">
+                                                                <TextBlock
+                                                                    FontSize="9"
+                                                                    Foreground="{StaticResource Brush.Text.Primary}"
+                                                                    Text="{Binding SelectedItem.PatternBackgroundOpacity, StringFormat={}{0:0}%}" />
+                                                            </Border>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </StackPanel>
+
+                                                <!--  ── 图片或纹理填充（ImageTexture）当前未实现，保留占位提示 ──  -->
                                                 <Border
                                                     Margin="0,2,0,4"
                                                     Padding="6,4"
@@ -2992,9 +3303,6 @@
                                                             <Setter Property="Visibility" Value="Collapsed" />
                                                             <Setter Property="Background" Value="{StaticResource Brush.Bg.Base}" />
                                                             <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding SelectedItem.FillStyle}" Value="{x:Static models:FillStyle.Pattern}">
-                                                                    <Setter Property="Visibility" Value="Visible" />
-                                                                </DataTrigger>
                                                                 <DataTrigger Binding="{Binding SelectedItem.FillStyle}" Value="{x:Static models:FillStyle.ImageTexture}">
                                                                     <Setter Property="Visibility" Value="Visible" />
                                                                 </DataTrigger>
@@ -3005,7 +3313,7 @@
                                                         FontSize="9"
                                                         Foreground="{StaticResource Brush.Text.Tertiary}"
                                                         TextWrapping="Wrap"
-                                                        Text="图案/图片填充 — UI 框架已就位,具体图案与图片导入逻辑后续迭代。" />
+                                                        Text="图片或纹理填充 — 导入逻辑后续迭代实现。" />
                                                 </Border>
 
                                                 <!--  ── 亮度 Slider（所有非 None 方式生效；Pattern/ImageTexture 暂禁用） ──  -->
