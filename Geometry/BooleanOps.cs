@@ -82,6 +82,11 @@ public static class BooleanOps
     /// a/b 必须是画布坐标系（调用方自行平移 X/Y，见 PrimitiveItem.CanvasFillGeometry）。</summary>
     public static BooleanResult? Compute(Geometry a, Geometry b, GeometryCombineMode mode)
     {
+        // 优先 Clipper2 折线布尔（椭圆 2° 均匀离散 → 稳定输出，无 Combine 的弧重建偏心）。
+        // 任何失败/不支持（含非圆几何、含弧环等）自动回退到 Geometry.Combine，保住既有能力。
+        var clipperResult = ClipperBooleanEngine.Compute(a, b, mode);
+        if (clipperResult is not null) return clipperResult;
+
         var combined = Geometry.Combine(a, b, mode, null, Tolerance, ToleranceType.Absolute);
         if (combined is null || combined.IsEmpty() || combined.Bounds.IsEmpty) return null;
         var bounds = combined.Bounds;

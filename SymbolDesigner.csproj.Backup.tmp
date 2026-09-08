@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <!-- 独立可执行：元件设计器可单独启动（双击 SymbolDesigner.exe）。
+         主程序 FactoryKanban 通过 ProjectReference 复用同一套代码，
+         改一处两边生效。 -->
+    <OutputType>WinExe</OutputType>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>SymbolDesigner</RootNamespace>
+    <AssemblyName>SymbolDesigner</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Clipper2" Version="2.0.0" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+  </ItemGroup>
+
+  <!-- 启动入口：App.xaml 是 ApplicationDefinition、MainWindow.xaml 是 Page，
+       WPF SDK 默认会自动包含项目目录里的这两类文件，无需显式声明。
+       显式声明反而会触发 NETSDK1022 "重复 Page 项"。 -->
+
+</Project>
