@@ -128,9 +128,11 @@ public partial class PrimitiveItem : ObservableObject
     // ===== 图案填充专属字段（仅 FillStyle=Pattern 时生效，与 Solid/Gradient 的颜色字段互不通用） =====
     // 遵循"按模式各管各的颜色"原则——图案前景/背景是独立语义，不与 FillColor 混用。
 
-    /// <summary>图案前景色（Pattern 模式下画线/画点的颜色）。默认深色，对应经典 CAD hatch 风格。
-    /// 与 Solid 模式的 FillColor 互不干扰——切换模式各自保留，编辑另一组不会改变图案外观。</summary>
-    [ObservableProperty] private string _patternForeground = "#60A0FF";
+    /// <summary>图案前景色（Pattern 模式下画线/画点的颜色）。默认 #E0E0E0（近白浅灰，Brush.Brand.StrokeLight），
+    /// 不扎眼、与画布深底色对比度足够，符合经典 CAD hatch 风格。
+    /// 与 Solid 模式的 FillColor 互不干扰——切换模式各自保留，编辑另一组不会改变图案外观。
+    /// 注意：默认值变更不影响已存在图元（旧工程按各自保存的色保留），仅新建图元生效。</summary>
+    [ObservableProperty] private string _patternForeground = "#E0E0E0";
     /// <summary>图案背景色（Pattern 模式下的底色/网格内空白色）。默认完全透明——
     /// 经典 CAD hatch 视觉是"线条 + 透空底"，让用户透过图案看到画布/下方图元；
     /// 用户想加底色（如强调填充感）可改任意不透明颜色。仅在 alpha > 0 时画底，
