@@ -211,7 +211,10 @@ public partial class SymbolDesignerViewModel
         DraftSnapToStart = dist < CloseSnapThreshold / scale;
     }
 
-    /// <summary>按 Esc 时的统一处理：正在绘制则放弃当前未提交的草稿(不生成图元);
+    /// <summary>Esc 键统一入口。按优先级逐级退出：
+    ///   1) 格式刷待命 → 退出格式刷
+    ///   2) 工具栏有选中（ActiveToolKey != null 且不在绘制中）→ 退出工具栏激活态（用户期望：点错工具后按 Esc 能取消高亮）
+    ///   3) 正在连续绘制 → 放弃当前草稿（不生成新图元），同时退出工具栏激活态
     /// 否则若有选中则取消选中。Esc 只"取消/放弃",绝不提交、也绝不清空画布
     /// （清空画布仅通过工具栏"全部清空"按钮,避免误触清掉整张图）。</summary>
     [RelayCommand]
@@ -221,6 +224,16 @@ public partial class SymbolDesignerViewModel
         if (IsFormatPainterActive)
         {
             ClearFormatPainter();
+            return;
+        }
+
+        // 工具栏工具激活态（用户点错工具后按 Esc 取消高亮 + 画布退出绘制分支）
+        // 注意：SelectTool 同时设 ActiveToolKey + DrawMode，两个必须一起退，否则光高亮退了、画布还在按 DrawMode 走 → 还能画
+        if (!IsDrawing && ActiveToolKey is not null)
+        {
+            ActiveToolKey = null;
+            DrawMode = DrawMode.None;
+            _userChangedDrawMode = true;
             return;
         }
 
