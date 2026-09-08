@@ -170,4 +170,150 @@ public static class PatternBrushFactory
         var c = ColorUtil.ParseHex(hex);
         return c is SolidColorBrush scb ? scb.Color : Colors.Black;
     }
+
+    // ========================== 导出（XamlExporter 调用） ==========================
+
+    /// <summary>根据 Pattern 配置生成稳定的资源 Key（XamlExporter 用，相同配置复用同一 key）。
+    /// Key 形如 Brush.Pattern.{Style}.{fg4}.{bg4}.{hash8}：
+    ///   Style - Diagonal / Horizontal / Vertical / Cross（人类可读）
+    ///   fg4/bg4 - 前景/背景 hex 的前 4 位（去掉 #，人类可一眼看出主色调）
+    ///   hash8 - 配置指纹（亮/透/tile/spacing 全参 → 8 位 hex）保证唯一性
+    /// 两个图元 Pattern 配置完全一致 → 共享同一 key → 同一资源。</summary>
+    public static string BuildResourceKey(
+        PatternStyle style,
+        string fgHex, double fgBrightness, double fgOpacity,
+        string bgHex, double bgBrightness, double bgOpacity,
+        double tileSize, double spacing)
+    {
+        // 量化亮/透到 0.1 步长，避免浮点漂移造成 hash 不一致
+        int qb = (int)Math.Round(fgBrightness * 10);
+        int qo = (int)Math.Round(fgOpacity * 10);
+        int qBb = (int)Math.Round(bgBrightness * 10);
+        int qBo = (int)Math.Round(bgOpacity * 10);
+        int qTs = (int)Math.Round(tileSize);
+        int qSp = (int)Math.Round(spacing);
+
+        string raw = $"{style}|{fgHex}|{qb}|{qo}|{bgHex}|{qBb}|{qBo}|{qTs}|{qSp}";
+        int hash = raw.GetHashCode();
+
+        // 提取 hex 前 4 位（不含 #），便于人类识别："Blue8" = "#FF8...xxx" 的前 4
+        string fgTag = ColorTag(fgHex);
+        string bgTag = ColorTag(bgHex);
+
+        // XAML key 合法字符：字母/数字/_；不能用 #
+        return $"Brush.Pattern.{style}.{fgTag}.{bgTag}.{(uint)hash:X8}";
+    }
+
+    private static string ColorTag(string? hex)
+    {
+        if (string.IsNullOrWhiteSpace(hex)) return "0000";
+        string h = hex.StartsWith("#") ? hex.Substring(1) : hex;
+        return h.Length >= 4 ? h.Substring(0, 4).ToUpperInvariant() : "0000";
+    }
+
+    /// <summary>把当前 Pattern 配置序列化成完整 DrawingBrush XAML 字符串（含 TileMode/Transform/Viewport），
+    /// 直接放进 &lt;Canvas.Resources&gt; 用。颜色用 InvariantCulture（#AARRGGBB），防止本地化漂移。
+    /// 资源 Key 由 BuildResourceKey 单独生成并配套使用。</summary>
+    public static string BuildResourceXaml(
+        PatternStyle style,
+        string fgHex, double fgBrightness, double fgOpacity,
+        string bgHex, double bgBrightness, double bgOpacity,
+        double tileSize, double spacing,
+        string resourceKey)
+    {
+        if (tileSize < 4) tileSize = 4;
+        if (tileSize > 40) tileSize = 40;
+        if (spacing < 1) spacing = 1;
+        if (spacing > 40) spacing = 40;
+
+        var fgColor = ParseColor(ColorUtil.ApplyBrightnessAndOpacity(fgHex, fgBrightness, fgOpacity));
+        var bgColor = bgHex is null
+            ? Colors.Transparent
+            : ParseColor(ColorUtil.ApplyBrightnessAndOpacity(bgHex, bgBrightness, bgOpacity));
+
+        // 线宽 = tileSize/8，与 Build() 里的 Pen 保持一致（视觉一致）
+        double penWidth = Math.Max(1.0, tileSize / 8.0);
+        string fgArgb = ColorToArgb(fgColor);
+        string bgArgb = ColorToArgb(bgColor);
+
+        var sb = new System.Text.StringBuilder();
+        sb.Append($"<DrawingBrush x:Key=\"{resourceKey}\"");
+        sb.Append($" TileMode=\"Tile\"");
+        sb.Append($" ViewportUnits=\"Absolute\"");
+        sb.Append($" Stretch=\"None\"");
+        sb.Append($" AlignmentX=\"Left\" AlignmentY=\"Top\"");
+        sb.Append($" Viewport=\"0,0,{Fmt(tileSize)},{Fmt(tileSize)}\">");
+
+        // Diagonal 时挂 45° 旋转，与 Build() 行为一致
+        if (style == PatternStyle.Diagonal)
+        {
+            double center = tileSize / 2.0;
+            sb.Append($"<DrawingBrush.Transform><RotateTransform Angle=\"45\" CenterX=\"{Fmt(center)}\" CenterY=\"{Fmt(center)}\"/></DrawingBrush.Transform>");
+        }
+
+        sb.Append("<DrawingBrush.Drawing>");
+        sb.Append("<DrawingGroup>");
+
+        // 背景：仅在 bg 不透明时铺底矩形
+        if (bgColor.A > 0)
+        {
+            sb.Append($"<GeometryDrawing Brush=\"{bgArgb}\" Geometry=\"M0,0H{Fmt(tileSize)}V{Fmt(tileSize)}H0Z\"/>");
+        }
+
+        // 前景几何：直接用 BuildTileGeometryMiniLanguage 生成 Path mini-language 字符串。
+        // 注意：不能对 BuildTileGeometry 生成的 GeometryGroup 调 ToString()——GeometryGroup 的
+        // ToString() 只返回类型名 "System.Windows.Media.GeometryGroup"，不是可序列化的路径数据。
+        string geomStr = BuildTileGeometryMiniLanguage(style, tileSize, spacing);
+        // Pen 用显式子元素（GeometryDrawing.Pen 是 Pen 对象，字符串属性转换不可靠）；
+        // Flat cap 保证端点正好落在 tile 边界，平铺接缝不凸出（与运行时 Build() 的 Pen 一致）。
+        sb.Append($"<GeometryDrawing Geometry=\"{geomStr}\">");
+        sb.Append($"<GeometryDrawing.Pen><Pen Brush=\"{fgArgb}\" Thickness=\"{Fmt(penWidth)}\" StartLineCap=\"Flat\" EndLineCap=\"Flat\"/></GeometryDrawing.Pen>");
+        sb.Append("</GeometryDrawing>");
+
+        sb.Append("</DrawingGroup>");
+        sb.Append("</DrawingBrush.Drawing>");
+        sb.Append("</DrawingBrush>");
+        return sb.ToString();
+    }
+
+    private static string ColorToArgb(Color c)
+    {
+        // 输出 #AARRGGBB（WPF 颜色格式）
+        return $"#{c.A:X2}{c.R:X2}{c.G:X2}{c.B:X2}";
+    }
+
+    /// <summary>生成前景线的 Path mini-language 字符串（与 BuildTileGeometry 的线段分布完全一致）。
+    /// 输出形如 "M0,5L22.27,5 M0,11.13L22.27,11.13 ..."（GeometryDrawing.Geometry 直接可用）。
+    ///   Diagonal/Horizontal - n 条水平线，y = T*(i+0.5)/n
+    ///   Vertical            - n 条竖直线，x = T*(i+0.5)/n
+    ///   Cross               - 水平 + 竖直叠加
+    /// 注意：必须独立生成，不能靠 GeometryGroup.ToString()（那只返回类型名）。</summary>
+    private static string BuildTileGeometryMiniLanguage(PatternStyle style, double tileSize, double spacing)
+    {
+        int n = Math.Max(1, (int)Math.Round(tileSize / spacing));
+        var sb = new System.Text.StringBuilder();
+        string t = Fmt(tileSize);
+
+        bool useHorizontal = style == PatternStyle.Diagonal || style == PatternStyle.Horizontal || style == PatternStyle.Cross;
+        bool useVertical = style == PatternStyle.Vertical || style == PatternStyle.Cross;
+
+        if (useHorizontal)
+            for (int i = 0; i < n; i++)
+            {
+                double y = tileSize * (i + 0.5) / n;
+                string ys = y.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+                sb.Append("M0,").Append(ys).Append("L").Append(t).Append(",").Append(ys);
+            }
+        if (useVertical)
+            for (int i = 0; i < n; i++)
+            {
+                double x = tileSize * (i + 0.5) / n;
+                string xs = x.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+                sb.Append("M").Append(xs).Append(",0L").Append(xs).Append(",").Append(t);
+            }
+        return sb.ToString();
+    }
+
+    private static string Fmt(double v)
+        => v.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
 }
