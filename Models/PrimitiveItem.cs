@@ -279,6 +279,11 @@ public partial class PrimitiveItem : ObservableObject
     /// <summary>PathData 解析缓存（局部坐标顶点）。null 表示 PathData 为空。</summary>
     public IReadOnlyList<Point>? ParsedPathPoints => _parsedPathPoints;
 
+    /// <summary>PolylineGeometry 的 StreamGeometry 缓存（局部坐标）。PathData 变化时由 getter 命中失效重建。</summary>
+    private System.Windows.Media.StreamGeometry? _polylineCache;
+    /// <summary>PolylineGeometry 缓存对应的 PathData（用于判定失效）。</summary>
+    private string? _cachedPolylinePath;
+
     /// <summary>BandPolyline 的整体带宽（保留兼容，新代码用 Segments 按段控制）。</summary>
     /// 仅 L1 BandPolyline 生效，其他 L1 图形此字段为 0。</summary>
     [ObservableProperty] private double _bandWidth = 6;
@@ -720,14 +725,24 @@ public partial class PrimitiveItem : ObservableObject
     /// 与 BandPolyline 的 OutlineGeometry 严格分离——OutlineGeometry 走"带宽偏移/接缝"逻辑（仅 BandPolyline 用），
     /// PolylineGeometry 只为 Polyline 提供纯 stroke 渲染的 Geometry，完全绕开轮廓计算。
     /// 模板绑定：L1PolylineNode 绑此属性，L1BandPolylineNode 绑 OutlineGeometry。
-    /// PathData 变化时刷新（见 OnPathDataChanged）。</summary>
+    /// PathData 变化时刷新（见 OnPathDataChanged）。
+    /// 缓存：拖动（X/Y 变化）会触发 SelectionGeometry → 本 getter 每帧被取；开放 Polyline 顶点多时
+    /// 若每次重建 StreamGeometry 会很卡。故按 PathData 缓存结果（局部坐标几何，X/Y 不动不失效）。</summary>
     public System.Windows.Media.Geometry? PolylineGeometry
     {
         get
         {
-            if (string.IsNullOrEmpty(PathData)) return null;
-            var pts = Converters.BandOutlineBuilder.ParsePathData(PathData);
-            if (pts.Count < 2) return null;  // 至少两个点才能形成线段
+            if (string.IsNullOrEmpty(PathData))
+            {
+                _polylineCache = null;
+                _cachedPolylinePath = null;
+                return null;
+            }
+            // PathData 未变则复用缓存（几何只由 PathData 决定，与 X/Y 无关）
+            if (_polylineCache is not null && _cachedPolylinePath == PathData)
+                return _polylineCache;
+            var pts = ParsedPathPoints;   // OnPathDataChanged 已缓存解析结果，避免重复 Split+TryParse
+            if (pts is null || pts.Count < 2) return null;  // 至少两个点才能形成线段
             var stream = new System.Windows.Media.StreamGeometry();
             using (var ctx = stream.Open())
             {
@@ -736,7 +751,9 @@ public partial class PrimitiveItem : ObservableObject
                     ctx.LineTo(pts[i], isStroked: true, isSmoothJoin: false);
             }
             stream.Freeze();
-            return stream;
+            _polylineCache = stream;
+            _cachedPolylinePath = PathData;
+            return _polylineCache;
         }
     }
 
