@@ -300,8 +300,9 @@ public partial class SymbolDesignerViewModel
         if (!IsDrawing) return;
         IsDrawing = false;
 
-        // 形状类两段式：DraftPoints[0]=中心点，[1]=第二点
-        // - Rectangle / RoundedRectangle / Triangle：第二点 = 对角点（W/H=2*|dx|,2*|dy|）
+        // 形状类两段式：
+        // - Rectangle：第一点/第二点 = 两个对角点（C × 对角点），W/H=2*|dx|,2*|dy| 以第一点为对角起点
+        // - RoundedRectangle / Triangle：第一点=中心点，第二点=对角点（W/H=2*|dx|,2*|dy|）
         // - Ellipse / Ring：第二点 = 圆周点（W=H=2*r，r=sqrt(dx²+dy²)）—— 始终正圆
         if (IsShapeDrawMode(DrawMode) && DraftPoints.Count >= 2)
         {
@@ -310,22 +311,33 @@ public partial class SymbolDesignerViewModel
             double dx = p2.X - center.X;
             double dy = p2.Y - center.Y;
             bool isCircleLike = DrawMode is DrawMode.Ellipse or DrawMode.Ring or DrawMode.Pie;
-            double w, h;
-            if (isCircleLike)
+            double w, h, x, y;
+            if (DrawMode == DrawMode.Rectangle)
             {
-                // 半径点语义：r = sqrt(dx²+dy²)，W = H = 2r
+                // 矩形：两点相对角 → 包围盒 = (minX,minY) 到 (maxX,maxY)，第一点是矩形的角不是圆心
+                x = System.Math.Min(center.X, p2.X);
+                y = System.Math.Min(center.Y, p2.Y);
+                w = System.Math.Max(2, System.Math.Abs(dx));
+                h = System.Math.Max(2, System.Math.Abs(dy));
+            }
+            else if (isCircleLike)
+            {
+                // 半径点语义：r = sqrt(dx²+dy²)，W = H = 2r，第一点为圆心
                 double r = System.Math.Sqrt(dx * dx + dy * dy);
                 double size = System.Math.Max(2, r * 2);
                 w = size;
                 h = size;
+                x = center.X - w / 2;
+                y = center.Y - h / 2;
             }
             else
             {
+                // 其它形状：第一点=中心，第二点=对角点
                 w = System.Math.Max(2, System.Math.Abs(dx) * 2);
                 h = System.Math.Max(2, System.Math.Abs(dy) * 2);
+                x = center.X - w / 2;
+                y = center.Y - h / 2;
             }
-            double x = center.X - w / 2;
-            double y = center.Y - h / 2;
             // 无限画布：不做夹紧，图元落点自由
 
             var primitive = DrawMode switch
@@ -603,9 +615,15 @@ public partial class SymbolDesignerViewModel
         switch (DrawMode)
         {
             case DrawMode.Rectangle:
-                // M x,y H x+w V y+h H x Z
-                sb.AppendFormat(System.Globalization.CultureInfo.InvariantCulture, "M {0:0.##},{1:0.##} H {2:0.##} V {3:0.##} H {0:0.##} Z", x, y, x + w, y + h);
-                break;
+                // 矩形：第一点/第二点 = 两对角点 → 包围盒 = (min)~(max)；第一点是角不是圆心
+                {
+                    double rx = System.Math.Min(center.X, p.X);
+                    double ry = System.Math.Min(center.Y, p.Y);
+                    double rw = System.Math.Max(1, System.Math.Abs(p.X - center.X));
+                    double rh = System.Math.Max(1, System.Math.Abs(p.Y - center.Y));
+                    sb.AppendFormat(System.Globalization.CultureInfo.InvariantCulture, "M {0:0.##},{1:0.##} H {2:0.##} V {3:0.##} H {0:0.##} Z", rx, ry, rx + rw, ry + rh);
+                    break;
+                }
 
             case DrawMode.RoundedRectangle:
                 // 默认圆角半径 = min(w,h)/8（与图元默认 CornerRadius 接近，避免预览与提交视觉差）
