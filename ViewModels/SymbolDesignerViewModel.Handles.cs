@@ -307,12 +307,13 @@ public partial class SymbolDesignerViewModel
 
     // ============== 扇形（L1 Pie）拖拽手柄 ==============
 
-    /// <summary>扇形的选中拖拽手柄集合：中心 1 + 半径 1（东侧）+ 起始角 1 + 终止角 1 = 4 个。
-    /// 显示在画布上（仅选中 Pie 时），用于平移/改半径/调起始角/调扫掠角。</summary>
+    /// <summary>扇形的选中拖拽手柄集合：中心 1 + 半径 1（对称中轴鼻尖）+ 起始/终止弧端点 2 = 4 个。
+    /// 显示在画布上（仅选中 Pie 时），用于平移/改半径/对称扫掠角调整。</summary>
     public ObservableCollection<PieHandle> PieHandles { get; } = new();
 
-    /// <summary>刷新 PieHandles：中心 1 + 半径 1（东侧）+ 起始角 1 + 终止角 1 = 4 个。
-    /// 圆手柄中心 = (cx,cy)，半径手柄 = 东侧 (cx+r,cy)，角度手柄在圆周上沿 StartAngle / StartAngle+SweepAngle。
+    /// <summary>刷新 PieHandles：中心 1 + 半径 1（对称中轴鼻尖）+ 起始/终止弧端点 2 = 4 个。
+    /// 对称模型：StartAngle=对称中轴角，SweepAngle=总张角，弧区 = [中轴-张角/2, 中轴+张角/2]。
+    /// 半径手柄放在中轴鼻尖（角度=中轴），起始/终止手柄放在两个真实弧端点，全部贴合扇面（避免飘出）。
     /// SelectedItem 为 Pie 时按当前圆心/半径/角度填充；其它情况清空。
     /// 调用时机：SelectedItem 变化 / X·Y·Width·Height·StartAngle·SweepAngle 变化 / 加载完成。</summary>
     private void RefreshPieHandles()
@@ -325,19 +326,21 @@ public partial class SymbolDesignerViewModel
         double cx = item.X + item.Width / 2;
         double cy = item.Y + item.Height / 2;
         double r = Math.Min(item.Width, item.Height) / 2;
-        double a0 = item.StartAngle * Math.PI / 180;
-        double a1 = (item.StartAngle + item.SweepAngle) * Math.PI / 180;
+        double axis = item.StartAngle * Math.PI / 180;
+        double half = item.SweepAngle * Math.PI / 180 / 2;
+        double a0 = axis - half; // 起始弧端点（中轴-张角/2）
+        double a1 = axis + half; // 终止弧端点（中轴+张角/2）
 
         PieHandles.Add(new PieHandle(PieHandleKind.Center, cx, cy));
-        PieHandles.Add(new PieHandle(PieHandleKind.Radius, cx + r, cy));
+        PieHandles.Add(new PieHandle(PieHandleKind.Radius, cx + r * Math.Cos(axis), cy + r * Math.Sin(axis)));
         PieHandles.Add(new PieHandle(PieHandleKind.Start, cx + r * Math.Cos(a0), cy + r * Math.Sin(a0)));
         PieHandles.Add(new PieHandle(PieHandleKind.End, cx + r * Math.Cos(a1), cy + r * Math.Sin(a1)));
     }
 
     /// <summary>扇形手柄拖拽：根据手柄类型 + 鼠标在画布上的位置，更新扇形几何。
-    /// Center = 平移圆心（X/Y 整体移动，半径/角度不变）；Radius = 改半径（Width/Height 等比变，圆心不动）；
-    /// Start = 改起始角（鼠标相对圆心方位）；End = 改扫掠角（终止角方位 - 起始角）。
-    /// 拖拽期间手柄集合不重建，直接更新各手柄 X/Y。</summary>
+    /// Center = 平移圆心（X/Y 整体移动，半径/角度不变）；
+    /// Radius = 改半径（Width/Height 等比变，圆心不动，手柄在中轴鼻尖）；
+    /// Start / End = 对称扫掠角调整：固定对称中轴，张角 = 2 × |鼠标方位 − 中轴| 的短夹角（两端对称扩张）。</summary>
     public void UpdatePieHandle(PieHandleKind kind, double mouseX, double mouseY)
     {
         if (SelectedItem is not { } item) return;
@@ -368,16 +371,14 @@ public partial class SymbolDesignerViewModel
                 break;
 
             case PieHandleKind.Start:
-                item.StartAngle = AngleOf(cx, cy, mouseX, mouseY);
-                break;
-
             case PieHandleKind.End:
                 {
+                    // 固定对称中轴（StartAngle），被拖弧端点方位 a 决定张角的一半。
                     double a = AngleOf(cx, cy, mouseX, mouseY);
-                    double sweep = a - item.StartAngle;
-                    // 归一化到一个顺时针周期内，且保持 (0,360) 之间
-                    sweep = (sweep % 360 + 360) % 360;
-                    item.SweepAngle = sweep <= 0 ? 1 : sweep;
+                    double axis = item.StartAngle;
+                    // 中轴到端点的短夹角（范围 (-180,180]），对称张角 = 2×|短夹角|
+                    double half = Math.Abs((a - axis + 180) % 360 - 180);
+                    item.SweepAngle = Math.Clamp(half * 2, 1, 359.999);
                 }
                 break;
         }
@@ -387,23 +388,25 @@ public partial class SymbolDesignerViewModel
         {
             var h = PieHandles[i];
             double r = Math.Min(item.Width, item.Height) / 2;
+            double kx = item.X + item.Width / 2;
+            double ky = item.Y + item.Height / 2;
             switch (h.Kind)
             {
                 case PieHandleKind.Center:
-                    h.X = item.X + item.Width / 2;
-                    h.Y = item.Y + item.Height / 2;
+                    h.X = kx;
+                    h.Y = ky;
                     break;
                 case PieHandleKind.Radius:
-                    h.X = item.X + item.Width / 2 + r;
-                    h.Y = item.Y + item.Height / 2;
-                    break;
+                    {
+                        double ax = item.StartAngle * Math.PI / 180;
+                        h.X = kx + r * Math.Cos(ax);
+                        h.Y = ky + r * Math.Sin(ax);
+                        break;
+                    }
                 default:
                     {
-                        double kx = item.X + item.Width / 2;
-                        double ky = item.Y + item.Height / 2;
-                        double ang = h.Kind == PieHandleKind.Start
-                            ? item.StartAngle * Math.PI / 180
-                            : (item.StartAngle + item.SweepAngle) * Math.PI / 180;
+                        double off = (h.Kind == PieHandleKind.Start ? -0.5 : 0.5) * item.SweepAngle;
+                        double ang = (item.StartAngle + off) * Math.PI / 180;
                         h.X = kx + r * Math.Cos(ang);
                         h.Y = ky + r * Math.Sin(ang);
                         break;
@@ -417,6 +420,25 @@ public partial class SymbolDesignerViewModel
     {
         double deg = Math.Atan2(my - cy, mx - cx) * 180 / Math.PI;
         return (deg % 360 + 360) % 360;
+    }
+
+    /// <summary>扇形对称中轴朝向吸附：吸到 45°倍数 ∪ 30°倍数（含水平/竖直 0/90/180/270、45/135/225/315、30/60/120/150/...）。
+    /// 容差 8°；命中时返回最近的特殊朝向，否则返回原角度。绘制朝向 / 手柄搬运共用，保证预览与提交一致。</summary>
+    private static double SnapPieAxis(double deg)
+    {
+        int[] specials = { 0, 30, 45, 60, 90, 120, 135, 150, 180, 210, 225, 240, 270, 300, 315, 330 };
+        double best = deg;
+        double bestDelta = 8.0;
+        foreach (int s in specials)
+        {
+            double d = Math.Abs((deg - s + 540) % 360 - 180); // 最小角度差 (0,180]
+            if (d < bestDelta)
+            {
+                bestDelta = d;
+                best = s;
+            }
+        }
+        return best;
     }
 
     // ============== 轮廓接缝编辑（OutlineEditMode.Outline 模式下显示） ==============

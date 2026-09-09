@@ -248,6 +248,8 @@ public partial class SymbolDesignerViewModel
             DraftPreviewPoint = new System.Windows.Point(double.NaN, double.NaN);
             DraftShapeData = string.Empty;
             IsShapePreviewVisible = false;
+            PieAxisGuideEnabled = false;
+            PieAngleTextVisible = false;
             _draftCloseRequested = false;
             DraftSnapToStart = false;
             // 同步隐藏"对象追踪贯穿虚线"（最后一点吸附命中后停留在画布上的孤儿提示）
@@ -341,9 +343,10 @@ public partial class SymbolDesignerViewModel
             // 圆环默认内径 = 外径 1/4（与 AddL1 拖入语义一致）
             if (primitive == L1Primitive.Ring)
                 item.InnerRadius = System.Math.Min(w, h) / 4;
-            // 扇形：中心→第二点方向 = 对称中轴线（对称张角 60°）；第二点距中心的距离 = 半径（扇形的"鼻尖"）
+            // 扇形：中心→第二点方向 = 对称中轴线（中轴吸附到 45°/30° 倍数等特殊角）；
+            // 第二点距中心的距离 = 半径（扇形的"鼻尖"）。
             if (primitive == L1Primitive.Pie)
-                item.StartAngle = AngleOf(center.X, center.Y, p2.X, p2.Y);
+                item.StartAngle = SnapPieAxis(AngleOf(center.X, center.Y, p2.X, p2.Y));
             item.ZIndex = Primitives.Count;
             Primitives.Add(item);
             ItemCount = Primitives.Count;
@@ -354,6 +357,8 @@ public partial class SymbolDesignerViewModel
             DraftPreviewPoint = new System.Windows.Point(double.NaN, double.NaN);
             DraftShapeData = string.Empty;
             IsShapePreviewVisible = false;
+            PieAxisGuideEnabled = false;
+            PieAngleTextVisible = false;
             // 形状提交：擦除对象追踪提示线（如果路径类被走过，状态可能残留）
             ResetDraftSnapVisuals();
             DrawMode = DrawMode.None;
@@ -556,6 +561,8 @@ public partial class SymbolDesignerViewModel
         {
             DraftShapeData = string.Empty;
             IsShapePreviewVisible = false;
+            PieAxisGuideEnabled = false;
+            PieAngleTextVisible = false;
             return;
         }
         var center = DraftPoints[0];
@@ -565,6 +572,8 @@ public partial class SymbolDesignerViewModel
         {
             DraftShapeData = string.Empty;
             IsShapePreviewVisible = false;
+            PieAxisGuideEnabled = false;
+            PieAngleTextVisible = false;
             return;
         }
         double dx = p.X - center.X;
@@ -640,11 +649,39 @@ public partial class SymbolDesignerViewModel
                 break;
 
             case DrawMode.Pie:
-                // 扇形预览：半径 = 圆心到鼠标距离；对称中轴 = 圆心指向鼠标方向（第二点方向 = 对称中轴线），
-                // 对称张角默认 60°（与提交后的成品几何一致，鼻尖朝向鼠标）。
-                sb.Append(Converters.PieGeometryBuilder.BuildPath(center.X, center.Y,
-                    halfW, AngleOf(center.X, center.Y, p.X, p.Y), 60));
-                break;
+                {
+                    // 扇形预览：半径 = 圆心到鼠标距离；对称中轴 = 圆心指向鼠标方向（第二点方向 = 对称中轴线），
+                    // 对称张角默认 60°（鼻尖朝向鼠标）。
+                    double rawAxis = AngleOf(center.X, center.Y, p.X, p.Y);
+                    double snappedAxis = SnapPieAxis(rawAxis);
+                    sb.Append(Converters.PieGeometryBuilder.BuildPath(center.X, center.Y, halfW, snappedAxis, 60));
+                    // 实时角度读数 + 吸附提示线
+                    bool snapped = Math.Abs(snappedAxis - rawAxis) > 1e-9; // 吸附前后角度不同 → 吸附命中
+                    // 角度标注：吸附命中显示特殊角整度数（45°），否则显示实时角度（一位小数）
+                    PieAngleText = (snapped
+                        ? Math.Round(snappedAxis) % 360
+                        : rawAxis % 360).ToString(snapped ? "0" : "0.#", System.Globalization.CultureInfo.InvariantCulture) + "°";
+                    // 标签放在鼻尖（鼠标）附近，靠右上避开光标
+                    PieAngleTextX = p.X + 12;
+                    PieAngleTextY = p.Y - 22;
+                    PieAngleTextVisible = true;
+                    // 吸附提示线：从圆心沿吸附后中轴方向延伸虚线（像画直线的绿色轴对齐提示）
+                    if (snapped)
+                    {
+                        double len = halfW + 20; // 延伸超过鼻尖 20px，方向更醒目
+                        double rad = snappedAxis * Math.PI / 180;
+                        PieAxisGuideX1 = center.X;
+                        PieAxisGuideY1 = center.Y;
+                        PieAxisGuideX2 = center.X + len * Math.Cos(rad);
+                        PieAxisGuideY2 = center.Y + len * Math.Sin(rad);
+                        PieAxisGuideEnabled = true;
+                    }
+                    else
+                    {
+                        PieAxisGuideEnabled = false;
+                    }
+                    break;
+                }
         }
 
         DraftShapeData = sb.ToString();

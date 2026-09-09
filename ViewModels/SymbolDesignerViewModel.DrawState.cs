@@ -68,6 +68,29 @@ public partial class SymbolDesignerViewModel
     /// 形状模式不触发（形状有独立的预览 Path）。</summary>
     [ObservableProperty] private bool _isPathSnappingActive;
 
+    /// <summary>扇形（Pie）绘制中"对称中轴吸附"激活态：中轴方向落入特殊角（45°/30°倍数）阈值内时为 true。
+    /// XAML 绑到一根从圆心沿吸附后中轴方向延伸的绿色虚线——像画直线时的轴对齐提示线，提示"中轴已锁定在特殊角"。</summary>
+    [ObservableProperty] private bool _pieAxisGuideEnabled;
+
+    /// <summary>扇形中轴吸附提示线起点（圆心，画布坐标）。仅 PieAxisGuideEnabled 时有效。</summary>
+    [ObservableProperty] private double _pieAxisGuideX1;
+    /// <summary>扇形中轴吸附提示线起点（圆心，画布坐标）。仅 PieAxisGuideEnabled 时有效。</summary>
+    [ObservableProperty] private double _pieAxisGuideY1;
+    /// <summary>扇形中轴吸附提示线终点（圆心 + 沿吸附后中轴方向延伸，画布坐标）。仅 PieAxisGuideEnabled 时有效。</summary>
+    [ObservableProperty] private double _pieAxisGuideX2;
+    /// <summary>扇形中轴吸附提示线终点（圆心 + 沿吸附后中轴方向延伸，画布坐标）。仅 PieAxisGuideEnabled 时有效。</summary>
+    [ObservableProperty] private double _pieAxisGuideY2;
+
+    /// <summary>扇形朝向实时角度读数文本（如 "38.4°"；吸附时显示特殊角 "45°"）。
+    /// 绘制扇形第二点（定朝向）时显示在鼻尖附近，CAD 极轴角度标注风格。</summary>
+    [ObservableProperty] private string _pieAngleText = string.Empty;
+    /// <summary>扇形角度读数的画布 X。仅 PieAngleTextVisible 时有效。</summary>
+    [ObservableProperty] private double _pieAngleTextX;
+    /// <summary>扇形角度读数的画布 Y。仅 PieAngleTextVisible 时有效。</summary>
+    [ObservableProperty] private double _pieAngleTextY;
+    /// <summary>扇形角度读数是否可见（绘制扇形第二点期间始终显示，实时更新）。</summary>
+    [ObservableProperty] private bool _pieAngleTextVisible;
+
     /// <summary>绘制路径模式下"对象追踪 X 对齐"激活态：鼠标 X 与任一已画点 X 同坐标（误差范围内），
     /// XAML 画一条贯穿画布的浅色虚线提示"现在按 X 对齐到 P_i"。
     /// 与 IsPathSnappingActive（轴对齐）并行：可同时为 true——既轴对齐又对象追踪。

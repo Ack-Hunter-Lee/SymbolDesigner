@@ -1476,6 +1476,56 @@
                                 Visibility="{Binding IsShapePreviewVisible, Converter={StaticResource BoolToVis}}" />
 
                             <!--
+                                扇形中轴吸附提示线（CAD 轴对齐风格，绿色虚线）：
+                                绘制扇形第二点（定朝向）时，中轴命中特殊角（45°/30°倍数）即吸附；
+                                此时从圆心沿吸附后的对称中轴方向延伸一根虚线，提示"中轴已锁定在特殊角"，
+                                与画直线时的绿色轴对齐提示线一致。
+                            -->
+                            <Line
+                                IsHitTestVisible="False"
+                                Stretch="None"
+                                Stroke="{StaticResource Brush.State.Success}"
+                                StrokeDashArray="{Binding DashS}"
+                                StrokeEndLineCap="Round"
+                                StrokeThickness="{Binding StrokeWidthM}"
+                                X1="{Binding PieAxisGuideX1}"
+                                Y1="{Binding PieAxisGuideY1}"
+                                X2="{Binding PieAxisGuideX2}"
+                                Y2="{Binding PieAxisGuideY2}"
+                                Visibility="{Binding PieAxisGuideEnabled, Converter={StaticResource BoolToVis}}" />
+
+                            <!--
+                                扇形朝向实时角度读数（CAD 极轴角度标注）：
+                                绘制扇形第二点（定朝向）时在鼻尖附近显示当前朝向角；吸附到特殊角时显示整度数（如 45°）。
+                                必须放 Canvas 内，Canvas.Left/Top 才能定位（宿主是 Grid，Grid 忽略该附加属性才会不显示/停角落）。
+                                反向缩放保持屏幕字号恒定；半透明深色底 + 白字，便于画布叠加可读。
+                            -->
+                            <Canvas
+                                Width="{Binding CanvasWidth}"
+                                Height="{Binding CanvasHeight}"
+                                IsHitTestVisible="False">
+                                <Border
+                                    Padding="4,1.5"
+                                    Background="{StaticResource Brush.Overlay.Dim}"
+                                    CornerRadius="2"
+                                    Panel.ZIndex="9997"
+                                    Canvas.Left="{Binding PieAngleTextX}"
+                                    Canvas.Top="{Binding PieAngleTextY}"
+                                    RenderTransformOrigin="0.5,0.5"
+                                    Visibility="{Binding PieAngleTextVisible, Converter={StaticResource BoolToVis}}">
+                                    <Border.RenderTransform>
+                                        <ScaleTransform
+                                            ScaleX="{Binding InverseScale}"
+                                            ScaleY="{Binding InverseScale}" />
+                                    </Border.RenderTransform>
+                                    <TextBlock
+                                        FontSize="9"
+                                        Foreground="{StaticResource Brush.Text.Primary}"
+                                        Text="{Binding PieAngleText}" />
+                                </Border>
+                            </Canvas>
+
+                            <!--
                                 草稿已确认顶点的视觉标记（小方块）。
                                 样式与选中后的顶点手柄（VertexHandles）统一：2×2 淡蓝方块 + 白描边，
                                 让水平/垂直同一直线上连点时也能一眼数清已连了几个点。
