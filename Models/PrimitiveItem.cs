@@ -271,7 +271,15 @@ public partial class PrimitiveItem : ObservableObject
     /// BooleanPath = 布尔快照（BooleanOps 的"多环骨架"M/L/Z + F 前缀，全局局部坐标）。</summary>
     [ObservableProperty] private string _pathData = string.Empty;
 
-    /// <summary>BandPolyline 的整体带宽（保留兼容，新代码用 Segments 按段控制）。
+    /// <summary>PathData 的解析缓存（局部坐标顶点列表）。
+    /// PathData 变化时由 OnPathDataChanged 重建；读缓存比每帧 Split+TryParse 快得多。
+    /// 供选区包围盒、命中检测等频繁解析 PathData 的场景复用，避免拖动时反复字符串解析。</summary>
+    private IReadOnlyList<Point>? _parsedPathPoints;
+
+    /// <summary>PathData 解析缓存（局部坐标顶点）。null 表示 PathData 为空。</summary>
+    public IReadOnlyList<Point>? ParsedPathPoints => _parsedPathPoints;
+
+    /// <summary>BandPolyline 的整体带宽（保留兼容，新代码用 Segments 按段控制）。</summary>
     /// 仅 L1 BandPolyline 生效，其他 L1 图形此字段为 0。</summary>
     [ObservableProperty] private double _bandWidth = 6;
 
@@ -426,6 +434,10 @@ public partial class PrimitiveItem : ObservableObject
     /// BooleanPath 多环骨架 / Polyline 闭合形态：骨架点/环数变化时同步 VertexBandWidths（圆角半径容器）。</summary>
     partial void OnPathDataChanged(string value)
     {
+        // 重建 PathData 解析缓存（选区包围盒/命中检测复用,避免每帧重复 Split+TryParse）
+        _parsedPathPoints = string.IsNullOrEmpty(value)
+            ? null
+            : Converters.BandOutlineBuilder.ParsePathData(value);
         if (!string.IsNullOrEmpty(value))
         {
             if (TypeKey == nameof(L1Primitive.BooleanPath))

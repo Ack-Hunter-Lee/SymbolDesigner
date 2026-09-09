@@ -157,9 +157,9 @@ public partial class SymbolDesignerViewModel
 
         foreach (var item in items)
         {
-            if (!string.IsNullOrEmpty(item.PathData))
+            var pts = item.ParsedPathPoints;
+            if (pts is { Count: > 0 })
             {
-                var pts = SymbolDesigner.Converters.BandOutlineBuilder.ParsePathData(item.PathData);
                 bool any = false;
                 foreach (var p in pts)
                 {
