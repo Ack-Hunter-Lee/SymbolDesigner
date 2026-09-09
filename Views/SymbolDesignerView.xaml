@@ -2708,6 +2708,61 @@
                         <!--  ═══ 属性页（原右侧属性栏内容） ═══  -->
                         <ScrollViewer VerticalScrollBarVisibility="Auto" Visibility="{Binding IsPropertiesPaneVisible, Converter={StaticResource BoolToVis}}">
                             <StackPanel>
+                                <!--  扇形属性组（仅 Pie 时显示）：起始角（旋转）+ 扫掠角（夹角）。放最顶部，选中扇形时第一个出现。  -->
+                                <StackPanel
+                                    Margin="0,0,0,6"
+                                    Visibility="{Binding SelectedItemIsPie, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock
+                                        Margin="0,0,0,8"
+                                        FontSize="11"
+                                        FontWeight="Bold"
+                                        Foreground="{StaticResource Brush.Text.Secondary}"
+                                        Text="扇形属性" />
+                                    <Grid Margin="0,0,0,2">
+                                        <TextBlock
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Center"
+                                            FontSize="10"
+                                            Foreground="{StaticResource Brush.Text.Primary}"
+                                            Text="起始角（旋转）" />
+                                        <TextBlock
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center"
+                                            FontSize="10"
+                                            Foreground="{StaticResource Brush.Text.Tertiary}"
+                                            Text="{Binding SelectedItem.StartAngle, Mode=OneWay, StringFormat={}{0:0.#}°}" />
+                                    </Grid>
+                                    <controls:SliderSpinBox
+                                        IsSnapToTickEnabled="True"
+                                        LargeChange="10"
+                                        Maximum="360"
+                                        Minimum="0"
+                                        Step="1"
+                                        StringFormat="{}{0:0.#}°"
+                                        Value="{Binding SelectedItem.StartAngle, Mode=TwoWay}" />
+                                    <Grid Margin="0,8,0,2">
+                                        <TextBlock
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Center"
+                                            FontSize="10"
+                                            Foreground="{StaticResource Brush.Text.Primary}"
+                                            Text="扫掠角（夹角）" />
+                                        <TextBlock
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center"
+                                            FontSize="10"
+                                            Foreground="{StaticResource Brush.Text.Tertiary}"
+                                            Text="{Binding SelectedItem.SweepAngle, Mode=OneWay, StringFormat={}{0:0.#}°}" />
+                                    </Grid>
+                                    <controls:SliderSpinBox
+                                        IsSnapToTickEnabled="True"
+                                        LargeChange="10"
+                                        Maximum="360"
+                                        Minimum="1"
+                                        Step="1"
+                                        StringFormat="{}{0:0.#}°"
+                                        Value="{Binding SelectedItem.SweepAngle, Mode=TwoWay}" />
+                                </StackPanel>
                                 <!--
                                     画布背景颜色(画布级全局设置,与选中元素无关):SwatchesPicker 改背景色 + 重置按钮。
                                     CanvasHost.Background 绑 VM.CanvasBackgroundBrush,改色即时生效。
@@ -3825,59 +3880,7 @@
                                                 TextWrapping="Wrap" />
                                         </StackPanel>
 
-                                        <!--  扇形属性组（仅 Pie 时显示）：起始角 + 扫掠角  -->
-                                        <StackPanel Visibility="{Binding SelectedItemIsPie, Converter={StaticResource BoolToVis}}">
-                                            <TextBlock
-                                                Margin="0,0,0,8"
-                                                FontSize="11"
-                                                FontWeight="Bold"
-                                                Foreground="#78909c"
-                                                Text="扇形属性" />
-                                            <Grid Margin="0,0,0,2">
-                                                <TextBlock
-                                                    HorizontalAlignment="Left"
-                                                    VerticalAlignment="Center"
-                                                    FontSize="10"
-                                                    Foreground="#a8c4d8"
-                                                    Text="起始角" />
-                                                <TextBlock
-                                                    HorizontalAlignment="Right"
-                                                    VerticalAlignment="Center"
-                                                    FontSize="10"
-                                                    Foreground="#546e7a"
-                                                    Text="{Binding SelectedItem.StartAngle, Mode=OneWay, StringFormat={}{0:0.#}°}" />
-                                            </Grid>
-                                            <controls:SliderSpinBox
-                                                IsSnapToTickEnabled="True"
-                                                LargeChange="10"
-                                                Maximum="360"
-                                                Minimum="0"
-                                                Step="1"
-                                                StringFormat="{}{0:0.#}°"
-                                                Value="{Binding SelectedItem.StartAngle, Mode=TwoWay}" />
-                                            <Grid Margin="0,8,0,2">
-                                                <TextBlock
-                                                    HorizontalAlignment="Left"
-                                                    VerticalAlignment="Center"
-                                                    FontSize="10"
-                                                    Foreground="#a8c4d8"
-                                                    Text="扫掠角" />
-                                                <TextBlock
-                                                    HorizontalAlignment="Right"
-                                                    VerticalAlignment="Center"
-                                                    FontSize="10"
-                                                    Foreground="#546e7a"
-                                                    Text="{Binding SelectedItem.SweepAngle, Mode=OneWay, StringFormat={}{0:0.#}°}" />
-                                            </Grid>
-                                            <controls:SliderSpinBox
-                                                IsSnapToTickEnabled="True"
-                                                LargeChange="10"
-                                                Maximum="360"
-                                                Minimum="1"
-                                                Step="1"
-                                                StringFormat="{}{0:0.#}°"
-                                                Value="{Binding SelectedItem.SweepAngle, Mode=TwoWay}" />
-                                        </StackPanel>
+                                        
 
                                         <!--  带状折线属性组（仅 BandPolyline 时显示）  -->
                                         <StackPanel Visibility="{Binding SelectedItemIsBandPolyline, Converter={StaticResource BoolToVis}}">

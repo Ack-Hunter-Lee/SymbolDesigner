@@ -909,6 +909,7 @@ public partial class PrimitiveItem : ObservableObject
                 Math.Max(0.1, Width / 2), Math.Max(0.1, Height / 2)),
         nameof(L1Primitive.Triangle) => BuildTriangleGeometry(),
         nameof(L1Primitive.Ring) => RingGeometry,
+        nameof(L1Primitive.Pie) => PieGeometry,
         nameof(L1Primitive.Line) => BuildLineSelectionGeometry(),
         nameof(L1Primitive.Polyline) when IsClosed => OutlineGeometry,
         nameof(L1Primitive.Polyline) => PolylineGeometry,
