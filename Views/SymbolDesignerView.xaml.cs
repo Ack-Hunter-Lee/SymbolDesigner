@@ -437,15 +437,13 @@ public partial class SymbolDesignerView : UserControl
             vm.IsExportDialogOpen = false;
     }
 
-    /// <summary>点击"复制到剪贴板"按钮。</summary>
+    /// <summary>点击"复制到剪贴板"按钮：复制后自动关闭导出弹窗。</summary>
     private void OnCopyXamlClick(object sender, MouseButtonEventArgs e)
     {
         if (DataContext is SymbolDesignerViewModel vm)
         {
             vm.CopyXamlToClipboardCommand.Execute(null);
-            // 全选弹窗中的文本框内容，方便用户看到已经复制
-            ExportTextBox.SelectAll();
-            ExportTextBox.Focus();
+            vm.IsExportDialogOpen = false; // 复制完成 → 关闭导出浮层
         }
     }
 

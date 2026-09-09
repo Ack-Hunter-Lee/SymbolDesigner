@@ -114,7 +114,7 @@ public static class XamlExporter
                 => EllipseElement(left, top, w, h, z, ctx),
 
             "Line"
-                => LineElement(left, top, w, h, z, ctx),
+                => LineElement(p, left, top, w, h, z, ctx),
 
             "Triangle"
                 => TriangleElement(left, top, w, h, z, ctx),
@@ -345,12 +345,37 @@ public static class XamlExporter
            $" Width=\"{w}\" Height=\"{h}\" Panel.ZIndex=\"{z}\"" +
            $" Fill=\"{ctx.FillExpression}\" Stroke=\"{ctx.StrokeExpression}\" StrokeThickness=\"{ctx.StrokeWidthExpression}\" />";
 
-    private static string LineElement(string left, string top, string w, string h, string z,
+    private static string LineElement(PrimitiveItem p, string left, string top, string w, string h, string z,
         ExportContext ctx)
-        => $"<Line Canvas.Left=\"{left}\" Canvas.Top=\"{top}\"" +
-           $" X1=\"0\" Y1=\"{h}\" X2=\"{w}\" Y2=\"0\"" +
-           $" Panel.ZIndex=\"{z}\"" +
-           $" Stroke=\"{ctx.StrokeExpression}\" StrokeThickness=\"{ctx.StrokeWidthExpression}\" />";
+    {
+        // 有 PathData（画线工具绘制的精确斜线）→ 用首尾点导出，保留真实方向；
+        // 无 PathData（工具栏拖入的空模板）→ 按 LineAxis 回退（默认对角左下→右上）。
+        string x1, y1, x2, y2;
+        var pts = p.ParsedPathPoints;
+        if (pts is { Count: >= 2 })
+        {
+            x1 = Fmt(pts[0].X);
+            y1 = Fmt(pts[0].Y);
+            x2 = Fmt(pts[pts.Count - 1].X);
+            y2 = Fmt(pts[pts.Count - 1].Y);
+        }
+        else
+        {
+            switch (p.LineAxis)
+            {
+                case Models.LineAxisMode.Horizontal:
+                    x1 = "0"; y1 = Fmt(p.Height / 2); x2 = w; y2 = Fmt(p.Height / 2); break;
+                case Models.LineAxisMode.Vertical:
+                    x1 = Fmt(p.Width / 2); y1 = "0"; x2 = Fmt(p.Width / 2); y2 = h; break;
+                default: // Free（默认对角）：左下 → 右上
+                    x1 = "0"; y1 = h; x2 = w; y2 = "0"; break;
+            }
+        }
+        return $"<Line Canvas.Left=\"{left}\" Canvas.Top=\"{top}\"" +
+               $" X1=\"{x1}\" Y1=\"{y1}\" X2=\"{x2}\" Y2=\"{y2}\"" +
+               $" Panel.ZIndex=\"{z}\"" +
+               $" Stroke=\"{ctx.StrokeExpression}\" StrokeThickness=\"{ctx.StrokeWidthExpression}\" />";
+    }
 
     /// <summary>
     /// 三角形：用 Polygon + Stretch="Uniform" 让一个绝对坐标多边形适配 w×h 包围盒。
