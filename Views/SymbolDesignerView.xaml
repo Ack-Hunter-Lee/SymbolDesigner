@@ -1973,6 +1973,71 @@
                             </ItemsControl>
 
                             <!--
+                                扇形拖拽手柄：仅选中 L1 Pie 时显示（中心 1 + 半径 1 + 起始角 1 + 终止角 1 = 4 个）。
+                                Center 中心点：拖动整体平移；Radius 半径点：拖动改半径（圆心不动）；
+                                Start 起始角点：沿圆周拖动转起始半径；End 终止角点：沿圆周拖动改扫掠角。
+                            -->
+                            <ItemsControl
+                                IsHitTestVisible="True"
+                                ItemsSource="{Binding PieHandles}"
+                                PreviewMouseLeftButtonDown="OnPieHandleMouseDown"
+                                PreviewMouseLeftButtonUp="OnPieHandleMouseUp"
+                                PreviewMouseMove="OnPieHandleMouseMove"
+                                Visibility="{Binding SelectedItemIsPie, Converter={StaticResource BoolToVis}}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <Canvas />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemContainerStyle>
+                                    <Style TargetType="ContentPresenter">
+                                        <Setter Property="Canvas.Left" Value="{Binding X}" />
+                                        <Setter Property="Canvas.Top" Value="{Binding Y}" />
+                                        <Setter Property="Panel.ZIndex" Value="9996" />
+                                        <Setter Property="Width" Value="3.5" />
+                                        <Setter Property="Height" Value="3.5" />
+                                        <Setter Property="Margin" Value="-1.75,-1.75,0,0" />
+                                    </Style>
+                                </ItemsControl.ItemContainerStyle>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <!--  中心手柄：白色圆点；半径手柄：蓝色方块；起始角：黄色方块；终止角：橙色圆点。反向缩放：屏幕尺寸恒定。  -->
+                                        <Rectangle
+                                            Cursor="SizeAll"
+                                            RenderTransformOrigin="0.5,0.5"
+                                            Stroke="#ffffff"
+                                            StrokeThickness="0.1">
+                                            <Rectangle.RenderTransform>
+                                                <ScaleTransform
+                                                    ScaleX="{Binding InverseScale}"
+                                                    ScaleY="{Binding InverseScale}" />
+                                            </Rectangle.RenderTransform>
+                                            <Rectangle.Style>
+                                                <Style TargetType="Rectangle">
+                                                    <Setter Property="Fill" Value="#64B5F6" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Kind}" Value="{x:Static viewmodels:PieHandleKind.Center}">
+                                                            <Setter Property="Fill" Value="#ffffff" />
+                                                            <Setter Property="RadiusX" Value="1.75" />
+                                                            <Setter Property="RadiusY" Value="1.75" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Kind}" Value="{x:Static viewmodels:PieHandleKind.Start}">
+                                                            <Setter Property="Fill" Value="#FFD54F" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Kind}" Value="{x:Static viewmodels:PieHandleKind.End}">
+                                                            <Setter Property="Fill" Value="#FF7043" />
+                                                            <Setter Property="RadiusX" Value="1.75" />
+                                                            <Setter Property="RadiusY" Value="1.75" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Rectangle.Style>
+                                        </Rectangle>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!--
                                 轮廓接缝手柄：仅轮廓模式下显示（骨架/带宽模式下隐藏，避免和顶点手柄混淆）。
                                 每个手柄定位在接缝的外尖点（miter 顶点），点击选中该接缝 → 属性面板显示其样式编辑。
                             -->

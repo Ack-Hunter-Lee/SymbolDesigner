@@ -143,6 +143,7 @@ public partial class SymbolDesignerViewModel
         RefreshVertexHandles();
         RefreshSegmentHandles();
         RefreshRingHandles();
+        RefreshPieHandles();
         // SelectedItem 改变时，若当前是轮廓模式也刷新接缝手柄
         if (OutlineEditMode == OutlineEditMode.Outline)
             RefreshOutlineCornerHandles();
@@ -206,11 +207,18 @@ public partial class SymbolDesignerViewModel
             RefreshBandWidthHandles();
             // 圆环：拖圆心手柄 → X/Y 变 → 刷新圆心/外圆/内圆手柄位置
             RefreshRingHandles();
+            RefreshPieHandles();
         }
         else if (e.PropertyName == nameof(PrimitiveItem.InnerRadius))
         {
             // 圆环：内径变 → 刷新内圆手柄位置
             RefreshRingHandles();
+        }
+        else if (e.PropertyName == nameof(PrimitiveItem.StartAngle) ||
+                 e.PropertyName == nameof(PrimitiveItem.SweepAngle))
+        {
+            // 扇形：角度变（属性面板或手柄拖拽）→ 刷新起始角/终止角手柄位置
+            RefreshPieHandles();
         }
         else if (e.PropertyName == nameof(PrimitiveItem.IsClosed))
         {

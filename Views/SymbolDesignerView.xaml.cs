@@ -880,6 +880,7 @@ public partial class SymbolDesignerView : UserControl
     // ============== 圆环（L1 Ring）拖拽手柄 ==============
 
     private RingHandle? _draggingRing;
+    private PieHandle? _draggingPie;
 
     /// <summary>圆环手柄按下：记录正在拖拽的手柄 + 捕获鼠标。
     /// 通过鼠标在画布上的位置驱动 VM.UpdateRingHandle（Center=平移，Outer=改外径，Inner=改内径）。</summary>
@@ -914,6 +915,43 @@ public partial class SymbolDesignerView : UserControl
         if (_draggingRing is null) return;
         if (sender is UIElement ui && ui.IsMouseCaptured) ui.ReleaseMouseCapture();
         _draggingRing = null;
+    }
+
+    // ───────────── 扇形（L1 Pie）拖拽手柄 ─────────────
+
+    /// <summary>扇形手柄按下：记录正在拖拽的手柄 + 捕获鼠标。
+    /// 通过鼠标在画布上的位置驱动 VM.UpdatePieHandle（Center=平移，Radius=改半径，Start/End=改角度）。</summary>
+    private void OnPieHandleMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (DataContext is not SymbolDesignerViewModel vm) return;
+        if (e.OriginalSource is not FrameworkElement fe || fe.DataContext is not PieHandle h) return;
+
+        _draggingPie = h;
+        if (sender is UIElement ui) ui.CaptureMouse();
+        e.Handled = true;
+    }
+
+    /// <summary>扇形手柄移动：把鼠标位置传给 VM.UpdatePieHandle 更新圆心/半径/角度（几何 + 其它手柄同步）。</summary>
+    private void OnPieHandleMouseMove(object sender, MouseEventArgs e)
+    {
+        if (_draggingPie is null) return;
+        if (e.LeftButton != MouseButtonState.Pressed)
+        {
+            _draggingPie = null;
+            return;
+        }
+        if (DataContext is not SymbolDesignerViewModel vm) return;
+
+        var pos = e.GetPosition(CanvasHost);
+        vm.UpdatePieHandle(_draggingPie.Kind, pos.X, pos.Y);
+    }
+
+    /// <summary>扇形手柄松开：释放鼠标捕获 + 清空拖拽状态。</summary>
+    private void OnPieHandleMouseUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_draggingPie is null) return;
+        if (sender is UIElement ui && ui.IsMouseCaptured) ui.ReleaseMouseCapture();
+        _draggingPie = null;
     }
 
     // ============== 轮廓编辑模式（OutlineEditMode） ==============

@@ -305,6 +305,120 @@ public partial class SymbolDesignerViewModel
         }
     }
 
+    // ============== 扇形（L1 Pie）拖拽手柄 ==============
+
+    /// <summary>扇形的选中拖拽手柄集合：中心 1 + 半径 1（东侧）+ 起始角 1 + 终止角 1 = 4 个。
+    /// 显示在画布上（仅选中 Pie 时），用于平移/改半径/调起始角/调扫掠角。</summary>
+    public ObservableCollection<PieHandle> PieHandles { get; } = new();
+
+    /// <summary>刷新 PieHandles：中心 1 + 半径 1（东侧）+ 起始角 1 + 终止角 1 = 4 个。
+    /// 圆手柄中心 = (cx,cy)，半径手柄 = 东侧 (cx+r,cy)，角度手柄在圆周上沿 StartAngle / StartAngle+SweepAngle。
+    /// SelectedItem 为 Pie 时按当前圆心/半径/角度填充；其它情况清空。
+    /// 调用时机：SelectedItem 变化 / X·Y·Width·Height·StartAngle·SweepAngle 变化 / 加载完成。</summary>
+    private void RefreshPieHandles()
+    {
+        PieHandles.Clear();
+        if (SelectedItem is not { } item) return;
+        if (item.TypeKey != nameof(L1Primitive.Pie)) return;
+        if (item.Width <= 0 || item.Height <= 0) return;
+
+        double cx = item.X + item.Width / 2;
+        double cy = item.Y + item.Height / 2;
+        double r = Math.Min(item.Width, item.Height) / 2;
+        double a0 = item.StartAngle * Math.PI / 180;
+        double a1 = (item.StartAngle + item.SweepAngle) * Math.PI / 180;
+
+        PieHandles.Add(new PieHandle(PieHandleKind.Center, cx, cy));
+        PieHandles.Add(new PieHandle(PieHandleKind.Radius, cx + r, cy));
+        PieHandles.Add(new PieHandle(PieHandleKind.Start, cx + r * Math.Cos(a0), cy + r * Math.Sin(a0)));
+        PieHandles.Add(new PieHandle(PieHandleKind.End, cx + r * Math.Cos(a1), cy + r * Math.Sin(a1)));
+    }
+
+    /// <summary>扇形手柄拖拽：根据手柄类型 + 鼠标在画布上的位置，更新扇形几何。
+    /// Center = 平移圆心（X/Y 整体移动，半径/角度不变）；Radius = 改半径（Width/Height 等比变，圆心不动）；
+    /// Start = 改起始角（鼠标相对圆心方位）；End = 改扫掠角（终止角方位 - 起始角）。
+    /// 拖拽期间手柄集合不重建，直接更新各手柄 X/Y。</summary>
+    public void UpdatePieHandle(PieHandleKind kind, double mouseX, double mouseY)
+    {
+        if (SelectedItem is not { } item) return;
+        if (item.TypeKey != nameof(L1Primitive.Pie)) return;
+
+        double halfW = item.Width / 2;
+        double halfH = item.Height / 2;
+        double cx = item.X + halfW;
+        double cy = item.Y + halfH;
+
+        switch (kind)
+        {
+            case PieHandleKind.Center:
+                item.X = mouseX - halfW;
+                item.Y = mouseY - halfH;
+                break;
+
+            case PieHandleKind.Radius:
+                {
+                    double dX = mouseX - cx;
+                    double dY = mouseY - cy;
+                    double r = Math.Max(2, Math.Sqrt(dX * dX + dY * dY));
+                    item.X = cx - r;
+                    item.Y = cy - r;
+                    item.Width = r * 2;
+                    item.Height = r * 2;
+                }
+                break;
+
+            case PieHandleKind.Start:
+                item.StartAngle = AngleOf(cx, cy, mouseX, mouseY);
+                break;
+
+            case PieHandleKind.End:
+                {
+                    double a = AngleOf(cx, cy, mouseX, mouseY);
+                    double sweep = a - item.StartAngle;
+                    // 归一化到一个顺时针周期内，且保持 (0,360) 之间
+                    sweep = (sweep % 360 + 360) % 360;
+                    item.SweepAngle = sweep <= 0 ? 1 : sweep;
+                }
+                break;
+        }
+
+        // 同步手柄位置（集合不重建，直接更新各手柄 X/Y）
+        for (int i = 0; i < PieHandles.Count; i++)
+        {
+            var h = PieHandles[i];
+            double r = Math.Min(item.Width, item.Height) / 2;
+            switch (h.Kind)
+            {
+                case PieHandleKind.Center:
+                    h.X = item.X + item.Width / 2;
+                    h.Y = item.Y + item.Height / 2;
+                    break;
+                case PieHandleKind.Radius:
+                    h.X = item.X + item.Width / 2 + r;
+                    h.Y = item.Y + item.Height / 2;
+                    break;
+                default:
+                    {
+                        double kx = item.X + item.Width / 2;
+                        double ky = item.Y + item.Height / 2;
+                        double ang = h.Kind == PieHandleKind.Start
+                            ? item.StartAngle * Math.PI / 180
+                            : (item.StartAngle + item.SweepAngle) * Math.PI / 180;
+                        h.X = kx + r * Math.Cos(ang);
+                        h.Y = ky + r * Math.Sin(ang);
+                        break;
+                    }
+            }
+        }
+    }
+
+    /// <summary>计算鼠标相对圆心 (cx,cy) 的方位角（度，0=东，屏幕顺时针正值，y 向下）。</summary>
+    private static double AngleOf(double cx, double cy, double mx, double my)
+    {
+        double deg = Math.Atan2(my - cy, mx - cx) * 180 / Math.PI;
+        return (deg % 360 + 360) % 360;
+    }
+
     // ============== 轮廓接缝编辑（OutlineEditMode.Outline 模式下显示） ==============
 
     /// <summary>当前选中 BandPolyline 的轮廓接缝手柄集合（画布坐标）。
