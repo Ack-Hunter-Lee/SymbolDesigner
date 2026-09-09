@@ -341,6 +341,9 @@ public partial class SymbolDesignerViewModel
             // 圆环默认内径 = 外径 1/4（与 AddL1 拖入语义一致）
             if (primitive == L1Primitive.Ring)
                 item.InnerRadius = System.Math.Min(w, h) / 4;
+            // 扇形：中心→第二点方向 = 对称中轴线（对称张角 60°）；第二点距中心的距离 = 半径（扇形的"鼻尖"）
+            if (primitive == L1Primitive.Pie)
+                item.StartAngle = AngleOf(center.X, center.Y, p2.X, p2.Y);
             item.ZIndex = Primitives.Count;
             Primitives.Add(item);
             ItemCount = Primitives.Count;
@@ -637,8 +640,10 @@ public partial class SymbolDesignerViewModel
                 break;
 
             case DrawMode.Pie:
-                // 扇形预览：半径点语义 → 正圆，默认起始角 0°、扫掠角 60°（与提交后的成品几何一致）。
-                sb.Append(Converters.PieGeometryBuilder.BuildPath(center.X, center.Y, halfW, 0, 60));
+                // 扇形预览：半径 = 圆心到鼠标距离；对称中轴 = 圆心指向鼠标方向（第二点方向 = 对称中轴线），
+                // 对称张角默认 60°（与提交后的成品几何一致，鼻尖朝向鼠标）。
+                sb.Append(Converters.PieGeometryBuilder.BuildPath(center.X, center.Y,
+                    halfW, AngleOf(center.X, center.Y, p.X, p.Y), 60));
                 break;
         }
 

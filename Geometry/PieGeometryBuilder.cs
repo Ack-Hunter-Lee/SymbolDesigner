@@ -19,18 +19,19 @@ namespace SymbolDesigner.Converters;
 /// </summary>
 internal static class PieGeometryBuilder
 {
-    /// <summary>生成扇形 Path Data 字符串（画布/局部坐标均可，由调用方传绝对或相对圆心半径）。</summary>
+    /// <summary>生成扇形 Path Data 字符串（画布/局部坐标均可，由调用方传绝对或相对圆心半径）。
+/// 对称语义：分布关于中轴对称，从 中轴-张角/2 张开到 中轴+张角/2。</summary>
     /// <param name="cx">圆心 X</param>
     /// <param name="cy">圆心 Y</param>
     /// <param name="radius">外圆半径（&gt;0）</param>
-    /// <param name="startDeg">起始角（度，0=东，正=屏幕顺时针）</param>
-    /// <param name="sweepDeg">扫掠角（度，&gt;0 正角度方向，clamp 到 (0,360) 防整圆退化）</param>
-    public static string BuildPath(double cx, double cy, double radius, double startDeg, double sweepDeg)
+    /// <param name="axisDeg">对称中轴指向角（度，0=东，正=屏幕顺时针）。弧区 = [axis-∠/2, axis+∠/2]。</param>
+    /// <param name="sweepDeg">张角/总夹角（度，对中轴对称展开；Clamp 到 (0,360) 防整圆退化）</param>
+    public static string BuildPath(double cx, double cy, double radius, double axisDeg, double sweepDeg)
     {
         double r = System.Math.Max(0.01, radius);
         double sweep = ClampSweep(sweepDeg);
-        double a0 = ToRadians(startDeg);
-        double a1 = ToRadians(startDeg + sweep);
+        double a0 = ToRadians(axisDeg - sweep / 2);
+        double a1 = ToRadians(axisDeg + sweep / 2);
         double sx = cx + r * System.Math.Cos(a0);
         double sy = cy + r * System.Math.Sin(a0);
         double ex = cx + r * System.Math.Cos(a1);
