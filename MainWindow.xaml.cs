@@ -12,14 +12,24 @@ public partial class MainWindow : Window
         InitializeComponent();
     }
 
-    /// <summary>方向键微移选中元素：
-    /// WPF 把方向键当焦点导航键，KeyBinding / 画布级 PreviewKeyDown 都收不到，
-    /// 必须在 Window 级 PreviewKeyDown（tunneling 起点）拦截才会先于导航触发。
-    /// 焦点在 TextBox(属性面板)内放行，方向键留给光标移动。</summary>
+    /// <summary>窗口级预览按键（tunneling 起点）：
+    /// - Enter：绘制中强制结束绘制。原因：KeyBinding 在本 Window 的 InputBindings 里，
+    ///   但若焦点落在某控件（如 SliderSpinBox 的内嵌 TextBox 会消费 Enter），KeyBinding 收不到。
+    ///   与方向键一样在 Window 层拦截才稳定，绘制中始终放行提交。
+    /// - 方向键微移选中元素：WPF 把方向键当焦点导航键，KeyBinding / 画布级 PreviewKeyDown 都收不到，
+    ///   必须在 Window 级 PreviewKeyDown 拦截才会先于导航触发。
+    /// 焦点在 TextBox(属性面板)内时方向键放行给光标移动；但不放行 Enter（避免干扰绘制结束）。</summary>
     protected override void OnPreviewKeyDown(KeyEventArgs e)
     {
         var vm = DataContext as SymbolDesignerViewModel
                  ?? (Content as FrameworkElement)?.DataContext as SymbolDesignerViewModel;
+        // Enter 结束绘制：即使某控件持有键盘焦点也强制提交（保证 Polyline/BandPolyline 能用 Enter 结束）
+        if (e.Key == Key.Enter && vm is not null && vm.IsDrawing)
+        {
+            vm.FinishDraw();
+            e.Handled = true;
+            return;
+        }
         if (e.Key is Key.Left or Key.Right or Key.Up or Key.Down
             && Keyboard.Modifiers == ModifierKeys.None
             && Keyboard.FocusedElement is not TextBox
