@@ -159,8 +159,10 @@ public static class ClipperBooleanEngine
             var path = new PathD();
             void Add(Point p)
             {
-                var pt = g.Transform.Transform(p);
-                path.Add(new PointD(pt.X, pt.Y));
+                // GetFlattenedPathGeometry 已经应用了 Geometry.Transform（输出即画布坐标），
+                // 这里不得再乘 g.Transform，否则带 Translate 的图元（如闭合折线/布尔桥源）会被双重平移，
+                // 导致布尔结果位置错乱、图元"消失"。
+                path.Add(new PointD(p.X, p.Y));
             }
             Add(f.StartPoint);
             foreach (var seg in f.Segments)
