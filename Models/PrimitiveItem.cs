@@ -306,10 +306,10 @@ public partial class PrimitiveItem : ObservableObject
     /// 空 = 老版布尔结果（无源引用，不可重新合并）。</summary>
     [ObservableProperty] private string _booleanMode = string.Empty;
 
-    /// <summary>参与本次布尔运算的源图元 Id（仅 BooleanPath，顺序 = 选择顺序）。
-    /// 与沿路径阵列同策略：存"引用"不存指针——源被删/改不影响结果图元本身，
-    /// "重新合并"命令按 Id 取源图元当前几何重新运算。</summary>
-    [ObservableProperty] private List<Guid> _booleanSourceIds = new();
+    /// <summary>参与本次布尔运算的源图元【几何快照】DTO（仅 BooleanPath，顺序 = 选择顺序）。
+    /// 不存"画布上保留的源图元引用"，而是把源几何快照挂载在结果上；需要调整时按快照
+    /// 物化回画布、编辑后再重新合并。空 = 老版布尔结果（无快照，调整源禁用）。</summary>
+    [ObservableProperty] private List<PrimitiveItemDto> _booleanSourceSnapshot = new();
 
     partial void OnIsClosedChanged(bool value)
     {

@@ -34,20 +34,23 @@ public partial class SymbolDesignerViewModel
             }
         }
 
-        // 正处于"调整源"而选中切换到其它（含取消）→ 自动收起源，避免源残留画布
-        if (IsSourceAdjustMode && value?.Id != _sourceAdjustTarget)
+        // 正处于"调整源"而选中切换到其它（含取消；点物化源本身不算切走）→ 自动收起源，避免源残留画布
+        if (IsSourceAdjustMode
+            && value?.Id != _sourceAdjustTarget
+            && !IsActiveBooleanSourceItem(value))
         {
-            if (_sourceAdjustTarget != Guid.Empty)
+            var t = Primitives.FirstOrDefault(p => p.Id == _sourceAdjustTarget);
+            if (t is not null)
             {
-                var t = Primitives.FirstOrDefault(p => p.Id == _sourceAdjustTarget);
-                if (t is { TypeKey: nameof(L1Primitive.BooleanPath) })
-                {
-                    CollapseSourceAdjust(t);
-                    SetBooleanSourcesVisible(t, false);
-                }
+                CollapseSourceAdjust(t);
+                NotifyBooleanCanExecuteChanged();
             }
-            _sourceAdjustTarget = Guid.Empty;
-            IsSourceAdjustMode = false;
+            else
+            {
+                _sourceAdjTemp.Clear();
+                _sourceAdjustTarget = Guid.Empty;
+                IsSourceAdjustMode = false;
+            }
         }
 
         // 单选：把选中状态同步到所有 item
@@ -71,8 +74,7 @@ public partial class SymbolDesignerViewModel
         OnPropertyChanged(nameof(SelectedItemIsRing));
         OnPropertyChanged(nameof(SelectedItemIsBooleanPath));
         OnPropertyChanged(nameof(SelectedBooleanSkeletonInfo));
-        OnPropertyChanged(nameof(CanRecomputeBoolean));
-        ToggleSourceAdjustCommand.NotifyCanExecuteChanged();
+        NotifyBooleanCanExecuteChanged(); // 刷新"CanRecomputeBoolean"属性 + 调整源/重新合并按钮
         // 格式刷按钮可用态：选中变化（多选累积切到单选、选中切到 null）→ 通知 PickFormatPainter 重新评估 CanExecute
         PickFormatPainterCommand.NotifyCanExecuteChanged();
 
@@ -342,9 +344,9 @@ public partial class SymbolDesignerViewModel
         if (_isArrayEditMode) ExitArrayEdit(); // 清空/撤销恢复关闭编辑浮层，避免 _editingArray 悬空
         if (scheduleUndo)
             ScheduleUndoCommit(); // 清空是可撤销步骤:先记前置快照
-        // 清空画布 → 调整源现场一并废弃（源随集合清空，还原字典失去意义）
+        // 清空画布 → 调整源现场一并废弃（物化源随 Primitives.Clear 一并移除）
         _sourceAdjustTarget = Guid.Empty;
-        _sourceZRestore.Clear();
+        _sourceAdjTemp.Clear();
         IsSourceAdjustMode = false;
         Primitives.Clear();
         ArrayInstances.Clear();

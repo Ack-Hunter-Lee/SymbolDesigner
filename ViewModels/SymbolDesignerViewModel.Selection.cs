@@ -83,6 +83,7 @@ public partial class SymbolDesignerViewModel
         MergeShapesCommand.NotifyCanExecuteChanged();
         SubtractShapesCommand.NotifyCanExecuteChanged();
         IntersectShapesCommand.NotifyCanExecuteChanged();
+        NotifyBooleanCanExecuteChanged(); // 调整源/重新合并按钮随多选态刷新
         RefreshScaleSelectionHandles();
         System.Diagnostics.Debug.WriteLine($"[CanApplyTangent?={CanApplyTangent}] MultiSelected.Count={MultiSelected.Count} items=[{string.Join(",", MultiSelected.Select(p => p.TypeKey))}]  Constraints.Count={Constraints.Count}");
     }
@@ -104,6 +105,7 @@ public partial class SymbolDesignerViewModel
         MergeShapesCommand.NotifyCanExecuteChanged();
         SubtractShapesCommand.NotifyCanExecuteChanged();
         IntersectShapesCommand.NotifyCanExecuteChanged();
+        NotifyBooleanCanExecuteChanged(); // 调整源/重新合并按钮随多选态刷新
         RefreshScaleSelectionHandles();
         System.Diagnostics.Debug.WriteLine($"[CanApplyTangent?={CanApplyTangent}] MultiSelected.Count={MultiSelected.Count} (after clear) Constraints.Count={Constraints.Count}");
     }

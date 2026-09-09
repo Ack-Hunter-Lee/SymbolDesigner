@@ -116,9 +116,11 @@ public class PrimitiveItemDto
     /// <summary>布尔运算模式（仅 BooleanPath）："Union"/"Exclude"/"Intersect"。
     /// 老文件没有此字段 → 加载时为空（老版布尔结果，无源可重新合并）。</summary>
     public string? BooleanMode { get; set; }
-    /// <summary>参与布尔运算的源图元 Id（仅 BooleanPath，保留选择顺序）。
-    /// 老文件没有此字段 → 加载时为空，结果图元本身不受影响。</summary>
-    public List<string>? BooleanSourceIds { get; set; }
+    /// <summary>参与布尔运算的源图元【几何快照】（仅 BooleanPath，保留选择顺序）。
+    /// 用完整 DTO 快照承载源数据，而不是"引用画布上保留但隐藏的源图元"：
+    /// 源以数据挂载在结果上、按需物化回画布，天然不占画布 / 不进导出 / 不撑包围盒。
+    /// 老文件没有此字段（老版只存源 Id 引用）→ 加载时快照为空 → 老结果的"调整源"禁用。</summary>
+    public List<PrimitiveItemDto>? BooleanSources { get; set; }
 
     // ===== 外观（线条/填充，任意图元通用；老文件缺省 = 各类型的默认观感） =====
     /// <summary>线条颜色 hex（缺省 null → 默认 #FFFFFF）。</summary>

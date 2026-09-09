@@ -1,5 +1,8 @@
+using System.Collections.Generic;
+using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using SymbolDesigner.Models;
 
 namespace SymbolDesigner.ViewModels;
 
@@ -8,9 +11,18 @@ public partial class SymbolDesignerViewModel
 {
     // ============== XAML 导出 ==============
 
-    /// <summary>当前画布的 XAML 导出（按需计算，避免重复序列化）。</summary>
-    public string ExportedXaml =>
-        XamlExporter.ExportCanvas(Primitives);
+    /// <summary>当前画布的 XAML 导出（按需计算，避免重复序列化）。
+    /// "调整源"期间会过滤掉物化的临时源——源专属瞬态编辑壳，不进客户工程/不撑包围盒。</summary>
+    public string ExportedXaml
+    {
+        get
+        {
+            IEnumerable<PrimitiveItem> items = IsSourceAdjustMode && _sourceAdjTemp.Count > 0
+                ? Primitives.Where(p => !_sourceAdjTemp.Contains(p.Id))
+                : (IEnumerable<PrimitiveItem>)Primitives;
+            return XamlExporter.ExportCanvas(items);
+        }
+    }
 
     /// <summary>导出弹窗是否可见。</summary>
     [ObservableProperty] private bool _isExportDialogOpen;

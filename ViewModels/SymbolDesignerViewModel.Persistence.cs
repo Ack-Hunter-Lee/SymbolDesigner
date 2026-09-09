@@ -127,17 +127,15 @@ public partial class SymbolDesignerViewModel
     /// <summary>当前 Primitives 集合转为 SymbolProject（DTO 序列化容器）。</summary>
     private SymbolProject ToSymbolProject()
     {
-        // 若仍处于"调整源"模式 → 先收起（还原源 ZIndex/Opacity），防止把临时层叠写进工程文件
+        // 若仍处于"调整源"模式 → 先收起（丢弃物化源），防止把临时层叠写进工程文件
         if (IsSourceAdjustMode && _sourceAdjustTarget != Guid.Empty)
         {
             var t = Primitives.FirstOrDefault(p => p.Id == _sourceAdjustTarget);
-            if (t is { TypeKey: nameof(L1Primitive.BooleanPath) })
+            if (t is not null)
             {
                 CollapseSourceAdjust(t);
-                SetBooleanSourcesVisible(t, false);
+                NotifyBooleanCanExecuteChanged();
             }
-            _sourceAdjustTarget = Guid.Empty;
-            IsSourceAdjustMode = false;
         }
 
         var project = new SymbolProject
@@ -249,12 +247,8 @@ public partial class SymbolDesignerViewModel
             PatternTileSize = p.PatternTileSize,
             PatternSpacing = p.PatternSpacing,
         };
-        if (p.BooleanSourceIds.Count > 0)
-        {
-            dto.BooleanSourceIds = p.BooleanSourceIds
-                .Select(g => g.ToString())
-                .ToList();
-        }
+        if (p.BooleanSourceSnapshot.Count > 0)
+            dto.BooleanSources = p.BooleanSourceSnapshot.ToList();
         foreach (var v in p.VertexBandWidths)
             dto.VertexThicknesses.Add(new VertexThicknessDto
             {
@@ -482,15 +476,12 @@ public partial class SymbolDesignerViewModel
                     item.SetVertexJoinStyle(vjs.Index, ParseJoinStyle(vjs.Style));
             }
         }
-        // 恢复布尔运算源引用（老文件无此字段 → 空，老版布尔结果不可重新合并）
+        // 恢复布尔运算源快照（老文件无此字段 → 快照为空，老版布尔结果不可调整源/重新合并）
         item.BooleanMode = dto.BooleanMode ?? string.Empty;
-        if (dto.BooleanSourceIds != null)
+        if (dto.BooleanSources != null)
         {
-            foreach (var id in dto.BooleanSourceIds)
-            {
-                if (Guid.TryParse(id, out var gid))
-                    item.BooleanSourceIds.Add(gid);
-            }
+            foreach (var src in dto.BooleanSources)
+                item.BooleanSourceSnapshot.Add(src); // 反序列化所得已是独立副本，直接沿用
         }
         // 恢复元素透明度：老工程文件没这字段 → 默认 1.0（完全不透明,行为不变）
         item.Opacity = dto.Opacity <= 0 ? 1.0 : Math.Min(1.0, dto.Opacity);

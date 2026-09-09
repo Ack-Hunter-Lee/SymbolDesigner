@@ -942,22 +942,6 @@
                             Text="&#x2229;" />
                     </Border>
 
-                    <!--  保留源图元开关：合并时保留两个源图形（保留后选中结果可"重新合并"重算）  -->
-                    <Border Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon" ToolTip="保留源图元 (合并后源图形不删除, 可继续调整, 再选中结果点&quot;重新合并&quot;)">
-                        <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
-                            <CheckBox
-                                VerticalAlignment="Center"
-                                Foreground="{StaticResource Brush.Tool.Icon}"
-                                IsChecked="{Binding KeepBooleanSources, Mode=TwoWay}" />
-                            <TextBlock
-                                Margin="2,0,0,0"
-                                VerticalAlignment="Center"
-                                FontSize="10"
-                                Foreground="{StaticResource Brush.Tool.Icon}"
-                                Text="保源" />
-                        </StackPanel>
-                    </Border>
-
                     <!--
                         格式刷：选中图元 → 点击按钮吸取样式（线条/填充），再点其它图元即应用并自动退出。
                         自绘"刷子"图标（旋转 45° 的矩形刷头 + 手柄），比 Segoe MDL2 私有区字符更直观。
@@ -3468,7 +3452,7 @@
                                                 Foreground="#a8c4d8"
                                                 Text="由两个闭合图元合并/剪除/相交得到。轮廓点不允许拖拽；轮廓模式下点击轮廓点可设置该点样式（Miter 尖角 / Round 圆角）及圆角半径（0=尖角，&gt;0=圆角）。结果仍可再次参与布尔运算。"
                                                 TextWrapping="Wrap" />
-                                            <!--  源引用 + 调整/重新合并：合并时勾选"保源"后源保留但默认隐藏，仅在调整时临时出现  -->
+                                            <!--  源快照 + 调整/重新合并：合并时源几何已烧入结果；点"调整源"按快照恢复到画布编辑  -->
                                             <Border
                                                 Margin="0,2,0,6"
                                                 Background="#0f1820"
@@ -3548,7 +3532,7 @@
                                                         Margin="6,0,6,4"
                                                         FontSize="9"
                                                         Foreground="#78909c"
-                                                        Text="合并后源图形默认隐藏。点&#x201C;调整源&#x201D;临时显示源（结果半透明作参考）。拖动源：结果实时预览；松开鼠标自动重算并收起源。拖尺寸手柄：实时预览但不自动收起，可继续微调后手动点&#x201C;收起源&#x201D;或&#x201C;重新合并&#x201D;。"
+                                                        Text="点&#x201C;调整源&#x201D;按快照把两个源恢复到画布（结果半透明作参考）。拖动/改尺寸源：结果实时预览；松开鼠标自动重新合并并收起源。可手动点&#x201C;收起源&#x201D;（保持当前结果）或&#x201C;重新合并&#x201D;（按最新源几何烧入结果）。"
                                                         TextWrapping="Wrap" />
                                                 </StackPanel>
                                             </Border>
