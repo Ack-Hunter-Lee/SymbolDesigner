@@ -73,6 +73,7 @@ public partial class SymbolDesignerViewModel
         OnPropertyChanged(nameof(SelectedItemIsPolyline));
         OnPropertyChanged(nameof(SelectedItemIsRing));
         OnPropertyChanged(nameof(SelectedItemIsBooleanPath));
+        OnPropertyChanged(nameof(SelectedItemIsPie));
         OnPropertyChanged(nameof(SelectedBooleanSkeletonInfo));
         NotifyBooleanCanExecuteChanged(); // 刷新"CanRecomputeBoolean"属性 + 调整源/重新合并按钮
         // 格式刷按钮可用态：选中变化（多选累积切到单选、选中切到 null）→ 通知 PickFormatPainter 重新评估 CanExecute

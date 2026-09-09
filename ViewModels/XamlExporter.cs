@@ -125,6 +125,9 @@ public static class XamlExporter
             "Polyline"
                 => PolylineElement(p, left, top, z, ctx),
 
+            "Pie"
+                => PieElement(p, left, top, z, ctx),
+
             "BooleanPath"
                 => BooleanPathElement(p, left, top, z, ctx),
 
@@ -344,6 +347,20 @@ public static class XamlExporter
         => $"<Ellipse Canvas.Left=\"{left}\" Canvas.Top=\"{top}\"" +
            $" Width=\"{w}\" Height=\"{h}\" Panel.ZIndex=\"{z}\"" +
            $" Fill=\"{ctx.FillExpression}\" Stroke=\"{ctx.StrokeExpression}\" StrokeThickness=\"{ctx.StrokeWidthExpression}\" />";
+
+    /// <summary>扇形导出：单 Path，Data = PieGeometry（M 弧起点 A 弧终点 L 圆心 Z 闭合扇面），
+    /// 局部坐标（圆心 = 元素中心），Stretch=None + Canvas.Left/Top 定位。</summary>
+    private static string PieElement(PrimitiveItem p, string left, string top, string z,
+        ExportContext ctx)
+    {
+        var geom = p.PieGeometry;
+        if (geom is null) return Comment("Pie 尺寸无效，无法导出");
+        string dataStr = System.Security.SecurityElement.Escape(geom.ToString(CultureInfo.InvariantCulture));
+        return $"<Path Canvas.Left=\"{left}\" Canvas.Top=\"{top}\"" +
+               $" Data=\"{dataStr}\" Panel.ZIndex=\"{z}\"" +
+               $" Fill=\"{ctx.FillExpression}\" Stroke=\"{ctx.StrokeExpression}\" StrokeThickness=\"{ctx.StrokeWidthExpression}\"" +
+               $" StrokeLineJoin=\"Miter\" Stretch=\"None\" />";
+    }
 
     private static string LineElement(PrimitiveItem p, string left, string top, string w, string h, string z,
         ExportContext ctx)

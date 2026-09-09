@@ -91,6 +91,10 @@ public class PrimitiveItemDto
     public double CornerRadius { get; set; }
     /// <summary>内圆半径（仅 L1 Ring 用）。老文件缺省 = 0（非 Ring 元素不受影响）。</summary>
     public double InnerRadius { get; set; }
+    /// <summary>扇形起始角（度，仅 L1 Pie 用）。老文件缺省 = 0。</summary>
+    public double StartAngle { get; set; }
+    /// <summary>扇形扫掠角（度，仅 L1 Pie 用）。老文件缺省 = 0 → 加载时按默认 60 处理。</summary>
+    public double SweepAngle { get; set; }
     public double Rotation { get; set; }
     public int ZIndex { get; set; }
     public string LineAxis { get; set; } = "Free";

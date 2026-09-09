@@ -215,6 +215,8 @@ public partial class SymbolDesignerViewModel
             Height = p.Height,
             CornerRadius = p.CornerRadius,
             InnerRadius = p.InnerRadius,
+            StartAngle = p.StartAngle,
+            SweepAngle = p.SweepAngle,
             Rotation = p.Rotation,
             ZIndex = p.ZIndex,
             LineAxis = p.LineAxis.ToString(),

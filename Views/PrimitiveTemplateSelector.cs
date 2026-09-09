@@ -19,6 +19,7 @@ public class PrimitiveTemplateSelector : DataTemplateSelector
     public DataTemplate? L1BandPolyline { get; set; }
     public DataTemplate? L1Polyline { get; set; }
     public DataTemplate? L1Ring { get; set; }
+    public DataTemplate? L1Pie { get; set; }
     public DataTemplate? L1BooleanPath { get; set; }
 
     public override DataTemplate? SelectTemplate(object? item, DependencyObject container)
@@ -35,6 +36,7 @@ public class PrimitiveTemplateSelector : DataTemplateSelector
             "BandPolyline" => L1BandPolyline,
             "Polyline" => L1Polyline,
             "Ring" => L1Ring,
+            "Pie" => L1Pie,
             "BooleanPath" => L1BooleanPath,
             _ => null,
         };

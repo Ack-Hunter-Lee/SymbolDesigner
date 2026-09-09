@@ -25,6 +25,7 @@ public partial class SymbolDesignerViewModel
             L1Primitive.RoundedRectangle  => (40.0, 24.0),
             L1Primitive.Triangle         => (20.0, 20.0),
             L1Primitive.Ring             => (40.0, 40.0),
+            L1Primitive.Pie              => (40.0, 40.0),
             _ => (30.0, 30.0),
         };
 
@@ -67,7 +68,7 @@ public partial class SymbolDesignerViewModel
                 // 第二次点击：DraftPoints[0] = 中心点；当前 clamped 是第二点 → 提交
                 // 若按住 Shift 且不是 Ellipse/Ring，则锁正形：用 ConstrainShapeToSquare 等比化后再写入 DraftPoints
                 var center = DraftPoints[0];
-                bool isCircleLike = DrawMode is DrawMode.Ellipse or DrawMode.Ring;
+                bool isCircleLike = DrawMode is DrawMode.Ellipse or DrawMode.Ring or DrawMode.Pie;
                 if (_shiftKey && !isCircleLike)
                     clamped = Converters.GeometryMath.ConstrainShapeToSquare(center, clamped);
                 DraftPoints.Add(clamped);
@@ -129,7 +130,8 @@ public partial class SymbolDesignerViewModel
         or DrawMode.RoundedRectangle
         or DrawMode.Ellipse
         or DrawMode.Ring
-        or DrawMode.Triangle;
+        or DrawMode.Triangle
+        or DrawMode.Pie;
 
     /// <summary>画布鼠标移动：更新橡皮线终点（最后一个已确认点到当前鼠标位置的临时连线）。
     /// 路径类且已起笔时，若鼠标接近起点（首顶点），置 DraftSnapToStart 并让橡皮线终点吸附到起点，
@@ -147,7 +149,7 @@ public partial class SymbolDesignerViewModel
             //   不能经过 ConstrainPoint（AxisSnapEnabled=true 时会投影到水平/竖直轴线），
             //   否则预览圆的半径被算成 |dx| 或 |dy|，鼠标不在圆弧上。
             // - 其它形状（Rect/RoundedRect/Triangle）：Shift 锁等比（正方形/正三角形）
-            bool isCircleLike = DrawMode is DrawMode.Ellipse or DrawMode.Ring;
+            bool isCircleLike = DrawMode is DrawMode.Ellipse or DrawMode.Ring or DrawMode.Pie;
             if (!isCircleLike && shiftKey)
                 DraftPreviewPoint = Converters.GeometryMath.ConstrainShapeToSquare(anchor, clamped);
             else
@@ -305,7 +307,7 @@ public partial class SymbolDesignerViewModel
             var p2 = DraftPoints[1];
             double dx = p2.X - center.X;
             double dy = p2.Y - center.Y;
-            bool isCircleLike = DrawMode is DrawMode.Ellipse or DrawMode.Ring;
+            bool isCircleLike = DrawMode is DrawMode.Ellipse or DrawMode.Ring or DrawMode.Pie;
             double w, h;
             if (isCircleLike)
             {
@@ -331,6 +333,7 @@ public partial class SymbolDesignerViewModel
                 DrawMode.Ellipse           => L1Primitive.Ellipse,
                 DrawMode.Ring              => L1Primitive.Ring,
                 DrawMode.Triangle          => L1Primitive.Triangle,
+                DrawMode.Pie               => L1Primitive.Pie,
                 _                          => L1Primitive.Rectangle,
             };
 
@@ -564,7 +567,7 @@ public partial class SymbolDesignerViewModel
         double dx = p.X - center.X;
         double dy = p.Y - center.Y;
         // Ellipse/Ring 用半径点语义（始终正圆）；其它形状用对角点语义（矩形包围盒）
-        bool isCircleLike = DrawMode is DrawMode.Ellipse or DrawMode.Ring;
+        bool isCircleLike = DrawMode is DrawMode.Ellipse or DrawMode.Ring or DrawMode.Pie;
         double halfW, halfH;
         if (isCircleLike)
         {
@@ -631,6 +634,11 @@ public partial class SymbolDesignerViewModel
                 sb.AppendFormat(System.Globalization.CultureInfo.InvariantCulture, "M {0:0.##},{1:0.##} ", center.X, y);            // 上中
                 sb.AppendFormat(System.Globalization.CultureInfo.InvariantCulture, "L {0:0.##},{1:0.##} ", x, y + h);                // 左下
                 sb.AppendFormat(System.Globalization.CultureInfo.InvariantCulture, "L {0:0.##},{1:0.##} Z ", x + w, y + h);          // 右下
+                break;
+
+            case DrawMode.Pie:
+                // 扇形预览：半径点语义 → 正圆，默认起始角 0°、扫掠角 60°（与提交后的成品几何一致）。
+                sb.Append(Converters.PieGeometryBuilder.BuildPath(center.X, center.Y, halfW, 0, 60));
                 break;
         }
 

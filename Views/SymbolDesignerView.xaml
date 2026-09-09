@@ -199,6 +199,17 @@
                     Fill="#2A2A2A" />
             </Grid>
         </DataTemplate>
+        <!--  扇形（Pie）预览：三角形 + 弧边示意扇面  -->
+        <DataTemplate x:Key="L1PiePreview">
+            <Grid Width="14" Height="14">
+                <Path
+                    Data="M 7,7 L 14,7 A 7,7 0 0 1 4.95,12.05 Z"
+                    Fill="#2A2A2A"
+                    Stroke="White"
+                    StrokeLineJoin="Round"
+                    StrokeThickness="0.6" />
+            </Grid>
+        </DataTemplate>
 
         <!--  画布渲染模板：每个模板都用 DraggablePrimitive 包裹图形，使图形可在画布上拖动  -->
 
@@ -556,6 +567,29 @@
             </views:DraggablePrimitive>
         </DataTemplate>
         <!--
+            扇形（Pie）：单 Path，Data = PieGeometry（M 弧起点 A 弧终点 L 圆心 Z 闭合扇面）。
+            Stretch=None：几何即局部坐标（圆心 = 元素中心），Canvas 定位由 ItemContainerStyle 负责。
+        -->
+        <DataTemplate x:Key="L1PieNode" DataType="{x:Type models:PrimitiveItem}">
+            <views:DraggablePrimitive
+                Width="{Binding Width}"
+                Height="{Binding Height}"
+                Opacity="{Binding Opacity}">
+                <Grid Width="{Binding Width}" Height="{Binding Height}">
+                    <Path
+                        Width="{Binding Width}"
+                        Height="{Binding Height}"
+                        Data="{Binding PieGeometry}"
+                        Fill="{Binding FillBrush}"
+                        Stretch="None"
+                        Stroke="{Binding StrokeBrush}"
+                        StrokeDashArray="{Binding StrokeDashArray}"
+                        StrokeLineJoin="Miter"
+                        StrokeThickness="{Binding StrokeWidth}" />
+                </Grid>
+            </views:DraggablePrimitive>
+        </DataTemplate>
+        <!--
             布尔运算结果：多环骨架快照（合并/剪除/相交产物）。
             Path.Data=OutlineGeometry（多环骨架 + 逐顶点圆角重建；F0 填充规则 + 每环一 figure），
             骨架点/轮廓圆角编辑与闭合 Polyline 同一管道（顶点手柄 + 轮廓手柄共用）。
@@ -586,6 +620,7 @@
             L1Polyline="{StaticResource L1PolylineNode}"
             L1Rectangle="{StaticResource L1RectangleNode}"
             L1Ring="{StaticResource L1RingNode}"
+            L1Pie="{StaticResource L1PieNode}"
             L1RoundedRectangle="{StaticResource L1RoundedNode}"
             L1BandPolyline="{StaticResource L1BandPolylineNode}"
             L1Triangle="{StaticResource L1TriangleNode}" />
@@ -692,6 +727,9 @@
                                                 </DataTrigger>
                                                 <DataTrigger Binding="{Binding Key}" Value="L1_Ring">
                                                     <Setter Property="ContentTemplate" Value="{StaticResource L1RingPreview}" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Key}" Value="L1_Pie">
+                                                    <Setter Property="ContentTemplate" Value="{StaticResource L1PiePreview}" />
                                                 </DataTrigger>
                                                 <DataTrigger Binding="{Binding Key}" Value="L1_Line">
                                                     <Setter Property="ContentTemplate" Value="{StaticResource L1LinePreview}" />
@@ -3720,6 +3758,60 @@
                                                 Foreground="#a8c4d8"
                                                 Text="开放形态：仅骨架描边，无填充。勾选闭合形状后，骨架点首尾相接形成可填充多边形；进入轮廓编辑可对每个骨架点设置圆角半径（0=尖角 Miter，&gt;0=圆角 Round）。"
                                                 TextWrapping="Wrap" />
+                                        </StackPanel>
+
+                                        <!--  扇形属性组（仅 Pie 时显示）：起始角 + 扫掠角  -->
+                                        <StackPanel Visibility="{Binding SelectedItemIsPie, Converter={StaticResource BoolToVis}}">
+                                            <TextBlock
+                                                Margin="0,0,0,8"
+                                                FontSize="11"
+                                                FontWeight="Bold"
+                                                Foreground="#78909c"
+                                                Text="扇形属性" />
+                                            <Grid Margin="0,0,0,2">
+                                                <TextBlock
+                                                    HorizontalAlignment="Left"
+                                                    VerticalAlignment="Center"
+                                                    FontSize="10"
+                                                    Foreground="#a8c4d8"
+                                                    Text="起始角" />
+                                                <TextBlock
+                                                    HorizontalAlignment="Right"
+                                                    VerticalAlignment="Center"
+                                                    FontSize="10"
+                                                    Foreground="#546e7a"
+                                                    Text="{Binding SelectedItem.StartAngle, Mode=OneWay, StringFormat={}{0:0.#}°}" />
+                                            </Grid>
+                                            <controls:SliderSpinBox
+                                                IsSnapToTickEnabled="True"
+                                                LargeChange="10"
+                                                Maximum="360"
+                                                Minimum="0"
+                                                Step="1"
+                                                StringFormat="{}{0:0.#}°"
+                                                Value="{Binding SelectedItem.StartAngle, Mode=TwoWay}" />
+                                            <Grid Margin="0,8,0,2">
+                                                <TextBlock
+                                                    HorizontalAlignment="Left"
+                                                    VerticalAlignment="Center"
+                                                    FontSize="10"
+                                                    Foreground="#a8c4d8"
+                                                    Text="扫掠角" />
+                                                <TextBlock
+                                                    HorizontalAlignment="Right"
+                                                    VerticalAlignment="Center"
+                                                    FontSize="10"
+                                                    Foreground="#546e7a"
+                                                    Text="{Binding SelectedItem.SweepAngle, Mode=OneWay, StringFormat={}{0:0.#}°}" />
+                                            </Grid>
+                                            <controls:SliderSpinBox
+                                                IsSnapToTickEnabled="True"
+                                                LargeChange="10"
+                                                Maximum="360"
+                                                Minimum="1"
+                                                Step="1"
+                                                StringFormat="{}{0:0.#}°"
+                                                Value="{Binding SelectedItem.SweepAngle, Mode=TwoWay}" />
                                         </StackPanel>
 
                                         <!--  带状折线属性组（仅 BandPolyline 时显示）  -->

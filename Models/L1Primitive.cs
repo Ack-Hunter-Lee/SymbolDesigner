@@ -42,6 +42,11 @@ public enum L1Primitive
     /// M/L/Z 折线序列存 PathData（局部坐标），渲染/序列化/再次参与布尔都复用该数据。
     /// 属于"死形状"：只能整体移动/缩放，不具备圆角/厚度等参数化编辑能力。</summary>
     BooleanPath,
+
+    /// <summary>扇形（Pie）：圆心 + 半径 + 起始角 + 扫掠角闭合的填充满扇面。
+    /// Width/Height = 外圆包围盒（直径），StartAngle/SweepAngle 定义扇面方向与幅度。
+    /// 渲染用单 Path（Data = PieGeometry：M 弧起点 A 弧终点 L 圆心 Z），可填充、可参与布尔。</summary>
+    Pie,
 }
 
 /// <summary>直线轴对齐模式（仅 L1 Line 生效）。</summary>
@@ -77,4 +82,6 @@ public enum DrawMode
     Ring,
     /// <summary>三角形模式。两次点击：中心点 + 角点（提交后退出，等边方向由中心-角点连线确定）。</summary>
     Triangle,
+    /// <summary>扇形（Pie）模式。两次点击：中心点 + 半径点（周长点，正圆），提交后默认扫掠角 = 60°。</summary>
+    Pie,
 }

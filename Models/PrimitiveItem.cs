@@ -244,12 +244,14 @@ public partial class PrimitiveItem : ObservableObject
     {
         OnPropertyChanged(nameof(PositionInfo));
         OnPropertyChanged(nameof(RingGeometry));
+        OnPropertyChanged(nameof(PieGeometry));
         OnPropertyChanged(nameof(SelectionGeometry));
     }
     partial void OnHeightChanged(double value)
     {
         OnPropertyChanged(nameof(PositionInfo));
         OnPropertyChanged(nameof(RingGeometry));
+        OnPropertyChanged(nameof(PieGeometry));
         OnPropertyChanged(nameof(SelectionGeometry));
     }
     /// <summary>内圆半径变化时刷新 RingGeometry（圆环几何）—— 拖动内圆手柄看实时效果的关键钩子。</summary>
@@ -257,6 +259,37 @@ public partial class PrimitiveItem : ObservableObject
     {
         OnPropertyChanged(nameof(RingGeometry));
         OnPropertyChanged(nameof(SelectionGeometry));
+    }
+
+    /// <summary>扇形起始角（度，0=东，正=屏幕顺时针）。仅 L1 Pie 生效。</summary>
+    [ObservableProperty] private double _startAngle;
+    /// <summary>扇形扫掠角（度，正角度方向，默认 60°）。仅 L1 Pie 生效。</summary>
+    [ObservableProperty] private double _sweepAngle = 60;
+
+    /// <summary>起始角 / 扫掠角变化时刷新 PieGeometry 与选中装饰（扇形贴形）。</summary>
+    partial void OnStartAngleChanged(double value)
+    {
+        OnPropertyChanged(nameof(PieGeometry));
+        OnPropertyChanged(nameof(SelectionGeometry));
+    }
+    partial void OnSweepAngleChanged(double value)
+    {
+        OnPropertyChanged(nameof(PieGeometry));
+        OnPropertyChanged(nameof(SelectionGeometry));
+    }
+
+    /// <summary>扇形几何：单 Path（M 弧起点 A 弧终点 L 圆心 Z）闭合填充满扇面。
+    /// 局部坐标（以元素 X/Y 为原点），圆心 = (W/2, H/2)，半径 = min(W,H)/2。
+    /// Width/Height/StartAngle/SweepAngle 任一变化都会触发刷新。</summary>
+    public System.Windows.Media.Geometry? PieGeometry
+    {
+        get
+        {
+            double radius = System.Math.Min(Width, Height) / 2;
+            if (Width <= 0 || Height <= 0 || radius <= 0) return null;
+            return System.Windows.Media.Geometry.Parse(
+                Converters.PieGeometryBuilder.BuildPath(Width / 2, Height / 2, radius, StartAngle, SweepAngle));
+        }
     }
 
     /// <summary>直线轴对齐模式（仅 L1 Line 生效）。Free=斜线，Horizontal=水平，Vertical=竖直。</summary>
@@ -776,6 +809,7 @@ public partial class PrimitiveItem : ObservableObject
                         Math.Max(0, CornerRadius), Math.Max(0, CornerRadius)),
                 nameof(L1Primitive.Triangle) => BuildTriangleGeometry(),
                 nameof(L1Primitive.Ring) => RingGeometry,
+                nameof(L1Primitive.Pie) => PieGeometry,
                 nameof(L1Primitive.Polyline) when IsClosed => OutlineGeometry,
                 nameof(L1Primitive.BandPolyline) => OutlineGeometry,
                 nameof(L1Primitive.BooleanPath) => OutlineGeometry,  // 布尔结果 = 多环闭合骨架，走 OutlineGeometry 管道

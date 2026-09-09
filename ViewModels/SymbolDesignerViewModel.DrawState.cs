@@ -125,6 +125,11 @@ public partial class SymbolDesignerViewModel
         SelectedItem is not null
         && SelectedItem.TypeKey == nameof(L1Primitive.Ring);
 
+    /// <summary>当前选中的是否为扇形（Pie）。为 true 时属性面板显示起始角/扫掠角滑块。</summary>
+    public bool SelectedItemIsPie =>
+        SelectedItem is not null
+        && SelectedItem.TypeKey == nameof(L1Primitive.Pie);
+
     /// <summary>当前选中的是否为布尔运算结果（BooleanPath）。
     /// 布尔结果为"多环骨架快照"，骨架点直连闭合环，与闭合 Polyline 同一编辑管道：
     /// 骨架模式拖顶点（段端点，弧保留）→ 轮廓模式逐点设圆角。

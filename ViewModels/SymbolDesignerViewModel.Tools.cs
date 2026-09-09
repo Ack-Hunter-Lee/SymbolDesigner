@@ -19,6 +19,7 @@ public partial class SymbolDesignerViewModel
         new ToolboxEntry("L1_Ellipse",    "椭圆",   "⬭"),
         new ToolboxEntry("L1_Triangle",   "三角形", "▲"),
         new ToolboxEntry("L1_Ring",       "圆环",   "◯"),
+        new ToolboxEntry("L1_Pie",        "扇形",   "◔"),
         new ToolboxEntry("L1_RoundedRectangle", "圆角矩形", "▢"),
         new ToolboxEntry("L1_Line",       "直线",   "／"),
         new ToolboxEntry("L1_Polyline",   "折线",   "〰"),
@@ -59,6 +60,7 @@ public partial class SymbolDesignerViewModel
             "L1_Ellipse"           => DrawMode.Ellipse,
             "L1_Ring"              => DrawMode.Ring,
             "L1_Triangle"          => DrawMode.Triangle,
+            "L1_Pie"               => DrawMode.Pie,
             _                      => DrawMode.None,
         };
     }
