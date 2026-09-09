@@ -4068,6 +4068,29 @@
                                                         Step="0.1"
                                                         StringFormat="{}{0:0.#}"
                                                         Value="{Binding SelectedItem.BandWidth, Mode=TwoWay}" />
+                                                    <!--  取值范围 ×2/÷2：对数缩放上限。带宽远小于上限时 ÷2 收窄让滑块更好微调，×2 放大。  -->
+                                                    <Grid Margin="0,4,0,0">
+                                                        <TextBlock
+                                                            VerticalAlignment="Center"
+                                                            FontSize="9"
+                                                            Foreground="{StaticResource Brush.Text.Tertiary}"
+                                                            Text="调整范围" />
+                                                        <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+                                                            <Button
+                                                                Height="18"
+                                                                Margin="0,0,4,0"
+                                                                Padding="6,0"
+                                                                Command="{Binding BandWidthZoomOutCommand}"
+                                                                Focusable="False"
+                                                                ToolTip="取值范围 ÷2（收窄，便于当前带宽微调）"><TextBlock FontSize="10" Text="÷2" /></Button>
+                                                            <Button
+                                                                Height="18"
+                                                                Padding="6,0"
+                                                                Command="{Binding BandWidthZoomInCommand}"
+                                                                Focusable="False"
+                                                                ToolTip="取值范围 ×2（放大）"><TextBlock FontSize="10" Text="×2" /></Button>
+                                                        </StackPanel>
+                                                    </Grid>
                                                 </StackPanel>
                                                 <!--  分割线：把全局带宽与骨点列表视觉分离  -->
                                                 <Border

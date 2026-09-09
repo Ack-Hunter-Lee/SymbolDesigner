@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Text;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using SymbolDesigner.Models;
 
 namespace SymbolDesigner.ViewModels;
@@ -221,13 +222,50 @@ public partial class SymbolDesignerViewModel
     /// </summary>
     [ObservableProperty] private double _selectedBandWidthMax = 30;
 
-    /// <summary>画布尺寸变化时重新计算带宽上限并通知 UI 刷新。</summary>
+    /// <summary>带宽取值范围的对数缩放倍数（log₂）。×2按钮 +1，÷2按钮 −1，clamp 到 [-4, 8]。
+    /// 有效上限 = 基准上限 × 2^zoomFactor。不随图形持久化（每次选中按几何重算基准）。</summary>
+    [ObservableProperty] private int _bandWidthZoomFactor;
+
+    partial void OnBandWidthZoomFactorChanged(int value) => RecomputeSelectedBandWidthMax();
+
+    /// <summary>带宽取值范围 ×2（放大）：在保证当前带宽分辨率的前提下扩大上限。</summary>
+    [RelayCommand]
+    private void BandWidthZoomIn()
+    {
+        if (BandWidthZoomFactor >= 8) return;
+        BandWidthZoomFactor = BandWidthZoomFactor + 1;
+    }
+
+    /// <summary>带宽取值范围 ÷2（收窄）：让滑块在当前小带宽处更好微调。</summary>
+    [RelayCommand]
+    private void BandWidthZoomOut()
+    {
+        if (BandWidthZoomFactor <= -4) return;
+        BandWidthZoomFactor = BandWidthZoomFactor - 1;
+    }
+
+    /// <summary>画布尺寸变化时重新计算带宽上限并通知 UI 刷新。
+    /// 新算法：基准上限 = 折线包围盒短边的一半（带宽本质是半宽，最大不超过对象尺度一半）。
+    /// 最终有效上限 = 基准 × 2^zoomFactor，zoom 由 ×2/÷2 按钮控制，不随图形保存（每次选中重算）。</summary>
     private void RecomputeSelectedBandWidthMax()
     {
-        var longEdge = System.Math.Max(1, System.Math.Max(CanvasWidth, CanvasHeight));
-        var newMax = System.Math.Max(30, longEdge);
-        // 等值时不写(避免冗余通知)
-        if (System.Math.Abs(SelectedBandWidthMax - newMax) < 0.001) return;
-        SelectedBandWidthMax = newMax;
+        if (SelectedItem == null || SelectedItem.TypeKey != nameof(L1Primitive.BandPolyline))
+        {
+            // 无选中折线时回退到默认最小值（30），避免 slider 锁死
+            var newMax = 30.0;
+            if (System.Math.Abs(SelectedBandWidthMax - newMax) < 0.001) return;
+            SelectedBandWidthMax = newMax;
+            return;
+        }
+
+        // 折线的包围盒就是它本身的 X/Y/W/H，短边 = 短于 W/H 的那个。
+        double shortEdge = System.Math.Min(SelectedItem.Width, SelectedItem.Height);
+        // 基准最大带宽是短边的一半：带宽是半宽，最大不超过这个值；再不会因为画布太大导致小图带宽难调。
+        double baseMax = System.Math.Max(30.0, shortEdge * 0.5);
+        // 有效上限 = 基准 × 2^zoomFactor → 对数缩放
+        double effectiveMax = baseMax * System.Math.Pow(2, _bandWidthZoomFactor);
+        // 等值不通知，减少无效刷新
+        if (System.Math.Abs(SelectedBandWidthMax - effectiveMax) < 0.001) return;
+        SelectedBandWidthMax = effectiveMax;
     }
 }
