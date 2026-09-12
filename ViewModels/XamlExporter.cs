@@ -198,11 +198,13 @@ public static class XamlExporter
         }
     }
 
-    /// <summary>StrokeExpression（描边色）：图元 StrokeColor 经亮度合成；
-    /// 当前 PrimitiveItem 暂未独立 StrokeColor，沿用 #FF5a7a8c 默认 + p.StrokeWidth 控制粗细。</summary>
+    /// <summary>StrokeExpression（描边色）：导出图元的真实描边色。
+    /// 之前写死在 #FF5a7a8c，导致用户改的 StrokeColor（画布上已生效）导出后丢失/不一致。
+    /// 这里用 p.StrokeColor（走 HexToArgb 统一成 #AARRGGBB）；为空时回退旧默认，避免 NRE。</summary>
     private static string BuildStrokeExpression(PrimitiveItem p)
     {
-        return "#FF5a7a8c";
+        string hex = string.IsNullOrEmpty(p.StrokeColor) ? "#FF5a7a8c" : p.StrokeColor;
+        return HexToArgb(hex);
     }
 
     private static string BuildLinearGradient(string startHex, string endHex, double brightness, double opacity, double angle)
