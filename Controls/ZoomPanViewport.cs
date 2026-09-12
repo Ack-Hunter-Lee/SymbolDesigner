@@ -191,10 +191,13 @@ public class ZoomPanViewport : Decorator
 
     /// <summary>鼠标滚轮：以鼠标位置为锚点缩放。
     /// 实际逻辑在 PreviewMouseWheel（隧道）已处理；此处委托同一实现，
-    /// 仅当 Preview 被外层提前截走（几乎不会）时兜底。</summary>
+    /// 仅当 Preview 被外层提前截走（几乎不会）时兜底。
+    /// 但 Preview 已把事件标记 Handled，bubbling 阶段 OnMouseWheel 仍会（handledEventsToo）
+    /// 再触发一次 → 同一格滚轮 double-zoom，必须显式短路掉已处理的事件。</summary>
     protected override void OnMouseWheel(MouseWheelEventArgs e)
     {
         base.OnMouseWheel(e);
+        if (e.Handled) return; // Preview 已缩放，避免重复缩放
         OnWheelZoom(e);
     }
 
