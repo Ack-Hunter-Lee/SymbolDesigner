@@ -272,31 +272,52 @@ public partial class SymbolDesignerViewModel
         var involvedList = Primitives.Where(p => involved.Contains(p.Id)).ToList();
         if (involvedList.Count == 0) return;
 
+        // 几何签名字典只分配一次（每轮 Capture 复用同一个实例，避免 maxIter 次重分配）。
+        // 收敛比较带容差，避免浮点振荡下精确 == 永不命中而跑满 maxIter。
+        var before = CaptureGeometry(involvedList);
         for (int iter = 0; iter < maxIter; iter++)
         {
-            var before = CaptureGeometry(involvedList);
-            foreach (var c in Constraints.ToList())
+            CaptureGeometry(before, involvedList); // 原地覆写，不新建字典
+            // Resolve 只改写 PrimitiveItem、不增删 Constraints 集合 → 直接枚举，无需 ToList 拷贝
+            foreach (var c in Constraints)
                 c.Resolve(Primitives);
             if (GeometryUnchanged(before, involvedList))
                 break; // 已收敛
         }
     }
 
-    /// <summary>取参与约束图元的几何签名（求解收敛检测用）。</summary>
+    /// <summary>取参与约束图元的几何签名（求解收敛检测用，入口每次新建）。</summary>
     private static Dictionary<Guid, (double X, double Y, double W, double H, string? P)> CaptureGeometry(List<PrimitiveItem> items)
     {
         var d = new Dictionary<Guid, (double, double, double, double, string?)>(items.Count);
-        foreach (var p in items)
-            d[p.Id] = (p.X, p.Y, p.Width, p.Height, p.PathData);
+        CaptureGeometry(d, items);
         return d;
     }
+
+    /// <summary>把当前几何签名原地写入既有字典（避免迭代轮次反复分配）。
+    /// 覆写后既有 Key 全部保留，几何值更新为“本轮求解前”的状态。</summary>
+    private static void CaptureGeometry(
+        Dictionary<Guid, (double X, double Y, double W, double H, string? P)> d, List<PrimitiveItem> items)
+    {
+        d.Clear();
+        foreach (var p in items)
+            d[p.Id] = (p.X, p.Y, p.Width, p.Height, p.PathData);
+    }
+
+    /// <summary>浮点容差（几何坐标收敛判定）。求解过程会把坐标写成接近值，
+    /// 精确 == 在振荡/舍入下永不命中而跑满 maxIter；容差内视为已收敛。</summary>
+    private const double GeometryTolerance = 1e-3;
 
     private static bool GeometryUnchanged(Dictionary<Guid, (double X, double Y, double W, double H, string? P)> before, List<PrimitiveItem> items)
     {
         foreach (var p in items)
         {
             if (!before.TryGetValue(p.Id, out var s)) return false;
-            if (s.X == p.X && s.Y == p.Y && s.W == p.Width && s.H == p.Height && s.P == p.PathData) continue;
+            if (System.Math.Abs(s.X - p.X) < GeometryTolerance
+                && System.Math.Abs(s.Y - p.Y) < GeometryTolerance
+                && System.Math.Abs(s.W - p.Width) < GeometryTolerance
+                && System.Math.Abs(s.H - p.Height) < GeometryTolerance
+                && s.P == p.PathData) continue;
             return false;
         }
         return true;

@@ -210,19 +210,24 @@ public static class TangentSolver
 
     /// <summary>重写直线某个端点为 canvasPoint（画布坐标）。
     /// 仅 PathData 型直线（画线工具产物）可改端点；无 PathData 返回 false。
-    /// **只改目标端点的局部坐标，其它端点保持绝对位置不动，不重置 PathData 原点**
-    /// （避免把未参与约束的另一端点整体平移带走——那是"另一端点绕圆旋转"的根源）。
-    /// 仅更新包围盒 Width/Height（命中 / 选择框用），Path 渲染按局部坐标自然贴位。</summary>
+    /// **只改目标端点的画布绝对位置，其它端点保持绝对位置不动**：
+    ///  1. 目标端点的画布坐标 → 当前基准(line.X/Y)下的局部坐标；
+    ///  2. 重算包围盒并按 (minX, minY) 归一化 PathData（全部点平移到非负局部坐标），
+    ///     line.X/Y 同步平移同量 → 各端点画布绝对位置不变。
+    ///  必要性：Line 布局是 ContentPresenter 固定 Canvas.Left=X/Top=Y/Width/Height，
+    ///   Path(Stretch=None) 按局部坐标渲染（原点=布局框左上角）。端点被投影到远处后
+    ///   局部坐标会出现负值，若不平移会把几何画到布局框/画布可视区外 → 线"消失"。
+    ///  归一化后 PathData 全部落在 [0,W]×[0,H] 布局框内，永远可见。</summary>
     public static bool SetLineEndpointAt(PrimitiveItem line, int index, Point canvasPoint)
     {
         if (string.IsNullOrEmpty(line.PathData)) return false;
         var pts = BandOutlineBuilder.ParsePathData(line.PathData);
         int target = index == 0 ? 0 : pts.Count - 1;
 
-        // 保持基准 line.X/Y 不动，只把目标端点设为该基准下的新局部坐标
+        // 目标端点的画布坐标 → 当前基准下的局部坐标
         pts[target] = new Point(canvasPoint.X - line.X, canvasPoint.Y - line.Y);
 
-        // 重算包围盒尺寸（仅更新 Width/Height，不平移原点、不移动其它端点）
+        // 重算包围盒
         double minX = pts[0].X, minY = pts[0].Y;
         double maxX = minX, maxY = minY;
         foreach (var p in pts)
@@ -232,8 +237,19 @@ public static class TangentSolver
             if (p.X > maxX) maxX = p.X;
             if (p.Y > maxY) maxY = p.Y;
         }
-        line.Width = Math.Max(2, maxX - minX);
-        line.Height = Math.Max(2, maxY - minY);
+
+        // 归一化：全部点平移到最小坐标 = 0，line.X/Y 同步平移 → 画布绝对位置不变。
+        if (minX != 0 || minY != 0)
+        {
+            line.X += minX;
+            line.Y += minY;
+            for (int i = 0; i < pts.Count; i++)
+                pts[i] = new Point(pts[i].X - minX, pts[i].Y - minY);
+            maxX -= minX;
+            maxY -= minY;
+        }
+        line.Width = Math.Max(2, maxX);
+        line.Height = Math.Max(2, maxY);
 
         line.PathData = BuildPathDataLiteral(pts);
         return true;
