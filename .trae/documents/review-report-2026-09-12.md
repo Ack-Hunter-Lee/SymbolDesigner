@@ -5,7 +5,7 @@
 - 流水线：detect-stack → 业务/结构 → WPF 语言/主题 → 几何/通用质量 → 权衡
 - 技术栈确认：C# / WPF（.NET8 `net8.0-windows`）+ CommunityToolkit.Mvvm + Nodify
 - 原则：只审不改；每条可指认 `文件:行`；P0/P1 为主。
-- 处理总览：已修复 9 条（#2/3/5/8/10/11/12/13/14）· 待确认 7 条（#1/6/7/9/15/16/17）· 暂缓不修 1 条（#4）
+- 处理总览：已修复 10 条（#2/3/5/8/10/11/12/13/14/16）· 待确认 6 条（#1/6/7/9/15/17）· 暂缓不修 1 条（#4）
 
 ---
 
@@ -86,7 +86,7 @@
 
 ## P2 可读性 / 可选优化
 
-> **状态：以下 15~17 待确认（未处理）**
+> **状态：以下 15、17 待确认（未处理）**
 
 12. 语义重复且微差：半角圆角公式三处（`BooleanOps.cs:401`、`BandOutlineBuilder.cs:581`、`MiterPoint:642`）；闭合标志用字符串 `pd[^1]=='Z'`（`SelectionScale.cs:323/547`）而 `PrimitiveItem.IsClosed` 已存在——双套真相易失配。
 
@@ -99,6 +99,8 @@
     > **状态：已修复**（`Constraints.cs` 删除全部 17 处 `Debug.WriteLine`；`BandOutlineBuilder.cs` 清理 2 处注释残留；无 `[DEBUG-REMOVE]` 日志遗留）
 15. `TagToBrushesConverter`/`PickCenterBrushConverter` 每次求值 `new SolidColorBrush`（未缓存/未冻结），工具栏多按钮时略浪费。
 16. `PrimitiveTemplateSelector.cs:41` 未知 `TypeKey` 返回 null → 图元静默不可见，建议给兜底模板。
+
+    > **状态：已修复**（新增 `L1DefaultNode` 兜底模板：占位框 + TypeKey 文本，全部走 Brush token；Selector 未知分支返回 `L1Default`）
 17. 仓库 `obj/` 囤了一次性调试工程 `pietest/`、`ArcFitTest/`（gitignored，不影响产物）——可选删除整理。
 
 ---

@@ -673,6 +673,31 @@
                     StrokeThickness="{Binding StrokeWidth}" />
             </views:DraggablePrimitive>
         </DataTemplate>
+        <!--  兜底模板：未知 TypeKey 图元（历史/第三方新增类型）显示占位框 + 类型名，避免静默不可见。  -->
+        <DataTemplate x:Key="L1DefaultNode" DataType="{x:Type models:PrimitiveItem}">
+            <views:DraggablePrimitive
+                Width="{Binding Width}"
+                Height="{Binding Height}"
+                Opacity="{Binding Opacity}">
+                <Grid Width="{Binding Width}" Height="{Binding Height}">
+                    <Rectangle
+                        Width="{Binding Width}"
+                        Height="{Binding Height}"
+                        Stroke="{StaticResource Brush.Border.Subtle}"
+                        StrokeDashArray="4 3"
+                        Fill="{StaticResource Brush.Bg.Deep}" />
+                    <TextBlock
+                        Margin="4"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        FontSize="10"
+                        Text="{Binding TypeKey}"
+                        Foreground="{StaticResource Brush.Text.Secondary}"
+                        TextWrapping="Wrap"
+                        TextAlignment="Center" />
+                </Grid>
+            </views:DraggablePrimitive>
+        </DataTemplate>
         <!--  DataTemplateSelector：根据 PrimitiveItem 类型选模板（已废弃 L2/FanBlade 分支）  -->
         <views:PrimitiveTemplateSelector
             x:Key="PrimitiveSelector"
@@ -685,7 +710,8 @@
             L1Pie="{StaticResource L1PieNode}"
             L1RoundedRectangle="{StaticResource L1RoundedNode}"
             L1BandPolyline="{StaticResource L1BandPolylineNode}"
-            L1Triangle="{StaticResource L1TriangleNode}" />
+            L1Triangle="{StaticResource L1TriangleNode}"
+            L1Default="{StaticResource L1DefaultNode}" />
     </UserControl.Resources>
 
     <Grid
