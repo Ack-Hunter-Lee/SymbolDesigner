@@ -225,13 +225,14 @@ public partial class SymbolDesignerViewModel
         System.Diagnostics.Debug.WriteLine($"[SelectInRect] {selected.Count} items selected, rect={r}");
     }
 
-    /// <summary>单图元包围盒（画布坐标）：PathData 型解析点范围,其余 X/Y/W/H。</summary>
+    /// <summary>单图元包围盒（画布坐标）：PathData 型解析点范围,其余 X/Y/W/H。
+    /// 复用 ParsedPathPoints 缓存（OnPathDataChanged 已解析），避免每帧 Split+TryParse；
+    /// 与 GetUnionBounds 行为一致。</summary>
     private static Rect? GetItemBounds(PrimitiveItem item)
     {
-        if (!string.IsNullOrEmpty(item.PathData))
+        var pts = item.ParsedPathPoints;
+        if (pts is { Count: > 0 })
         {
-            var pts = SymbolDesigner.Converters.BandOutlineBuilder.ParsePathData(item.PathData);
-            if (pts.Count == 0) return null;
             double bx1 = pts[0].X, by1 = pts[0].Y, bx2 = pts[0].X, by2 = pts[0].Y;
             foreach (var p in pts)
             {
