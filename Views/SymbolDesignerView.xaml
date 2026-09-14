@@ -116,6 +116,68 @@
             <Setter Property="Foreground" Value="{Binding RelativeSource={RelativeSource AncestorType=Border}, Path=Tag, Converter={StaticResource TagBrush}, ConverterParameter=2}" />
         </Style>
 
+        <!--
+            Ribbon 页签式顶部栏（AutoCAD 风格）样式资源。
+            - RibbonTabControl：透明无框 TabControl（梳排 Header 由 TabItem 各自渲染）
+            - RibbonTabItem：深色扁平页签，选中时背景与内容区衔接 + 高亮文字
+            - RibbonPanel：分组面板容器（半透明深色底 + 细描边圆角 + 右侧留白分隔）
+            - RibbonPanelCaption：面板组标题（小号次要色文字）
+        -->
+        <Style x:Key="RibbonTabControl" TargetType="TabControl">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style x:Key="RibbonTabItem" TargetType="TabItem">
+            <Setter Property="Foreground" Value="{StaticResource Brush.Text.Secondary}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="Normal" />
+            <Setter Property="Padding" Value="14,7" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border
+                            x:Name="bd"
+                            Padding="{TemplateBinding Padding}"
+                            Background="{TemplateBinding Background}"
+                            BorderThickness="1,1,1,0"
+                            CornerRadius="4,4,0,0">
+                            <ContentPresenter
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                ContentSource="Header" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Foreground" Value="{StaticResource Brush.State.AccentBorder}" />
+                                <Setter Property="FontWeight" Value="SemiBold" />
+                                <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush.Bg.Panel}" />
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource Brush.Border.Subtle}" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush.Tool.HoverNeutral}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="RibbonPanel" TargetType="Border">
+            <Setter Property="Margin" Value="0,2,8,2" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="Background" Value="{StaticResource Brush.Tool.HoverNeutral}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Brush.Border.Subtle}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="VerticalAlignment" Value="Top" />
+        </Style>
+        <Style x:Key="RibbonPanelCaption" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{StaticResource Brush.Text.Secondary}" />
+            <Setter Property="Margin" Value="2,0,2,3" />
+        </Style>
+
         <!--  工具栏图标模板（小尺寸，去外层暗框后更清爽）  -->
         <DataTemplate x:Key="L1RectanglePreview">
             <Rectangle
@@ -759,30 +821,24 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <ScrollViewer
+            <TabControl
                 Grid.Row="0"
-                MaxHeight="120"
                 Margin="0,0,0,8"
-                HorizontalScrollBarVisibility="Disabled"
-                VerticalScrollBarVisibility="Auto">
-                <!--
-                    顶部工具栏（图标化 + 多行布局）。
-                    设计原则:
-                    1. 所有"动作按钮" → 28×28 方形按钮,内嵌一个 16px SymbolIcon (FontFamily Segoe MDL2 Assets / Segoe Fluent Icons)
-                    用 Segoe MDL2 Assets Unicode 私有区字符 → 跨 Windows 版本稳定渲染,不像 emoji 受字体影响
-                    2. 所有"复合控件"（含输入/选择/Slider） → 紧凑图标 + 内嵌控件
-                    3. 用 ItemsControl + WrapPanel（自动多行）+ 视觉竖线分隔分组
-                    4. 每个按钮的 ToolTip 承担"说明"职责 → 完全去除正文文案,字号可放大到 16px,识别度更高
-                -->
-                <ItemsControl>
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <WrapPanel Orientation="Horizontal" />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
+                Style="{StaticResource RibbonTabControl}">
 
-                    <!--  ── 第一组：编辑动作（红/橙色调） ──  -->
-                    <!--  撤销: Segoe MDL2 Assets E7A7 (Undo)  -->
+                <!--  ═══ 常用：编辑 / 排列 / 布尔 ═══  -->
+                <TabItem Header="常用" Style="{StaticResource RibbonTabItem}">
+                    <ScrollViewer
+                        HorizontalScrollBarVisibility="Auto"
+                        VerticalScrollBarVisibility="Disabled">
+                        <StackPanel Margin="2,2,0,4" Orientation="Horizontal">
+
+                            <!--  面板「修改」  -->
+                            <Border Style="{StaticResource RibbonPanel}">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource RibbonPanelCaption}" Text="修改" />
+                                    <StackPanel Orientation="Horizontal">
+                                        <!--  撤销: Segoe MDL2 Assets E7A7 (Undo)  -->
                     <Border
                         IsEnabled="{Binding CanUndo}"
                         MouseLeftButtonDown="OnUndoClick"
@@ -832,7 +888,53 @@
                         ToolTip="全部清空">
                         <TextBlock Style="{StaticResource ToolIconGlyph}" Text="&#xE75C;" />
                     </Border>
-                    <!--  水平镜像: 围绕选中集包围盒水平中心左右翻转（↔，Segoe UI Symbol）  -->
+
+                    <!--
+                        格式刷：选中图元 → 点击按钮吸取样式（线条/填充），再点其它图元即应用并自动退出。
+                        自绘"刷子"图标（旋转 45° 的矩形刷头 + 手柄），比 Segoe MDL2 私有区字符更直观。
+                        高亮态：IsFormatPainterActive=true 时边框变蓝、背景变深蓝灰（与左侧工具栏激活态一致）。
+                        Ctrl+点击 → 进入连刷模式（应用样式后不退出，便于批量刷同一外观）。
+                        IsEnabled 绑 CanPickFormat（未选中图元时禁用，文字框聚焦时也不拦截 Ctrl+C/V）。
+                    -->
+                    <Border
+                        MouseLeftButtonDown="OnFormatPainterClick"
+                        Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
+                        ToolTip="格式刷 (选中图元后点此按钮吸取样式, 再点其它图元即应用。Ctrl+点击进入连刷模式)">
+                        <Border.Style>
+                            <Style BasedOn="{StaticResource ToolIconButton}" TargetType="Border">
+                                <Style.Triggers>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter Property="Opacity" Value="0.35" />
+                                    </Trigger>
+                                    <!--  激活态：背景变深蓝灰 + 边框亮蓝（与左侧绘图工具激活态一致）  -->
+                                    <DataTrigger Binding="{Binding IsFormatPainterActive}" Value="True">
+                                        <Setter Property="Background" Value="{StaticResource Brush.Tool.HoverBlue}" />
+                                        <Setter Property="BorderBrush" Value="{StaticResource Brush.State.AccentBorder}" />
+                                        <Setter Property="BorderThickness" Value="1" />
+                                        <Setter Property="Opacity" Value="1.0" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <!--  格式刷图标（用户自绘）：刷头 + 斜刷柄 + 手柄，Viewbox 等比缩放撑满 16×16。  -->
+                        <Viewbox Width="16" Height="16" Stretch="Uniform">
+                            <Canvas Width="40.19" Height="67.82">
+                                <Rectangle Canvas.Left="0" Canvas.Top="0" Width="33.34" Height="9.59" Panel.ZIndex="0" Fill="#a8c4d8" Stroke="#5a7a8c" StrokeThickness="0.8" />
+                                <Path Canvas.Left="17.81" Canvas.Top="4.11" Data="M15.53,0L22.38,0 22.38,10.28 0,18.04 0,31.51" Panel.ZIndex="1" Stroke="#5a7a8c" StrokeThickness="0.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Stretch="None" />
+                                <Rectangle Canvas.Left="14.16" Canvas.Top="35.62" Width="7.31" Height="32.2" Panel.ZIndex="2" Fill="#a8c4d8" Stroke="#5a7a8c" StrokeThickness="0.8" />
+                            </Canvas>
+                        </Viewbox>
+                    </Border>
+
+                    </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+                                    <!--  面板「排列」  -->
+                                    <Border Style="{StaticResource RibbonPanel}">
+                                        <StackPanel>
+                                            <TextBlock Style="{StaticResource RibbonPanelCaption}" Text="排列" />
+                                            <StackPanel Orientation="Horizontal">
+                                        <!--  水平镜像: 围绕选中集包围盒水平中心左右翻转（↔，Segoe UI Symbol）  -->
                     <Border
                         IsEnabled="{Binding HasMirrorTarget}"
                         MouseLeftButtonDown="OnMirrorHorizontalClick"
@@ -873,217 +975,6 @@
                             Text="&#x2195;" />
                     </Border>
 
-                    <!--
-                        相切约束: 选中一条直线 + 一个圆后点击,圆自动移与直线相切(持久约束)。
-                        E891 = Link 图标
-                    -->
-                    <Border
-                        IsEnabled="{Binding CanApplyTangent}"
-                        MouseLeftButtonDown="OnApplyTangentClick"
-                        Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
-                        ToolTip="相切约束 (Ctrl+点击选择直线和圆, 绿色点亮可用)">
-                        <Border.Style>
-                            <Style BasedOn="{StaticResource ToolIconButton}" TargetType="Border">
-                                <Style.Triggers>
-                                    <Trigger Property="IsEnabled" Value="False">
-                                        <Setter Property="Opacity" Value="0.35" />
-                                    </Trigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <TextBlock Style="{StaticResource ToolIconGlyph}" Text="&#xE891;" />
-                    </Border>
-
-                    <!--
-                        重合约束: 选中一条直线 + 一个圆后点击,智能识别"端点落圆弧"或"圆心落直线"(持久约束)。
-                        E173 = BulletList (圆点) 图标
-                    -->
-                    <Border
-                        IsEnabled="{Binding CanApplyCoincident}"
-                        MouseLeftButtonDown="OnApplyCoincidentClick"
-                        Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
-                        ToolTip="重合约束 (Ctrl+点击选择直线和圆, 蓝色点亮可用)">
-                        <Border.Style>
-                            <Style BasedOn="{StaticResource ToolIconButton}" TargetType="Border">
-                                <Style.Triggers>
-                                    <Trigger Property="IsEnabled" Value="False">
-                                        <Setter Property="Opacity" Value="0.35" />
-                                    </Trigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <TextBlock Style="{StaticResource ToolIconGlyph}" Text="&#xE173;" />
-                    </Border>
-
-                    <!--
-                        ── 布尔运算组（合并/剪除/相交）：Ctrl+点击恰好选中 2 个闭合图元后可用。
-                        图标用数学符号 ∪ / − / ∩（Segoe UI Symbol 覆盖 MDL2 字体，语义直观）。
-                    -->
-                    <!--  合并 ∪: 两个闭合图元并集  -->
-                    <Border
-                        IsEnabled="{Binding CanBooleanOp}"
-                        MouseLeftButtonDown="OnMergeShapesClick"
-                        Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
-                        ToolTip="合并 (Ctrl+点击选中两个闭合图元后可用, 求并集)">
-                        <Border.Style>
-                            <Style BasedOn="{StaticResource ToolIconButton}" TargetType="Border">
-                                <Style.Triggers>
-                                    <Trigger Property="IsEnabled" Value="False">
-                                        <Setter Property="Opacity" Value="0.35" />
-                                    </Trigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <TextBlock
-                            FontFamily="Segoe UI Symbol"
-                            Style="{StaticResource ToolIconGlyph}"
-                            Text="&#x222A;" />
-                    </Border>
-                    <!--  剪除 −: 先选图元减后选图元 (A ∖ B)  -->
-                    <Border
-                        IsEnabled="{Binding CanBooleanOp}"
-                        MouseLeftButtonDown="OnSubtractShapesClick"
-                        Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
-                        ToolTip="剪除 (先选的图元 − 后选的图元)">
-                        <Border.Style>
-                            <Style BasedOn="{StaticResource ToolIconButton}" TargetType="Border">
-                                <Style.Triggers>
-                                    <Trigger Property="IsEnabled" Value="False">
-                                        <Setter Property="Opacity" Value="0.35" />
-                                    </Trigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <TextBlock
-                            FontFamily="Segoe UI Symbol"
-                            Style="{StaticResource ToolIconGlyph}"
-                            Text="&#x2212;" />
-                    </Border>
-                    <!--  相交 ∩: 两个闭合图元交集  -->
-                    <Border
-                        IsEnabled="{Binding CanBooleanOp}"
-                        MouseLeftButtonDown="OnIntersectShapesClick"
-                        Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
-                        ToolTip="相交 (两个闭合图元求交集)">
-                        <Border.Style>
-                            <Style BasedOn="{StaticResource ToolIconButton}" TargetType="Border">
-                                <Style.Triggers>
-                                    <Trigger Property="IsEnabled" Value="False">
-                                        <Setter Property="Opacity" Value="0.35" />
-                                    </Trigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <TextBlock
-                            FontFamily="Segoe UI Symbol"
-                            Style="{StaticResource ToolIconGlyph}"
-                            Text="&#x2229;" />
-                    </Border>
-
-                    <!--
-                        格式刷：选中图元 → 点击按钮吸取样式（线条/填充），再点其它图元即应用并自动退出。
-                        自绘"刷子"图标（旋转 45° 的矩形刷头 + 手柄），比 Segoe MDL2 私有区字符更直观。
-                        高亮态：IsFormatPainterActive=true 时边框变蓝、背景变深蓝灰（与左侧工具栏激活态一致）。
-                        Ctrl+点击 → 进入连刷模式（应用样式后不退出，便于批量刷同一外观）。
-                        IsEnabled 绑 CanPickFormat（未选中图元时禁用，文字框聚焦时也不拦截 Ctrl+C/V）。
-                    -->
-                    <Border
-                        MouseLeftButtonDown="OnFormatPainterClick"
-                        Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
-                        ToolTip="格式刷 (选中图元后点此按钮吸取样式, 再点其它图元即应用。Ctrl+点击进入连刷模式)">
-                        <Border.Style>
-                            <Style BasedOn="{StaticResource ToolIconButton}" TargetType="Border">
-                                <Style.Triggers>
-                                    <Trigger Property="IsEnabled" Value="False">
-                                        <Setter Property="Opacity" Value="0.35" />
-                                    </Trigger>
-                                    <!--  激活态：背景变深蓝灰 + 边框亮蓝（与左侧绘图工具激活态一致）  -->
-                                    <DataTrigger Binding="{Binding IsFormatPainterActive}" Value="True">
-                                        <Setter Property="Background" Value="{StaticResource Brush.Tool.HoverBlue}" />
-                                        <Setter Property="BorderBrush" Value="{StaticResource Brush.State.AccentBorder}" />
-                                        <Setter Property="BorderThickness" Value="1" />
-                                        <Setter Property="Opacity" Value="1.0" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <!--  格式刷图标（用户自绘）：刷头 + 斜刷柄 + 手柄，Viewbox 等比缩放撑满 16×16。  -->
-                        <Viewbox Width="16" Height="16" Stretch="Uniform">
-                            <Canvas Width="40.19" Height="67.82">
-                                <Rectangle Canvas.Left="0" Canvas.Top="0" Width="33.34" Height="9.59" Panel.ZIndex="0" Fill="#a8c4d8" Stroke="#5a7a8c" StrokeThickness="0.8" />
-                                <Path Canvas.Left="17.81" Canvas.Top="4.11" Data="M15.53,0L22.38,0 22.38,10.28 0,18.04 0,31.51" Panel.ZIndex="1" Stroke="#5a7a8c" StrokeThickness="0.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Stretch="None" />
-                                <Rectangle Canvas.Left="14.16" Canvas.Top="35.62" Width="7.31" Height="32.2" Panel.ZIndex="2" Fill="#a8c4d8" Stroke="#5a7a8c" StrokeThickness="0.8" />
-                            </Canvas>
-                        </Viewbox>
-                    </Border>
-
-                    <!--  视觉分隔  -->
-                    <Border Style="{StaticResource ToolSep}" />
-
-                    <!--  ── 第二组：工程文件（蓝色调） ──  -->
-                    <!--  加载: Segoe MDL2 Assets E8E5 (OpenFile)  -->
-                    <Border
-                        MouseLeftButtonDown="OnLoadProjectClick"
-                        Style="{StaticResource ToolIconButton}"
-                        Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
-                        ToolTip="加载工程 (.sym.json)">
-                        <TextBlock Style="{StaticResource ToolIconGlyph}" Text="&#xE8E5;" />
-                    </Border>
-                    <!--  导入 SVG：支持基本几何 + 折线 + path（曲线自动降采样）。
-                          仅导入几何,不导入渐变/滤镜/文字。toolTip="导入 SVG 文件"  -->
-                    <Border
-                        MouseLeftButtonDown="OnImportSvgClick"
-                        Style="{StaticResource ToolIconButton}"
-                        Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
-                        ToolTip="导入 SVG (支持 rect/circle/ellipse/line/polyline/polygon/path,曲线自动降采样)">
-                        <TextBlock Style="{StaticResource ToolIconGlyph}" Text="&#xE8B5;" />
-                    </Border>
-                    <!--  保存: Segoe MDL2 Assets E74E (Save)  -->
-                    <Border
-                        MouseLeftButtonDown="OnSaveProjectClick"
-                        Style="{StaticResource ToolIconButton}"
-                        Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
-                        ToolTip="保存 (有路径直接覆盖,无路径转另存为)">
-                        <TextBlock Style="{StaticResource ToolIconGlyph}" Text="&#xE74E;" />
-                    </Border>
-                    <!--  另存为: Segoe MDL2 Assets E792 (SaveLocal)  -->
-                    <Border
-                        MouseLeftButtonDown="OnSaveAsProjectClick"
-                        Style="{StaticResource ToolIconButton}"
-                        Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
-                        ToolTip="另存为...">
-                        <TextBlock Style="{StaticResource ToolIconGlyph}" Text="&#xE792;" />
-                    </Border>
-                    <!--  导出 XAML: Segoe MDL2 Assets EDE1 (Export)  -->
-                    <Border
-                        MouseLeftButtonDown="OnExportXamlClick"
-                        Style="{StaticResource ToolIconButton}"
-                        Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
-                        ToolTip="导出 XAML">
-                        <TextBlock Style="{StaticResource ToolIconGlyph}" Text="&#xEDE1;" />
-                    </Border>
-
-                    <!--
-                        阵列 (CAD Array)：矩形 / 环形 / 路径三种，选中源图形后即预览。
-                        Segoe MDL2 Assets E7B8 (Copy)
-                    -->
-                    <Border
-                        MouseLeftButtonDown="OnPathArrayClick"
-                        Style="{StaticResource ToolIconButton}"
-                        Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
-                        ToolTip="阵列: 选中源图形后即预览 (矩形 / 环形 / 路径)">
-                        <TextBlock Style="{StaticResource ToolIconGlyph}" Text="&#xE7B8;" />
-                    </Border>
-
-                    <!--  视觉分隔  -->
-                    <Border Style="{StaticResource ToolSep}" />
-
-                    <!--
-                        ── 第三组：图层层级 ──
-                        统一用自绘 z-order 图标（不依赖字体旋转，语义清晰）：
-                        置顶/置底带"顶线/底线"表示到最前/最后，上移/下移为纯上下箭头。
-                        Fill 取 Tag 第 3 位前景色，与其它图标一致，随主题统一。
-                    -->
                     <!--  置顶：顶部横线 + 下插杆上箭头（提到最顶）。形状取自 XAML 导出样例。  -->
                     <Border
                         MouseLeftButtonDown="OnBringToFrontClick"
@@ -1171,58 +1062,235 @@
                         </Viewbox>
                     </Border>
 
-                    <!--  视觉分隔  -->
-                    <Border Style="{StaticResource ToolSep}" />
-
-                    <!--  ── 第四组：缩放 ──  -->
-                    <!--  缩小: Segoe MDL2 Assets E738 (ZoomOut)  -->
-                    <Border
-                        MouseLeftButtonDown="OnZoomOutClick"
-                        Style="{StaticResource ToolIconButton}"
-                        Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
-                        ToolTip="缩小 (Ctrl+滚轮)">
-                        <TextBlock Style="{StaticResource ToolIconGlyph}" Text="&#xE738;" />
-                    </Border>
-                    <!--  缩放比例显示（点击重置为 100%）  -->
-                    <Border
-                        MouseLeftButtonDown="OnZoomResetClick"
-                        Style="{StaticResource ToolIconButton}"
-                        Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
-                        ToolTip="重置缩放为 100%">
-                        <TextBlock Style="{StaticResource ToolIconGlyph}" Text="{Binding ZoomLevel, Mode=OneWay, StringFormat={}{0:P0}}" />
-                    </Border>
-                    <!--  放大: Segoe MDL2 Assets E710 (ZoomIn)  -->
-                    <Border
-                        MouseLeftButtonDown="OnZoomInClick"
-                        Style="{StaticResource ToolIconButton}"
-                        Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
-                        ToolTip="放大 (Ctrl+滚轮)">
-                        <TextBlock Style="{StaticResource ToolIconGlyph}" Text="&#xE710;" />
-                    </Border>
-
-                    <!--  视觉分隔  -->
-                    <Border Style="{StaticResource ToolSep}" />
+                    </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                                <!--  面板「布尔」  -->
+                                <Border Style="{StaticResource RibbonPanel}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource RibbonPanelCaption}" Text="布尔" />
+                                        <StackPanel Orientation="Horizontal">
 
                     <!--
-                        第五组：画线模式已合并到左侧"基础图形"工具栏（点击 Polyline/BandPolyline/Line 进入绘制）。
-                        顶部不再需要重复选择——保留轴对齐按钮。
+                        ── 布尔运算组（合并/剪除/相交）：Ctrl+点击恰好选中 2 个闭合图元后可用。
+                        图标用数学符号 ∪ / − / ∩（Segoe UI Symbol 覆盖 MDL2 字体，语义直观）。
                     -->
-                    <!--  轴对齐: Segoe MDL2 Assets E0D5 (AlignCenter)  -->
+                    <!--  合并 ∪: 两个闭合图元并集  -->
                     <Border
-                        Style="{StaticResource ToolIconButton}"
+                        IsEnabled="{Binding CanBooleanOp}"
+                        MouseLeftButtonDown="OnMergeShapesClick"
                         Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
-                        ToolTip="轴对齐 (按住 Shift 切换水平/竖直)">
-                        <CheckBox
-                            Margin="0,0,0,0"
-                            VerticalAlignment="Center"
-                            Foreground="{StaticResource Brush.Tool.Icon}"
-                            IsChecked="{Binding AxisSnapEnabled, Mode=TwoWay}" />
+                        ToolTip="合并 (Ctrl+点击选中两个闭合图元后可用, 求并集)">
+                        <Border.Style>
+                            <Style BasedOn="{StaticResource ToolIconButton}" TargetType="Border">
+                                <Style.Triggers>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter Property="Opacity" Value="0.35" />
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <TextBlock
+                            FontFamily="Segoe UI Symbol"
+                            Style="{StaticResource ToolIconGlyph}"
+                            Text="&#x222A;" />
+                    </Border>
+                    <!--  剪除 −: 先选图元减后选图元 (A ∖ B)  -->
+                    <Border
+                        IsEnabled="{Binding CanBooleanOp}"
+                        MouseLeftButtonDown="OnSubtractShapesClick"
+                        Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
+                        ToolTip="剪除 (先选的图元 − 后选的图元)">
+                        <Border.Style>
+                            <Style BasedOn="{StaticResource ToolIconButton}" TargetType="Border">
+                                <Style.Triggers>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter Property="Opacity" Value="0.35" />
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <TextBlock
+                            FontFamily="Segoe UI Symbol"
+                            Style="{StaticResource ToolIconGlyph}"
+                            Text="&#x2212;" />
+                    </Border>
+                    <!--  相交 ∩: 两个闭合图元交集  -->
+                    <Border
+                        IsEnabled="{Binding CanBooleanOp}"
+                        MouseLeftButtonDown="OnIntersectShapesClick"
+                        Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
+                        ToolTip="相交 (两个闭合图元求交集)">
+                        <Border.Style>
+                            <Style BasedOn="{StaticResource ToolIconButton}" TargetType="Border">
+                                <Style.Triggers>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter Property="Opacity" Value="0.35" />
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <TextBlock
+                            FontFamily="Segoe UI Symbol"
+                            Style="{StaticResource ToolIconGlyph}"
+                            Text="&#x2229;" />
                     </Border>
 
-                    <!--  视觉分隔  -->
-                    <Border Style="{StaticResource ToolSep}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
 
-                    <!--  ── 第七组：背景图工具（黄色调） ──  -->
+                <!--  ═══ 参数化：几何约束 / 阵列 ═══  -->
+                <TabItem Header="参数化" Style="{StaticResource RibbonTabItem}">
+                    <ScrollViewer
+                        HorizontalScrollBarVisibility="Auto"
+                        VerticalScrollBarVisibility="Disabled">
+                        <StackPanel Margin="2,2,0,4" Orientation="Horizontal">
+
+                            <!--  面板「几何约束」  -->
+                            <Border Style="{StaticResource RibbonPanel}">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource RibbonPanelCaption}" Text="几何约束" />
+                                    <StackPanel Orientation="Horizontal">
+
+                    <!--
+                        相切约束: 选中一条直线 + 一个圆后点击,圆自动移与直线相切(持久约束)。
+                        E891 = Link 图标
+                    -->
+                    <Border
+                        IsEnabled="{Binding CanApplyTangent}"
+                        MouseLeftButtonDown="OnApplyTangentClick"
+                        Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
+                        ToolTip="相切约束 (Ctrl+点击选择直线和圆, 绿色点亮可用)">
+                        <Border.Style>
+                            <Style BasedOn="{StaticResource ToolIconButton}" TargetType="Border">
+                                <Style.Triggers>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter Property="Opacity" Value="0.35" />
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <TextBlock Style="{StaticResource ToolIconGlyph}" Text="&#xE891;" />
+                    </Border>
+
+                    <!--
+                        重合约束: 选中一条直线 + 一个圆后点击,智能识别"端点落圆弧"或"圆心落直线"(持久约束)。
+                        E173 = BulletList (圆点) 图标
+                    -->
+                    <Border
+                        IsEnabled="{Binding CanApplyCoincident}"
+                        MouseLeftButtonDown="OnApplyCoincidentClick"
+                        Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
+                        ToolTip="重合约束 (Ctrl+点击选择直线和圆, 蓝色点亮可用)">
+                        <Border.Style>
+                            <Style BasedOn="{StaticResource ToolIconButton}" TargetType="Border">
+                                <Style.Triggers>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter Property="Opacity" Value="0.35" />
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <TextBlock Style="{StaticResource ToolIconGlyph}" Text="&#xE173;" />
+                    </Border>
+
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!--  面板「阵列」  -->
+                            <Border Style="{StaticResource RibbonPanel}">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource RibbonPanelCaption}" Text="阵列" />
+                                    <StackPanel Orientation="Horizontal">
+                                        <!--
+                                        阵列 (CAD Array)：矩形 / 环形 / 路径三种，选中源图形后即预览。
+                                        Segoe MDL2 Assets E7B8 (Copy)
+                                    -->
+                                    <Border
+                                        MouseLeftButtonDown="OnPathArrayClick"
+                                        Style="{StaticResource ToolIconButton}"
+                                        Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
+                                        ToolTip="阵列: 选中源图形后即预览 (矩形 / 环形 / 路径)">
+                                        <TextBlock Style="{StaticResource ToolIconGlyph}" Text="&#xE7B8;" />
+                                    </Border>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+
+                <!--  ═══ 插入：工程 / 参考 ═══  -->
+                <TabItem Header="插入" Style="{StaticResource RibbonTabItem}">
+                    <ScrollViewer
+                        HorizontalScrollBarVisibility="Auto"
+                        VerticalScrollBarVisibility="Disabled">
+                        <StackPanel Margin="2,2,0,4" Orientation="Horizontal">
+
+                            <!--  面板「工程」  -->
+                            <Border Style="{StaticResource RibbonPanel}">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource RibbonPanelCaption}" Text="工程" />
+                                    <StackPanel Orientation="Horizontal">
+
+                    <!--  ── 第二组：工程文件（蓝色调） ──  -->
+                    <!--  加载: Segoe MDL2 Assets E8E5 (OpenFile)  -->
+                    <Border
+                        MouseLeftButtonDown="OnLoadProjectClick"
+                        Style="{StaticResource ToolIconButton}"
+                        Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
+                        ToolTip="加载工程 (.sym.json)">
+                        <TextBlock Style="{StaticResource ToolIconGlyph}" Text="&#xE8E5;" />
+                    </Border>
+                    <!--  导入 SVG：支持基本几何 + 折线 + path（曲线自动降采样）。
+                          仅导入几何,不导入渐变/滤镜/文字。toolTip="导入 SVG 文件"  -->
+                    <Border
+                        MouseLeftButtonDown="OnImportSvgClick"
+                        Style="{StaticResource ToolIconButton}"
+                        Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
+                        ToolTip="导入 SVG (支持 rect/circle/ellipse/line/polyline/polygon/path,曲线自动降采样)">
+                        <TextBlock Style="{StaticResource ToolIconGlyph}" Text="&#xE8B5;" />
+                    </Border>
+                    <!--  保存: Segoe MDL2 Assets E74E (Save)  -->
+                    <Border
+                        MouseLeftButtonDown="OnSaveProjectClick"
+                        Style="{StaticResource ToolIconButton}"
+                        Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
+                        ToolTip="保存 (有路径直接覆盖,无路径转另存为)">
+                        <TextBlock Style="{StaticResource ToolIconGlyph}" Text="&#xE74E;" />
+                    </Border>
+                    <!--  另存为: Segoe MDL2 Assets E792 (SaveLocal)  -->
+                    <Border
+                        MouseLeftButtonDown="OnSaveAsProjectClick"
+                        Style="{StaticResource ToolIconButton}"
+                        Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
+                        ToolTip="另存为...">
+                        <TextBlock Style="{StaticResource ToolIconGlyph}" Text="&#xE792;" />
+                    </Border>
+                    <!--  导出 XAML: Segoe MDL2 Assets EDE1 (Export)  -->
+                    <Border
+                        MouseLeftButtonDown="OnExportXamlClick"
+                        Style="{StaticResource ToolIconButton}"
+                        Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
+                        ToolTip="导出 XAML">
+                        <TextBlock Style="{StaticResource ToolIconGlyph}" Text="&#xEDE1;" />
+                    </Border>
+
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                    <!--  面板「参考」  -->
+                            <Border Style="{StaticResource RibbonPanel}">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource RibbonPanelCaption}" Text="参考" />
+                                    <StackPanel Orientation="Horizontal">
+
                     <!--  导入背景: Segoe MDL2 Assets E8B7 (Photo)  -->
                     <Border
                         MouseLeftButtonDown="OnImportBackgroundImageClick"
@@ -1301,43 +1369,58 @@
                         </StackPanel>
                     </Border>
 
-                    <!--  视觉分隔  -->
-                    <Border Style="{StaticResource ToolSep}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
 
-                    <!--  ── 第八组：当前文件名 + 元素数（信息条，非按钮） ──  -->
-                    <!--  文件名 Segoe MDL2 Assets E8A5 (Document)  -->
+                <!--  ═══ 视图：缩放 ═══  -->
+                <TabItem Header="视图" Style="{StaticResource RibbonTabItem}">
+                    <ScrollViewer
+                        HorizontalScrollBarVisibility="Auto"
+                        VerticalScrollBarVisibility="Disabled">
+                        <StackPanel Margin="2,2,0,4" Orientation="Horizontal">
+
+                            <!--  面板「缩放」  -->
+                            <Border Style="{StaticResource RibbonPanel}">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource RibbonPanelCaption}" Text="缩放" />
+                                    <StackPanel Orientation="Horizontal">
+
+                    <!--  缩小: Segoe MDL2 Assets E738 (ZoomOut)  -->
                     <Border
-                        Style="{StaticResource ToolInfoBadge}"
+                        MouseLeftButtonDown="OnZoomOutClick"
+                        Style="{StaticResource ToolIconButton}"
                         Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
-                        ToolTip="{Binding WindowTitle}">
-                        <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
-                            <TextBlock Style="{StaticResource ToolIconGlyph}" Text="&#xE8A5;" />
-                            <TextBlock
-                                Margin="4,0,0,0"
-                                VerticalAlignment="Center"
-                                FontSize="11"
-                                Foreground="#78909c"
-                                Text="{Binding WindowTitle}" />
-                        </StackPanel>
+                        ToolTip="缩小 (Ctrl+滚轮)">
+                        <TextBlock Style="{StaticResource ToolIconGlyph}" Text="&#xE738;" />
                     </Border>
-                    <!--  元素数 Segoe MDL2 Assets E8FD (AllApps)  -->
+                    <!--  缩放比例显示（点击重置为 100%）  -->
                     <Border
-                        Style="{StaticResource ToolInfoBadge}"
+                        MouseLeftButtonDown="OnZoomResetClick"
+                        Style="{StaticResource ToolIconButton}"
                         Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
-                        ToolTip="画布上的图形数量">
-                        <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
-                            <TextBlock Style="{StaticResource ToolIconGlyph}" Text="&#xE8FD;" />
-                            <TextBlock
-                                Margin="4,0,0,0"
-                                VerticalAlignment="Center"
-                                FontSize="11"
-                                FontWeight="Bold"
-                                Foreground="{StaticResource Brush.Tool.Icon}"
-                                Text="{Binding ItemCount, Mode=OneWay}" />
-                        </StackPanel>
+                        ToolTip="重置缩放为 100%">
+                        <TextBlock Style="{StaticResource ToolIconGlyph}" Text="{Binding ZoomLevel, Mode=OneWay, StringFormat={}{0:P0}}" />
                     </Border>
-                </ItemsControl>
-            </ScrollViewer>
+                    <!--  放大: Segoe MDL2 Assets E710 (ZoomIn)  -->
+                    <Border
+                        MouseLeftButtonDown="OnZoomInClick"
+                        Style="{StaticResource ToolIconButton}"
+                        Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
+                        ToolTip="放大 (Ctrl+滚轮)">
+                        <TextBlock Style="{StaticResource ToolIconGlyph}" Text="&#xE710;" />
+                    </Border>
+
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+            </TabControl>
 
             <Border
                 Grid.Row="1"
@@ -2579,6 +2662,29 @@
                 BorderThickness="0,1,0,0"
                 CornerRadius="2">
                 <StackPanel Orientation="Horizontal">
+                    <!--  当前工程文件名（AutoCAD 状态栏信息区）  -->
+                    <TextBlock
+                        MaxWidth="260"
+                        FontSize="10"
+                        Foreground="{StaticResource Brush.Text.Secondary}"
+                        TextTrimming="CharacterEllipsis"
+                        ToolTip="{Binding WindowTitle}"
+                        VerticalAlignment="Center">
+                        <Run Text="文件 " /><Run FontWeight="Bold" Text="{Binding WindowTitle, Mode=OneWay}" />
+                    </TextBlock>
+                    <!--  元素数  -->
+                    <TextBlock Margin="12,0,0,0" FontSize="10" Foreground="{StaticResource Brush.Text.Secondary}" VerticalAlignment="Center">
+                        <Run Text="元素 " /><Run FontWeight="Bold" Text="{Binding ItemCount, Mode=OneWay}" />
+                    </TextBlock>
+                    <!--  轴对齐（AutoCAD 正交位）  -->
+                    <StackPanel Margin="12,0,0,0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock FontSize="10" Foreground="{StaticResource Brush.Text.Secondary}" VerticalAlignment="Center" Text="轴对齐" />
+                        <CheckBox
+                            Margin="3,0,0,0"
+                            VerticalAlignment="Center"
+                            Foreground="{StaticResource Brush.Text.Primary}"
+                            IsChecked="{Binding AxisSnapEnabled, Mode=TwoWay}" />
+                    </StackPanel>
                     <!--  缩放倍率  -->
                     <TextBlock FontSize="10" Foreground="{StaticResource Brush.Text.Secondary}" VerticalAlignment="Center">
                         <Run Text="缩放 " /><Run FontWeight="Bold" Text="{Binding ZoomLevel, Mode=OneWay, StringFormat={}{0:P0}}" />
