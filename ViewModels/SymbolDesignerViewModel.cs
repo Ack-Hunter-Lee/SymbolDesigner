@@ -84,6 +84,8 @@ public partial class SymbolDesignerViewModel : ObservableObject
         Primitives.CollectionChanged += OnPrimitivesChanged;
         // 沿路径阵列集合增删 → 同样标 dirty（快照由 SnapshotPrimitives() 覆盖两个集合）
         ArrayInstances.CollectionChanged += OnArrayInstancesChanged;
+        // 几何约束增删 → 同样标 dirty + 可撤销（快照已纳入 Constraints）
+        Constraints.CollectionChanged += OnConstraintsChanged;
 
         // 属性编辑去抖:时间到 → 落栈
         _undoCommitTimer.Tick += (_, _) => ForceCommitEdit();

@@ -81,4 +81,6 @@ public class TangencyConstraintDto
     // 重合约束专用（LineCircleCoincident 时使用）；缺省 EndPointOnArc 兼容旧文件
     public string? CoincidentModeStr { get; set; }
     public int EndpointIndex { get; set; }
+    /// <summary>端点是否锁定到切点（"相切+端点落圆弧"双重约束用）。旧文件缺省 false。</summary>
+    public bool LockToTangentPoint { get; set; }
 }

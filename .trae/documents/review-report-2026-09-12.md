@@ -5,7 +5,7 @@
 - 流水线：detect-stack → 业务/结构 → WPF 语言/主题 → 几何/通用质量 → 权衡
 - 技术栈确认：C# / WPF（.NET8 `net8.0-windows`）+ CommunityToolkit.Mvvm + Nodify
 - 原则：只审不改；每条可指认 `文件:行`；P0/P1 为主。
-- 处理总览：已修复 14 条（#1/2/3/5/7/8/10/11/12/13/14/15/16/17）· 待确认 2 条（#6/9）· 暂缓不修 1 条（#4）
+- 处理总览：已修复 15 条（#1/2/3/5/6/7/8/10/11/12/13/14/15/16/17）· 待确认 1 条（#9）· 暂缓不修 1 条（#4）
 
 ---
 
@@ -49,7 +49,7 @@
    快照只存 `Primitives+ArrayInstances`，`Constraints`（相切/重合）不参与 → 新增约束不可撤销、撤销后旧约束实体残留继续求解。
    改法：快照 DTO 增 `Constraints`，恢复时重建。
 
-   > **状态：待确认（未处理）**
+   > **状态：已修复**（快照 DTO 增加 Constraints 字段；抽取 ToConstraintDto/ConstraintFromDto 供保存加载与撤销快照共用，顺带补上 LockToTangentPoint 丢失问题；SnapshotPrimitives/RestorePrimitives 纳入约束；Constraints.CollectionChanged 订阅触发撤销登记）；编译 0 错误
 
 7. **[AGENTS.md 颜色硬规则违反] UI 层大量硬编码色**
    `SymbolDesignerView.xaml` 约 173 处硬编码 hex/具名色（多数已有对应 `Brush.*` token：`:199 #2A2A2A→Brush.Bg.Canvas`、`:660 #141420→Brush.Bg.Deep`、`:418 #4FC3F7→Brush.State.Accent`、手柄/白线等）。Converters 亦违规：`PickCenterBrushConverter.cs:12`（橙/绿）、`TagToBrushesConverter.cs:76`（默认深蓝）。

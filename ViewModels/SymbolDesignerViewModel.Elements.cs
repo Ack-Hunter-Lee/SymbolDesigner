@@ -40,6 +40,15 @@ public partial class SymbolDesignerViewModel
         RebuildArrayRenderItems();
     }
 
+    /// <summary>Constraints 增/删/清 → 标 dirty + 调度撤销快照。
+    /// 快照由 SnapshotPrimitives() 的 Constraints 字段覆盖（新增约束可撤销、撤销/重做恢复约束集合）。
+    /// 撤销/重做恢复自身的清空/重建由 _isRestoring 抑制。</summary>
+    private void OnConstraintsChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+    {
+        IsDirty = true;
+        if (!_isRestoring) ScheduleUndoCommit();
+    }
+
     /// <summary>任一元素 IsVisible 变化 → 刷新隐藏计数（元素页统计/按钮可用态）。</summary>
     private void OnPrimitiveVisibilityChanged(object? sender, EventArgs e)
         => RefreshHiddenCount();

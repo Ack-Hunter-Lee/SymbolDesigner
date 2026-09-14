@@ -173,31 +173,9 @@ public partial class SymbolDesignerViewModel
         // 沿路径阵列：保存所有块引用。null = 老工程无此字段 → 反序列化时退回空集合。
         foreach (var a in ArrayInstances)
             (project.ArrayInstances ??= new()).Add(ArrayInstanceToDto(a));
-        // 约束：按 Id 序列化，加载时按 Kind 重新关联图元。LineCircleTangent 字段直取；
-        // 未来新约束类型在 switch 中扩展（此时 DTO 需相应增字段）。
+        // 约束：按 Id 序列化，加载时按 Kind 重新关联图元（与撤销快照共用 ToConstraintDto）。
         foreach (var c in Constraints)
-        {
-            var dto = new TangencyConstraintDto { Id = c.Id.ToString() };
-            switch (c)
-            {
-                case LineCircleTangentConstraint lc:
-                    dto.Kind = GeometricConstraintKind.LineCircleTangent;
-                    dto.LineId = lc.LineId.ToString();
-                    dto.CircleId = lc.CircleId.ToString();
-                    dto.Side = lc.Side;
-                    dto.AnchorIsLine = lc.AnchorIsLine;
-                    break;
-                case LineCircleCoincidentConstraint cc:
-                    dto.Kind = GeometricConstraintKind.LineCircleCoincident;
-                    dto.LineId = cc.LineId.ToString();
-                    dto.CircleId = cc.CircleId.ToString();
-                    dto.CoincidentModeStr = cc.Mode.ToString();
-                    dto.EndpointIndex = cc.EndpointIndex;
-                    break;
-                // 未来：CircleCircleTangent 在此扩展
-            }
-            (project.Constraints ??= new()).Add(dto);
-        }
+            (project.Constraints ??= new()).Add(ToConstraintDto(c));
         return project;
     }
 
@@ -353,39 +331,15 @@ public partial class SymbolDesignerViewModel
                 ArrayInstances.Add(ArrayInstanceFromDto(adto));
         // 显式重建渲染层（避免 Clear()+Add() 之间触发的事件链覆盖初始空渲染）
         RebuildArrayRenderItems();
-        // 约束加载：按 Kind 分派到具体约束子类（接口驱动，未来加新类型在此扩展）
+        // 约束加载：按 Kind 分派到具体约束子类（与撤销快照共用 ConstraintFromDto；未来新类型在此扩展）
         Constraints.Clear();
         if (project.Constraints != null)
         {
             foreach (var cdto in project.Constraints)
             {
-                if (!Guid.TryParse(cdto.LineId, out var lineId)) continue;
-                if (!Guid.TryParse(cdto.CircleId, out var circleId)) continue;
-                // 兼容老文件 CoincidentModeStr 空 → 默认 EndPointOnArc
-                var cMode = Enum.TryParse<CoincidentMode>(cdto.CoincidentModeStr, out var cm)
-                    ? cm : CoincidentMode.EndPointOnArc;
-                IGeometricConstraint constraint = cdto.Kind switch
-                {
-                    GeometricConstraintKind.LineCircleCoincident =>
-                        new LineCircleCoincidentConstraint
-                        {
-                            Id = cdto.Id is { } ccId && Guid.TryParse(ccId, out var ccg) ? ccg : Guid.NewGuid(),
-                            LineId = lineId,
-                            CircleId = circleId,
-                            Mode = cMode,
-                            EndpointIndex = cdto.EndpointIndex,
-                        },
-                    // 未来：CircleCircleTangent 在此扩展
-                    _ => new LineCircleTangentConstraint
-                    {
-                        Id = cdto.Id is { } cid && Guid.TryParse(cid, out var cg) ? cg : Guid.NewGuid(),
-                        LineId = lineId,
-                        CircleId = circleId,
-                        Side = cdto.Side == -1 ? -1 : 1,
-                        AnchorIsLine = cdto.AnchorIsLine,
-                    },
-                };
-                Constraints.Add(constraint);
+                var constraint = ConstraintFromDto(cdto);
+                if (constraint is not null)
+                    Constraints.Add(constraint);
             }
             PruneConstraints();
         }
@@ -394,6 +348,66 @@ public partial class SymbolDesignerViewModel
         VertexHandles.Clear();
         SegmentHandles.Clear();
         OutlineCornerHandles.Clear();
+    }
+
+    /// <summary>序列化单条几何约束为 DTO（工程保存与撤销快照共用；与 ConstraintFromDto 对称）。
+    /// 新约束类型在 switch 中扩展（此时 DTO 需相应增字段）。</summary>
+    private static TangencyConstraintDto ToConstraintDto(IGeometricConstraint c)
+    {
+        var dto = new TangencyConstraintDto { Id = c.Id.ToString() };
+        switch (c)
+        {
+            case LineCircleTangentConstraint lc:
+                dto.Kind = GeometricConstraintKind.LineCircleTangent;
+                dto.LineId = lc.LineId.ToString();
+                dto.CircleId = lc.CircleId.ToString();
+                dto.Side = lc.Side;
+                dto.AnchorIsLine = lc.AnchorIsLine;
+                break;
+            case LineCircleCoincidentConstraint cc:
+                dto.Kind = GeometricConstraintKind.LineCircleCoincident;
+                dto.LineId = cc.LineId.ToString();
+                dto.CircleId = cc.CircleId.ToString();
+                dto.CoincidentModeStr = cc.Mode.ToString();
+                dto.EndpointIndex = cc.EndpointIndex;
+                dto.LockToTangentPoint = cc.LockToTangentPoint;
+                break;
+            // 未来：CircleCircleTangent 在此扩展
+        }
+        return dto;
+    }
+
+    /// <summary>从 DTO 重建约束实例（工程加载与撤销/重做恢复共用；与 ToConstraintDto 对称）。
+    /// 引用图元 Id 解析失败 → 返回 null，由调用方跳过（约束随缺失图元一并丢弃）。</summary>
+    private static IGeometricConstraint? ConstraintFromDto(TangencyConstraintDto cdto)
+    {
+        if (!Guid.TryParse(cdto.LineId, out var lineId)) return null;
+        if (!Guid.TryParse(cdto.CircleId, out var circleId)) return null;
+        // 兼容老文件 CoincidentModeStr 空 → 默认 EndPointOnArc
+        var cMode = Enum.TryParse<CoincidentMode>(cdto.CoincidentModeStr, out var cm)
+            ? cm : CoincidentMode.EndPointOnArc;
+        return cdto.Kind switch
+        {
+            GeometricConstraintKind.LineCircleCoincident =>
+                new LineCircleCoincidentConstraint
+                {
+                    Id = cdto.Id is { } ccId && Guid.TryParse(ccId, out var ccg) ? ccg : Guid.NewGuid(),
+                    LineId = lineId,
+                    CircleId = circleId,
+                    Mode = cMode,
+                    EndpointIndex = cdto.EndpointIndex,
+                    LockToTangentPoint = cdto.LockToTangentPoint,
+                },
+            // 未来：CircleCircleTangent 在此扩展
+            _ => new LineCircleTangentConstraint
+            {
+                Id = cdto.Id is { } cid && Guid.TryParse(cid, out var cg) ? cg : Guid.NewGuid(),
+                LineId = lineId,
+                CircleId = circleId,
+                Side = cdto.Side == -1 ? -1 : 1,
+                AnchorIsLine = cdto.AnchorIsLine,
+            },
+        };
     }
 
     /// <summary>从 DTO 重建单个 PrimitiveItem（撤销/重做恢复与工程加载复用）。

@@ -241,13 +241,15 @@ public class ArrayInstanceDto
 }
 
 /// <summary>画布快照 DTO（撤销/重做专用）：
-/// 把 Primitives + ArrayInstances 打包成一个 JSON 对象，使单个快照覆盖画布全部状态。
+/// 把 Primitives + ArrayInstances + Constraints 打包成一个 JSON 对象，使单个快照覆盖画布全部状态。
 /// 与 SymbolProject 的区别：SymbolProject 还包含画布尺寸/背景图等"工程元数据"，
 /// 而快照只关心"可被编辑恢复的内容"（不重复存尺寸/背景图，减少快照大小与比对开销）。</summary>
 public class ProjectSnapshotDto
 {
     public List<PrimitiveItemDto> Primitives { get; set; } = new();
     public List<ArrayInstanceDto> ArrayInstances { get; set; } = new();
+    /// <summary>几何约束快照。旧快照无此字段 → null（无约束）。</summary>
+    public List<TangencyConstraintDto>? Constraints { get; set; }
 }
 
 /// <summary>顶点厚度 DTO。IsStart/IsEnd 不保存（加载时按 Index 和集合 Count 重新计算）。</summary>

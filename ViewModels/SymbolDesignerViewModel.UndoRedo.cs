@@ -48,9 +48,9 @@ public partial class SymbolDesignerViewModel
 
     // ============== 快照与栈操作 ==============
 
-    /// <summary>生成当前 Primitives + ArrayInstances 的深拷贝快照(DTO JSON)。
+    /// <summary>生成当前 Primitives + ArrayInstances + Constraints 的深拷贝快照(DTO JSON)。
     /// 序列化顺序与内容完全确定性:相同状态 → 相同字符串,可直接比较。
-    /// 把两个集合打包成单个 JSON 对象（Primitives + ArrayInstances）→ 一个快照覆盖画布全部状态。</summary>
+    /// 把两个集合打包成单个 JSON 对象（Primitives + ArrayInstances + Constraints）→ 一个快照覆盖画布全部状态。</summary>
     private string SnapshotPrimitives()
     {
         var dtoList = new List<PrimitiveItemDto>(Primitives.Count);
@@ -59,11 +59,20 @@ public partial class SymbolDesignerViewModel
         var arrDtoList = new List<ArrayInstanceDto>(ArrayInstances.Count);
         foreach (var a in ArrayInstances)
             arrDtoList.Add(ArrayInstanceToDto(a));
-        var snap = new ProjectSnapshotDto { Primitives = dtoList, ArrayInstances = arrDtoList };
+        var conDtoList = new List<TangencyConstraintDto>(Constraints.Count);
+        foreach (var c in Constraints)
+            conDtoList.Add(ToConstraintDto(c));
+        var snap = new ProjectSnapshotDto
+        {
+            Primitives = dtoList,
+            ArrayInstances = arrDtoList,
+            Constraints = conDtoList,
+        };
         return System.Text.Json.JsonSerializer.Serialize(snap);
     }
 
-    /// <summary>用快照整体替换 Primitives + ArrayInstances(撤销/重做恢复)。期间抑制一切历史记录。</summary>
+    /// <summary>用快照整体替换 Primitives + ArrayInstances + Constraints(撤销/重做恢复)。
+    /// 期间抑制一切历史记录。</summary>
     private void RestorePrimitives(string snapshot)
     {
         _isRestoring = true;
@@ -79,6 +88,18 @@ public partial class SymbolDesignerViewModel
             ArrayInstances.Clear();
             foreach (var adto in arrList)
                 ArrayInstances.Add(ArrayInstanceFromDto(adto));
+            // 恢复约束：快照由本 VM 生成，图元引用必然存在；无约束的快照恢复为空集合
+            Constraints.Clear();
+            if (snap?.Constraints != null)
+            {
+                foreach (var cdto in snap.Constraints)
+                {
+                    var constraint = ConstraintFromDto(cdto);
+                    if (constraint is not null)
+                        Constraints.Add(constraint);
+                }
+                PruneConstraints();
+            }
             // 恢复后选中/手柄全部清空,用户重新点击才显示
             SelectedItem = null;
             VertexHandles.Clear();
