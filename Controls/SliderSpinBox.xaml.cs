@@ -35,7 +35,7 @@ public partial class SliderSpinBox : UserControl
     public static readonly DependencyProperty ValueProperty =
         Slider.ValueProperty.AddOwner(
             typeof(SliderSpinBox),
-            new FrameworkPropertyMetadata(0.0, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
+            new FrameworkPropertyMetadata(0.0, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, OnValueChanged));
     public double Value
     {
         get => (double)GetValue(ValueProperty);
@@ -89,7 +89,8 @@ public partial class SliderSpinBox : UserControl
 
     /// <summary>数值显示格式（StringFormat）。例如 "{}{0:0}px" / "{}{0:0}%"。</summary>
     public static readonly DependencyProperty StringFormatProperty =
-        DependencyProperty.Register(nameof(StringFormat), typeof(string), typeof(SliderSpinBox), new PropertyMetadata("{}{0:0}"));
+        DependencyProperty.Register(nameof(StringFormat), typeof(string), typeof(SliderSpinBox),
+            new PropertyMetadata("{}{0:0}", OnStringFormatChanged));
     public string StringFormat
     {
         get => (string)GetValue(StringFormatProperty);
@@ -100,14 +101,31 @@ public partial class SliderSpinBox : UserControl
     /// 外部在 XAML 中写 ValueChanged="..." 即可拿到 RoutedPropertyChangedEventArgs&lt;double&gt;。</summary>
     public event RoutedPropertyChangedEventHandler<double>? ValueChanged;
 
-    /// <summary>渲染文本（按 StringFormat 格式化当前 Value）。</summary>
+    /// <summary>渲染文本（按 StringFormat 格式化当前 Value）。
+    /// DP 化：值/格式变化时由回调刷新，保证 TextBlock 读数实时跟随（此前普通 CLR 属性不通知绑定）。</summary>
+    public static readonly DependencyProperty DisplayTextProperty =
+        DependencyProperty.Register(nameof(DisplayText), typeof(string), typeof(SliderSpinBox),
+            new FrameworkPropertyMetadata("0"));
     public string DisplayText
     {
-        get
-        {
-            string fmt = string.IsNullOrEmpty(StringFormat) ? "{}{0:0}" : StringFormat;
-            return string.Format(fmt, Value);
-        }
+        get => (string)GetValue(DisplayTextProperty);
+        set => SetValue(DisplayTextProperty, value);
+    }
+
+    private static void OnValueChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is SliderSpinBox s) s.UpdateDisplayText();
+    }
+
+    private static void OnStringFormatChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is SliderSpinBox s) s.UpdateDisplayText();
+    }
+
+    private void UpdateDisplayText()
+    {
+        string fmt = string.IsNullOrEmpty(StringFormat) ? "{}{0:0}" : StringFormat;
+        SetCurrentValue(DisplayTextProperty, string.Format(fmt, Value));
     }
 
     private void OnIncrementClick(object sender, RoutedEventArgs e) => Adjust(+Step);
