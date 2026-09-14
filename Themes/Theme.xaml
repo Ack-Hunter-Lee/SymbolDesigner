@@ -40,6 +40,9 @@
     <SolidColorBrush x:Key="Brush.Bg.Accent"       Color="#1A2848" />
     <SolidColorBrush x:Key="Brush.Bg.Neutral"      Color="#1A1A0A" />
     <SolidColorBrush x:Key="Brush.Bg.Popup"        Color="#141420" />
+    <SolidColorBrush x:Key="Brush.Bg.InputDeep"     Color="#0A0E1A" />
+    <SolidColorBrush x:Key="Brush.Bg.Raised"        Color="#2A2A3A" />
+    <SolidColorBrush x:Key="Brush.Bg.Transparent"   Color="Transparent" />
 
     <!-- ====== 边框 ====== -->
     <SolidColorBrush x:Key="Brush.Border.Subtle"   Color="#2A3A4A" />
@@ -64,9 +67,11 @@
     <SolidColorBrush x:Key="Brush.Text.Muted"      Color="#78909C" />
     <SolidColorBrush x:Key="Brush.Text.Tertiary"   Color="#546E7A" />
     <SolidColorBrush x:Key="Brush.Text.Hint"       Color="#CFD8DC" />
+    <SolidColorBrush x:Key="Brush.Text.Diagnostic" Color="#8FA8BC" />
 
     <!-- ====== 状态色（语义色，跨场景复用） ====== -->
     <SolidColorBrush x:Key="Brush.State.Accent"         Color="#4FC3F7" />
+    <SolidColorBrush x:Key="Brush.State.AccentGlass"   Color="#B04FC3F7" />
     <SolidColorBrush x:Key="Brush.State.AccentBorder"   Color="#5DADE2" />
     <SolidColorBrush x:Key="Brush.State.AccentFill"     Color="#305DADE2" />
     <SolidColorBrush x:Key="Brush.State.Success"        Color="#66BB6A" />
@@ -77,6 +82,8 @@
     <SolidColorBrush x:Key="Brush.State.WarnBorder"     Color="#FF8A65" />
     <SolidColorBrush x:Key="Brush.State.Danger"         Color="#EF5350" />
     <SolidColorBrush x:Key="Brush.State.DangerLight"    Color="#EF9A9A" />
+    <SolidColorBrush x:Key="Brush.State.PickCenter"    Color="#FF9800" />
+    <SolidColorBrush x:Key="Brush.State.PickEndpoint"  Color="#4CAF50" />
 
     <!-- ====== 端口节点 ====== -->
     <SolidColorBrush x:Key="Brush.Port.Input"   Color="#81D4FA" />
@@ -85,11 +92,14 @@
     <SolidColorBrush x:Key="Brush.Port.Mid"     Color="#FFD54F" />
     <SolidColorBrush x:Key="Brush.Port.Output"  Color="#80CBC4" />
     <SolidColorBrush x:Key="Brush.Port.Output2" Color="#4DD0E1" />
+    <SolidColorBrush x:Key="Brush.Port.OutputDeep" Color="#FF7043" />
 
     <!-- ====== 品牌/图元 ====== -->
     <SolidColorBrush x:Key="Brush.Brand.Primary"     Color="#A8C4D8" />
     <SolidColorBrush x:Key="Brush.Brand.Stroke"      Color="#FFFFFF" />
     <SolidColorBrush x:Key="Brush.Brand.StrokeLight" Color="#E0E0E0" />
+    <SolidColorBrush x:Key="Brush.Brand.StrokeMuted" Color="#5A7A8C" />
+    <SolidColorBrush x:Key="Brush.Brand.StrokeDim"   Color="#A0A0A0" />
     <SolidColorBrush x:Key="Brush.Brand.Hint"        Color="#90A4AE" />
 
     <!-- ====== 阴影/遮罩（半透色） ====== -->

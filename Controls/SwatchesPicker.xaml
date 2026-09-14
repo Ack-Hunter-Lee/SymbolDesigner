@@ -15,7 +15,7 @@
                 <ToggleButton.Template>
                     <ControlTemplate TargetType="ToggleButton">
                         <Border Margin="0" Padding="4,3" CornerRadius="3"
-                                Background="#1A2A3A" BorderBrush="#3A5A7A" BorderThickness="1" />
+                                Background="{StaticResource Brush.Bg.Selected}" BorderBrush="{StaticResource Brush.Border.Mid}" BorderThickness="1" />
                     </ControlTemplate>
                 </ToggleButton.Template>
             </ToggleButton>
@@ -26,7 +26,7 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <Border x:Name="ColorPreview" Grid.Column="0" Width="20" Height="14" CornerRadius="2"
-                        Margin="4,3" BorderBrush="#2A3A4A" BorderThickness="1" />
+                        Margin="4,3" BorderBrush="{StaticResource Brush.Border.Subtle}" BorderThickness="1" />
                 <TextBlock x:Name="HexText" Grid.Column="1" Margin="5,0,4,0" FontSize="10"
                            VerticalAlignment="Center" Text="(空)" />
                 <TextBlock Grid.Column="2" FontSize="8" VerticalAlignment="Center" Text="▼" Margin="0,0,4,0" />
@@ -80,7 +80,7 @@
                                        VerticalAlignment="Center"
                                        Foreground="{StaticResource Brush.Text.Primary}" />
                             <Button Grid.Column="1" Click="OnMoreColorsClick" Cursor="Hand"
-                                    Background="Transparent" BorderThickness="0" Padding="2">
+                                    Background="{StaticResource Brush.Bg.Transparent}" BorderThickness="0" Padding="2">
                                 <Border Width="14" Height="14" CornerRadius="1"
                                         Background="{StaticResource Brush.Bg.Canvas}"
                                         BorderBrush="{StaticResource Brush.Border.Subtle}" BorderThickness="0.6">
@@ -98,7 +98,7 @@
                                        VerticalAlignment="Center"
                                        Foreground="{StaticResource Brush.Text.Primary}" />
                             <Button Grid.Column="1" Click="OnEyedropperClick" Cursor="Hand"
-                                    Background="Transparent" BorderThickness="0" Padding="2">
+                                    Background="{StaticResource Brush.Bg.Transparent}" BorderThickness="0" Padding="2">
                                 <TextBlock Text="🖊" FontSize="14"
                                            Foreground="{StaticResource Brush.Text.Primary}" />
                             </Button>
@@ -112,7 +112,7 @@
                                        VerticalAlignment="Center"
                                        Foreground="{StaticResource Brush.Text.Primary}" />
                             <Button Grid.Column="1" Click="OnNoFillClick" Cursor="Hand"
-                                    Background="Transparent" BorderThickness="0" Padding="2">
+                                    Background="{StaticResource Brush.Bg.Transparent}" BorderThickness="0" Padding="2">
                                 <Border Width="14" Height="14" CornerRadius="1"
                                         Background="{StaticResource Brush.Bg.Canvas}"
                                         BorderBrush="{StaticResource Brush.Border.Subtle}" BorderThickness="0.6">

@@ -55,12 +55,12 @@
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="HorizontalAlignment" Value="Left" />
             <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Background" Value="{StaticResource Brush.Bg.Transparent}" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="CornerRadius" Value="4" />
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#1F2A36" />
+                    <Setter Property="Background" Value="{StaticResource Brush.Bg.Hover}" />
                     <Setter Property="Opacity" Value="0.6" />
                 </Trigger>
             </Style.Triggers>
@@ -74,12 +74,12 @@
             <Setter Property="Padding" Value="6,2" />
             <Setter Property="CornerRadius" Value="4" />
             <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Background" Value="{StaticResource Brush.Bg.Transparent}" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Cursor" Value="Hand" />
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#1F2A36" />
+                    <Setter Property="Background" Value="{StaticResource Brush.Bg.Hover}" />
                     <Setter Property="Opacity" Value="0.5" />
                 </Trigger>
             </Style.Triggers>
@@ -124,7 +124,7 @@
             - RibbonPanelCaption：面板组标题（小号次要色文字）
         -->
         <Style x:Key="RibbonTabControl" TargetType="TabControl">
-            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Background" Value="{StaticResource Brush.Bg.Transparent}" />
             <Setter Property="BorderThickness" Value="0" />
         </Style>
         <Style x:Key="RibbonTabItem" TargetType="TabItem">
@@ -132,7 +132,7 @@
             <Setter Property="FontSize" Value="12" />
             <Setter Property="FontWeight" Value="Normal" />
             <Setter Property="Padding" Value="14,7" />
-            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Background" Value="{StaticResource Brush.Bg.Transparent}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TabItem">
@@ -183,16 +183,16 @@
             <Rectangle
                 Width="16"
                 Height="10"
-                Fill="Transparent"
-                Stroke="White"
+                Fill="{StaticResource Brush.Bg.Transparent}"
+                Stroke="{StaticResource Brush.Tool.Icon}"
                 StrokeThickness="0.6" />
         </DataTemplate>
         <DataTemplate x:Key="L1EllipsePreview">
             <Ellipse
                 Width="14"
                 Height="14"
-                Fill="Transparent"
-                Stroke="White"
+                Fill="{StaticResource Brush.Bg.Transparent}"
+                Stroke="{StaticResource Brush.Tool.Icon}"
                 StrokeThickness="0.6" />
         </DataTemplate>
         <DataTemplate x:Key="L1LinePreview">
@@ -200,7 +200,7 @@
             <Line
                 Width="16"
                 Height="14"
-                Stroke="White"
+                Stroke="{StaticResource Brush.Tool.Icon}"
                 StrokeThickness="0.6"
                 X1="0"
                 X2="16"
@@ -211,7 +211,7 @@
             <!--  纯折线 Polyline 预览：两段折线，描边与形状类统一 0.6。  -->
             <Polyline
                 Points="0,12 6,1 10,7 16,3"
-                Stroke="White"
+                Stroke="{StaticResource Brush.Tool.Icon}"
                 StrokeEndLineCap="Round"
                 StrokeLineJoin="Round"
                 StrokeStartLineCap="Round"
@@ -224,7 +224,7 @@
             -->
             <Path
                 Data="M 0,12 L 6,1 L 10,7 L 16,3"
-                Stroke="White"
+                Stroke="{StaticResource Brush.Tool.Icon}"
                 StrokeEndLineCap="Round"
                 StrokeLineJoin="Round"
                 StrokeStartLineCap="Round"
@@ -234,16 +234,16 @@
             <Border
                 Width="16"
                 Height="10"
-                Background="Transparent"
-                BorderBrush="White"
+                Background="{StaticResource Brush.Bg.Transparent}"
+                BorderBrush="{StaticResource Brush.Tool.Icon}"
                 BorderThickness="0.6"
                 CornerRadius="3" />
         </DataTemplate>
         <DataTemplate x:Key="L1TrianglePreview">
             <Polygon
-                Fill="Transparent"
+                Fill="{StaticResource Brush.Bg.Transparent}"
                 Points="8,1 15,12 1,12"
-                Stroke="White"
+                Stroke="{StaticResource Brush.Tool.Icon}"
                 StrokeThickness="0.6" />
         </DataTemplate>
         <DataTemplate x:Key="L1RingPreview">
@@ -252,13 +252,13 @@
                 <Ellipse
                     Width="14"
                     Height="14"
-                    Fill="Transparent"
-                    Stroke="White"
+                    Fill="{StaticResource Brush.Bg.Transparent}"
+                    Stroke="{StaticResource Brush.Tool.Icon}"
                     StrokeThickness="0.6" />
                 <Ellipse
                     Width="6"
                     Height="6"
-                    Fill="#2A2A2A" />
+                    Fill="{StaticResource Brush.Bg.Canvas}" />
             </Grid>
         </DataTemplate>
         <!--  扇形（Pie）预览：三角形 + 弧边示意扇面  -->
@@ -266,8 +266,8 @@
             <Grid Width="14" Height="14">
                 <Path
                     Data="M 7,7 L 14,7 A 7,7 0 0 1 4.95,12.05 Z"
-                    Fill="#2A2A2A"
-                    Stroke="White"
+                    Fill="{StaticResource Brush.Bg.Canvas}"
+                    Stroke="{StaticResource Brush.Tool.Icon}"
                     StrokeLineJoin="Round"
                     StrokeThickness="0.6" />
             </Grid>
@@ -345,7 +345,7 @@
                         Data="M 0,2 L 4,2 M 2,0 L 2,4"
                         IsHitTestVisible="False"
                         Opacity="0.65"
-                        Stroke="#A0A0A0"
+                        Stroke="{StaticResource Brush.Brand.StrokeDim}"
                         StrokeEndLineCap="Round"
                         StrokeStartLineCap="Round"
                         StrokeThickness="0.4" />
@@ -477,7 +477,7 @@
                         Data="{Binding TrajectoryPathData}"
                         IsHitTestVisible="False"
                         Stretch="None"
-                        Stroke="#4FC3F7"
+                        Stroke="{StaticResource Brush.State.Accent}"
                         StrokeDashArray="2 1.5"
                         StrokeThickness="0.3">
                         <Path.Style>
@@ -569,7 +569,7 @@
                 <Rectangle
                     Width="{Binding Width}"
                     Height="{Binding Height}"
-                    Fill="Transparent"
+                    Fill="{StaticResource Brush.Bg.Transparent}"
                     RadiusX="{Binding CornerRadius}"
                     RadiusY="{Binding CornerRadius}"
                     Style="{StaticResource CadShapeSelected}" />
@@ -584,7 +584,7 @@
                 <Polygon
                     Width="{Binding Width}"
                     Height="{Binding Height}"
-                    Fill="Transparent"
+                    Fill="{StaticResource Brush.Bg.Transparent}"
                     Points="0.5,0 1,1 0,1"
                     Stretch="Fill"
                     Style="{StaticResource CadShapeSelected}" />
@@ -621,7 +621,7 @@
                         Data="M 0,2 L 4,2 M 2,0 L 2,4"
                         IsHitTestVisible="False"
                         Opacity="0.65"
-                        Stroke="#A0A0A0"
+                        Stroke="{StaticResource Brush.Brand.StrokeDim}"
                         StrokeEndLineCap="Round"
                         StrokeStartLineCap="Round"
                         StrokeThickness="0.4" />
@@ -745,7 +745,7 @@
             Grid.Column="0"
             Margin="0,0,2,0"
             VerticalAlignment="Top"
-            Background="#141420"
+            Background="{StaticResource Brush.Bg.Deep}"
             BorderBrush="{StaticResource MetalFrameInner}"
             BorderThickness="1"
             CornerRadius="4">
@@ -777,8 +777,8 @@
                                 ToolTip="{Binding Label}">
                                 <Border.Style>
                                     <Style TargetType="Border">
-                                        <Setter Property="Background" Value="Transparent" />
-                                        <Setter Property="BorderBrush" Value="Transparent" />
+                                        <Setter Property="Background" Value="{StaticResource Brush.Bg.Transparent}" />
+                                        <Setter Property="BorderBrush" Value="{StaticResource Brush.Bg.Transparent}" />
                                         <Style.Triggers>
                                             <DataTrigger Value="True">
                                                 <DataTrigger.Binding>
@@ -787,8 +787,8 @@
                                                         <Binding Path="DataContext.ActiveToolKey" RelativeSource="{RelativeSource AncestorType=UserControl}" />
                                                     </MultiBinding>
                                                 </DataTrigger.Binding>
-                                                <Setter Property="Background" Value="#1a2a3a" />
-                                                <Setter Property="BorderBrush" Value="#5dade2" />
+                                                <Setter Property="Background" Value="{StaticResource Brush.Bg.Selected}" />
+                                                <Setter Property="BorderBrush" Value="{StaticResource Brush.State.AccentBorder}" />
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
@@ -945,9 +945,9 @@
                         <!--  格式刷图标（用户自绘）：刷头 + 斜刷柄 + 手柄，Viewbox 等比缩放撑满 16×16。  -->
                         <Viewbox Width="16" Height="16" Stretch="Uniform">
                             <Canvas Width="40.19" Height="67.82">
-                                <Rectangle Canvas.Left="0" Canvas.Top="0" Width="33.34" Height="9.59" Panel.ZIndex="0" Fill="#a8c4d8" Stroke="#5a7a8c" StrokeThickness="0.8" />
-                                <Path Canvas.Left="17.81" Canvas.Top="4.11" Data="M15.53,0L22.38,0 22.38,10.28 0,18.04 0,31.51" Panel.ZIndex="1" Stroke="#5a7a8c" StrokeThickness="0.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Stretch="None" />
-                                <Rectangle Canvas.Left="14.16" Canvas.Top="35.62" Width="7.31" Height="32.2" Panel.ZIndex="2" Fill="#a8c4d8" Stroke="#5a7a8c" StrokeThickness="0.8" />
+                                <Rectangle Canvas.Left="0" Canvas.Top="0" Width="33.34" Height="9.59" Panel.ZIndex="0" Fill="{StaticResource Brush.Text.Primary}" Stroke="{StaticResource Brush.Brand.StrokeMuted}" StrokeThickness="0.8" />
+                                <Path Canvas.Left="17.81" Canvas.Top="4.11" Data="M15.53,0L22.38,0 22.38,10.28 0,18.04 0,31.51" Panel.ZIndex="1" Stroke="{StaticResource Brush.Brand.StrokeMuted}" StrokeThickness="0.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Stretch="None" />
+                                <Rectangle Canvas.Left="14.16" Canvas.Top="35.62" Width="7.31" Height="32.2" Panel.ZIndex="2" Fill="{StaticResource Brush.Text.Primary}" Stroke="{StaticResource Brush.Brand.StrokeMuted}" StrokeThickness="0.8" />
                             </Canvas>
                         </Viewbox>
                     </Border>
@@ -1366,7 +1366,7 @@
                                 Margin="4,0,0,0"
                                 VerticalAlignment="Center"
                                 FontSize="9"
-                                Foreground="#546e7a"
+                                Foreground="{StaticResource Brush.Text.Tertiary}"
                                 Text="{Binding BackgroundOpacity, Mode=OneWay, StringFormat={}{0:P0}}"
                                 TextAlignment="Right" />
                         </StackPanel>
@@ -1517,7 +1517,7 @@
 
                             <Path
                                 Data="{Binding DraftPathData}"
-                                Fill="Transparent"
+                                Fill="{StaticResource Brush.Bg.Transparent}"
                                 IsHitTestVisible="False"
                                 Stretch="None"
                                 Visibility="{Binding IsDrawing, Converter={StaticResource BoolToVis}}">
@@ -1788,7 +1788,7 @@
                                             Fill="{Binding IsCircleCenter, Converter={StaticResource PickCenterBrush}}"
                                             RenderOptions.EdgeMode="Aliased"
                                             SnapsToDevicePixels="True"
-                                            Stroke="#ffffff"
+                                            Stroke="{StaticResource Brush.Brand.Stroke}"
                                             StrokeThickness="0.3" />
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -1941,8 +1941,8 @@
                                             Width="3"
                                             Height="3"
                                             Cursor="SizeAll"
-                                            Fill="#4FC3F7"
-                                            Stroke="#ffffff"
+                                            Fill="{StaticResource Brush.State.Accent}"
+                                            Stroke="{StaticResource Brush.Brand.Stroke}"
                                             StrokeThickness="0.1"
                                             RenderTransformOrigin="0.5,0.5"
                                             Tag="{Binding Index}"
@@ -1990,8 +1990,8 @@
                                             Width="3.5"
                                             Height="3.5"
                                             Cursor="SizeAll"
-                                            Fill="#FFB74D"
-                                            Stroke="#ffffff"
+                                            Fill="{StaticResource Brush.State.Warn}"
+                                            Stroke="{StaticResource Brush.Brand.Stroke}"
                                             StrokeThickness="0.1"
                                             RenderTransformOrigin="0.5,0.5"
                                             ToolTip="拖拽以平移整段线段（保持长度）">
@@ -2040,7 +2040,7 @@
                                             Width="3"
                                             Height="2"
                                             Stretch="Fill"
-                                            Stroke="#ffffff"
+                                            Stroke="{StaticResource Brush.Brand.Stroke}"
                                             RenderTransformOrigin="0.5,0.5"
                                             StrokeThickness="0.1">
                                             <Path.RenderTransform>
@@ -2050,7 +2050,7 @@
                                             </Path.RenderTransform>
                                             <Path.Style>
                                                 <Style TargetType="Path">
-                                                    <Setter Property="Fill" Value="#81D4FA" />
+                                                    <Setter Property="Fill" Value="{StaticResource Brush.Port.Input}" />
                                                     <!--  默认 = End（入端）：尖朝上  -->
                                                     <Setter Property="Data" Value="M0,4 L6,4 L3,0 Z" />
                                                     <Style.Triggers>
@@ -2059,7 +2059,7 @@
                                                             <Setter Property="Data" Value="M0,0 L6,0 L3,4 Z" />
                                                         </DataTrigger>
                                                         <DataTrigger Binding="{Binding Side}" Value="R">
-                                                            <Setter Property="Fill" Value="#FF8A65" />
+                                                            <Setter Property="Fill" Value="{StaticResource Brush.State.WarnBorder}" />
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
@@ -2104,7 +2104,7 @@
                                             Height="3.5"
                                             Cursor="SizeAll"
                                             RenderTransformOrigin="0.5,0.5"
-                                            Stroke="#ffffff"
+                                            Stroke="{StaticResource Brush.Brand.Stroke}"
                                             StrokeThickness="0.1">
                                             <Rectangle.RenderTransform>
                                                 <ScaleTransform
@@ -2113,15 +2113,15 @@
                                             </Rectangle.RenderTransform>
                                             <Rectangle.Style>
                                                 <Style TargetType="Rectangle">
-                                                    <Setter Property="Fill" Value="#64B5F6" />
+                                                    <Setter Property="Fill" Value="{StaticResource Brush.Port.Input2}" />
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding Kind}" Value="{x:Static viewmodels:RingHandleKind.Center}">
-                                                            <Setter Property="Fill" Value="#ffffff" />
+                                                            <Setter Property="Fill" Value="{StaticResource Brush.Brand.Stroke}" />
                                                             <Setter Property="RadiusX" Value="1.75" />
                                                             <Setter Property="RadiusY" Value="1.75" />
                                                         </DataTrigger>
                                                         <DataTrigger Binding="{Binding Kind}" Value="{x:Static viewmodels:RingHandleKind.Inner}">
-                                                            <Setter Property="Fill" Value="#FFD54F" />
+                                                            <Setter Property="Fill" Value="{StaticResource Brush.Port.Mid}" />
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
@@ -2164,7 +2164,7 @@
                                         <Rectangle
                                             Cursor="SizeAll"
                                             RenderTransformOrigin="0.5,0.5"
-                                            Stroke="#ffffff"
+                                            Stroke="{StaticResource Brush.Brand.Stroke}"
                                             StrokeThickness="0.1">
                                             <Rectangle.RenderTransform>
                                                 <ScaleTransform
@@ -2173,18 +2173,18 @@
                                             </Rectangle.RenderTransform>
                                             <Rectangle.Style>
                                                 <Style TargetType="Rectangle">
-                                                    <Setter Property="Fill" Value="#64B5F6" />
+                                                    <Setter Property="Fill" Value="{StaticResource Brush.Port.Input2}" />
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding Kind}" Value="{x:Static viewmodels:PieHandleKind.Center}">
-                                                            <Setter Property="Fill" Value="#ffffff" />
+                                                            <Setter Property="Fill" Value="{StaticResource Brush.Brand.Stroke}" />
                                                             <Setter Property="RadiusX" Value="1.75" />
                                                             <Setter Property="RadiusY" Value="1.75" />
                                                         </DataTrigger>
                                                         <DataTrigger Binding="{Binding Kind}" Value="{x:Static viewmodels:PieHandleKind.Start}">
-                                                            <Setter Property="Fill" Value="#FFD54F" />
+                                                            <Setter Property="Fill" Value="{StaticResource Brush.Port.Mid}" />
                                                         </DataTrigger>
                                                         <DataTrigger Binding="{Binding Kind}" Value="{x:Static viewmodels:PieHandleKind.End}">
-                                                            <Setter Property="Fill" Value="#FF7043" />
+                                                            <Setter Property="Fill" Value="{StaticResource Brush.Port.OutputDeep}" />
                                                             <Setter Property="RadiusX" Value="1.75" />
                                                             <Setter Property="RadiusY" Value="1.75" />
                                                         </DataTrigger>
@@ -2259,16 +2259,16 @@
                                             <Ellipse
                                                 Width="5"
                                                 Height="5"
-                                                Stroke="#ffffff"
+                                                Stroke="{StaticResource Brush.Brand.Stroke}"
                                                 StrokeThickness="0.15"
                                                 Visibility="{Binding IsCorner, Converter={StaticResource BoolToVis}}">
                                                 <Ellipse.Style>
                                                     <Style TargetType="Ellipse">
-                                                        <Setter Property="Fill" Value="#64B5F6" />
+                                                        <Setter Property="Fill" Value="{StaticResource Brush.Port.Input2}" />
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                                <Setter Property="Fill" Value="#A5D6A7" />
-                                                                <Setter Property="Stroke" Value="#64B5F6" />
+                                                                <Setter Property="Fill" Value="{StaticResource Brush.State.SuccessLight}" />
+                                                                <Setter Property="Stroke" Value="{StaticResource Brush.Port.Input2}" />
                                                                 <Setter Property="StrokeThickness" Value="0.4" />
                                                             </DataTrigger>
                                                         </Style.Triggers>
@@ -2279,16 +2279,16 @@
                                             <Rectangle
                                                 Width="3"
                                                 Height="3"
-                                                Stroke="#ffffff"
+                                                Stroke="{StaticResource Brush.Brand.Stroke}"
                                                 StrokeThickness="0.15"
                                                 Visibility="{Binding IsCorner, Converter={StaticResource InverseBoolToVis}}">
                                                 <Rectangle.Style>
                                                     <Style TargetType="Rectangle">
-                                                        <Setter Property="Fill" Value="#FFD54F" />
+                                                        <Setter Property="Fill" Value="{StaticResource Brush.Port.Mid}" />
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                                <Setter Property="Fill" Value="#A5D6A7" />
-                                                                <Setter Property="Stroke" Value="#FFD54F" />
+                                                                <Setter Property="Fill" Value="{StaticResource Brush.State.SuccessLight}" />
+                                                                <Setter Property="Stroke" Value="{StaticResource Brush.Port.Mid}" />
                                                                 <Setter Property="StrokeThickness" Value="0.4" />
                                                             </DataTrigger>
                                                         </Style.Triggers>
@@ -2819,15 +2819,15 @@
                         Margin="0,0,0,6"
                         FontSize="11"
                         FontWeight="Bold"
-                        Foreground="#78909c"
+                        Foreground="{StaticResource Brush.Text.Muted}"
                         Text="面板" />
 
                     <!--  页切换器：属性 / 元素（复刻三模式按钮：ItemsControl + UniformGrid 两列，DataTrigger 切选中色）  -->
                     <Border
                         Grid.Row="1"
                         Margin="0,0,0,6"
-                        Background="#0f1820"
-                        BorderBrush="#2a3a4a"
+                        Background="{StaticResource Brush.Bg.Darker}"
+                        BorderBrush="{StaticResource Brush.Border.Subtle}"
                         BorderThickness="1"
                         CornerRadius="3">
                         <ItemsControl ItemsSource="{Binding RightPaneChoices}">
@@ -2840,7 +2840,7 @@
                                 <DataTemplate>
                                     <Button
                                         Padding="0,4"
-                                        Background="Transparent"
+                                        Background="{StaticResource Brush.Bg.Transparent}"
                                         BorderThickness="0"
                                         Command="{Binding Command}"
                                         CommandParameter="{Binding CommandParameter}"
@@ -2857,12 +2857,12 @@
                                         </Button.Template>
                                         <Button.Style>
                                             <Style TargetType="Button">
-                                                <Setter Property="Background" Value="Transparent" />
-                                                <Setter Property="Foreground" Value="#78909c" />
+                                                <Setter Property="Background" Value="{StaticResource Brush.Bg.Transparent}" />
+                                                <Setter Property="Foreground" Value="{StaticResource Brush.Text.Muted}" />
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                        <Setter Property="Background" Value="#1a3a3a" />
-                                                        <Setter Property="Foreground" Value="#A5D6A7" />
+                                                        <Setter Property="Background" Value="{StaticResource Brush.Bg.SuccessSoft}" />
+                                                        <Setter Property="Foreground" Value="{StaticResource Brush.State.SuccessLight}" />
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -2870,10 +2870,10 @@
                                         <TextBlock FontSize="10" Text="{Binding Label}">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
-                                                    <Setter Property="Foreground" Value="#78909c" />
+                                                    <Setter Property="Foreground" Value="{StaticResource Brush.Text.Muted}" />
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                            <Setter Property="Foreground" Value="#A5D6A7" />
+                                                            <Setter Property="Foreground" Value="{StaticResource Brush.State.SuccessLight}" />
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
@@ -2969,7 +2969,7 @@
                                             <Button
                                                 HorizontalAlignment="Right"
                                                 Padding="4,0"
-                                                Background="Transparent"
+                                                Background="{StaticResource Brush.Bg.Transparent}"
                                                 BorderThickness="0"
                                                 Command="{Binding ResetCanvasBackgroundCommand}"
                                                 Cursor="Hand"
@@ -3008,8 +3008,8 @@
                                 <Border
                                     Margin="0,0,0,4"
                                     Padding="6"
-                                    Background="#0f1820"
-                                    BorderBrush="#2a3a4a"
+                                    Background="{StaticResource Brush.Bg.Darker}"
+                                    BorderBrush="{StaticResource Brush.Border.Subtle}"
                                     BorderThickness="1"
                                     CornerRadius="3"
                                     Visibility="{Binding HasSelectedItem, Converter={StaticResource BoolToVis}}">
@@ -3019,13 +3019,13 @@
                                                 HorizontalAlignment="Left"
                                                 VerticalAlignment="Center"
                                                 FontSize="10"
-                                                Foreground="#a8c4d8"
+                                                Foreground="{StaticResource Brush.Text.Primary}"
                                                 Text="透明度" />
                                             <TextBlock
                                                 HorizontalAlignment="Right"
                                                 VerticalAlignment="Center"
                                                 FontSize="10"
-                                                Foreground="#546e7a">
+                                                Foreground="{StaticResource Brush.Text.Tertiary}">
                                                 <Run Text="{Binding SelectedItem.Opacity, Mode=OneWay, StringFormat=P0}" />
                                             </TextBlock>
                                         </Grid>
@@ -3705,8 +3705,8 @@
                                 <!--  属性面板：仅当选中的是矩形类（Rectangle / RoundedRectangle）/ BandPolyline / Polyline 时显示  -->
                                 <Border
                                     Padding="6"
-                                    Background="#0f1820"
-                                    BorderBrush="#2a3a4a"
+                                    Background="{StaticResource Brush.Bg.Darker}"
+                                    BorderBrush="{StaticResource Brush.Border.Subtle}"
                                     BorderThickness="1"
                                     CornerRadius="3">
                                     <Border.Style>
@@ -3738,17 +3738,17 @@
                                                 Margin="0,0,0,4"
                                                 FontSize="11"
                                                 FontWeight="Bold"
-                                                Foreground="#78909c"
+                                                Foreground="{StaticResource Brush.Text.Muted}"
                                                 Text="布尔运算结果" />
                                             <Border
                                                 Margin="0,2,0,6"
-                                                Background="#0f1820"
-                                                BorderBrush="#2a3a4a"
+                                                Background="{StaticResource Brush.Bg.Darker}"
+                                                BorderBrush="{StaticResource Brush.Border.Subtle}"
                                                 BorderThickness="1"
                                                 CornerRadius="3">
                                                 <Button
                                                     Padding="6,4"
-                                                    Background="Transparent"
+                                                    Background="{StaticResource Brush.Bg.Transparent}"
                                                     BorderThickness="0"
                                                     Command="{Binding ToggleEditModeCommand}"
                                                     Cursor="Hand">
@@ -3764,10 +3764,10 @@
                                                     </Button.Template>
                                                     <Button.Style>
                                                         <Style TargetType="Button">
-                                                            <Setter Property="Foreground" Value="#78909c" />
+                                                            <Setter Property="Foreground" Value="{StaticResource Brush.Text.Muted}" />
                                                             <Style.Triggers>
                                                                 <DataTrigger Binding="{Binding IsOutlineEditMode}" Value="True">
-                                                                    <Setter Property="Foreground" Value="#A5D6A7" />
+                                                                    <Setter Property="Foreground" Value="{StaticResource Brush.State.SuccessLight}" />
                                                                 </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
@@ -3789,20 +3789,20 @@
                                             <TextBlock
                                                 Margin="0,0,0,4"
                                                 FontSize="10"
-                                                Foreground="#a8c4d8"
+                                                Foreground="{StaticResource Brush.Text.Primary}"
                                                 Text="由两个闭合图元合并/剪除/相交得到。轮廓点不允许拖拽；轮廓模式下点击轮廓点可设置该点样式（Miter 尖角 / Round 圆角）及圆角半径（0=尖角，&gt;0=圆角）。结果仍可再次参与布尔运算。"
                                                 TextWrapping="Wrap" />
                                             <!--  源快照 + 调整/重新合并：合并时源几何已烧入结果；点"调整源"按快照恢复到画布编辑  -->
                                             <Border
                                                 Margin="0,2,0,6"
-                                                Background="#0f1820"
-                                                BorderBrush="#2a3a4a"
+                                                Background="{StaticResource Brush.Bg.Darker}"
+                                                BorderBrush="{StaticResource Brush.Border.Subtle}"
                                                 BorderThickness="1"
                                                 CornerRadius="3">
                                                 <StackPanel>
                                                     <Button
                                                         Padding="6,4"
-                                                        Background="Transparent"
+                                                        Background="{StaticResource Brush.Bg.Transparent}"
                                                         BorderThickness="0"
                                                         Command="{Binding ToggleSourceAdjustCommand}"
                                                         Cursor="Hand">
@@ -3818,7 +3818,7 @@
                                                         </Button.Template>
                                                         <Button.Style>
                                                             <Style TargetType="Button">
-                                                                <Setter Property="Foreground" Value="#A5D6A7" />
+                                                                <Setter Property="Foreground" Value="{StaticResource Brush.State.SuccessLight}" />
                                                                 <Style.Triggers>
                                                                     <Trigger Property="IsEnabled" Value="False">
                                                                         <Setter Property="Opacity" Value="0.4" />
@@ -3842,7 +3842,7 @@
                                                     <Button
                                                         Margin="0,2,0,0"
                                                         Padding="6,4"
-                                                        Background="Transparent"
+                                                        Background="{StaticResource Brush.Bg.Transparent}"
                                                         BorderThickness="0"
                                                         Command="{Binding RecomputeBooleanCommand}"
                                                         Cursor="Hand">
@@ -3858,7 +3858,7 @@
                                                         </Button.Template>
                                                         <Button.Style>
                                                             <Style TargetType="Button">
-                                                                <Setter Property="Foreground" Value="#A5D6A7" />
+                                                                <Setter Property="Foreground" Value="{StaticResource Brush.State.SuccessLight}" />
                                                                 <Style.Triggers>
                                                                     <Trigger Property="IsEnabled" Value="False">
                                                                         <Setter Property="Opacity" Value="0.4" />
@@ -3871,7 +3871,7 @@
                                                     <TextBlock
                                                         Margin="6,0,6,4"
                                                         FontSize="9"
-                                                        Foreground="#78909c"
+                                                        Foreground="{StaticResource Brush.Text.Muted}"
                                                         Text="点&#x201C;调整源&#x201D;按快照把两个源恢复到画布（结果半透明作参考）。拖动/改尺寸源：结果实时预览；松开鼠标自动重新合并并收起源。可手动点&#x201C;收起源&#x201D;（保持当前结果）或&#x201C;重新合并&#x201D;（按最新源几何烧入结果）。"
                                                         TextWrapping="Wrap" />
                                                 </StackPanel>
@@ -3882,15 +3882,15 @@
                                                     <TextBlock
                                                         VerticalAlignment="Center"
                                                         FontSize="10"
-                                                        Foreground="#a8c4d8"
+                                                        Foreground="{StaticResource Brush.Text.Primary}"
                                                         Text="接缝样式" />
                                                     <ComboBox
                                                         Width="110"
                                                         HorizontalAlignment="Right"
-                                                        Background="#0a0e1a"
-                                                        BorderBrush="#2a3a4a"
+                                                        Background="{StaticResource Brush.Bg.InputDeep}"
+                                                        BorderBrush="{StaticResource Brush.Border.Subtle}"
                                                         FontSize="11"
-                                                        Foreground="#a8c4d8"
+                                                        Foreground="{StaticResource Brush.Text.Primary}"
                                                         IsEnabled="{Binding HasSelectedOutlineCorner}"
                                                         SelectedItem="{Binding SelectedOutlineCorner.CurrentStyleEffective, Mode=TwoWay}">
                                                         <models:JoinStyle>Miter</models:JoinStyle>
@@ -3901,7 +3901,7 @@
                                                     <TextBlock
                                                         VerticalAlignment="Center"
                                                         FontSize="10"
-                                                        Foreground="#a8c4d8"
+                                                        Foreground="{StaticResource Brush.Text.Primary}"
                                                         Text="圆角半径" />
                                                     <controls:SliderSpinBox
                                                         HorizontalAlignment="Right"
@@ -3933,14 +3933,14 @@
                                             <Expander
                                                 Margin="0,6,0,0"
                                                 FontSize="10"
-                                                Foreground="#a8c4d8"
+                                                Foreground="{StaticResource Brush.Text.Primary}"
                                                 Header="轮廓点列表（诊断）"
                                                 IsExpanded="False">
                                                 <ScrollViewer MaxHeight="150" VerticalScrollBarVisibility="Auto">
                                                     <TextBlock
                                                         FontFamily="Consolas"
                                                         FontSize="10"
-                                                        Foreground="#8fa8bc"
+                                                        Foreground="{StaticResource Brush.Text.Diagnostic}"
                                                         Text="{Binding SelectedBooleanSkeletonInfo}"
                                                         TextWrapping="NoWrap" />
                                                 </ScrollViewer>
@@ -3952,7 +3952,7 @@
                                                 Margin="0,0,0,4"
                                                 FontSize="11"
                                                 FontWeight="Bold"
-                                                Foreground="#78909c"
+                                                Foreground="{StaticResource Brush.Text.Muted}"
                                                 Text="矩形属性" />
 
                                             <!--  圆角半径 CornerRadius  -->
@@ -3962,13 +3962,13 @@
                                                         HorizontalAlignment="Left"
                                                         VerticalAlignment="Center"
                                                         FontSize="10"
-                                                        Foreground="#a8c4d8"
+                                                        Foreground="{StaticResource Brush.Text.Primary}"
                                                         Text="圆角" />
                                                     <TextBlock
                                                         HorizontalAlignment="Right"
                                                         VerticalAlignment="Center"
                                                         FontSize="10"
-                                                        Foreground="#546e7a">
+                                                        Foreground="{StaticResource Brush.Text.Tertiary}">
                                                         <Run Text="{Binding SelectedItem.CornerRadius, Mode=OneWay, StringFormat=F1}" />
                                                         <Run Text=" / 最大 " />
                                                         <Run Text="{Binding SelectedCornerRadiusMax, Mode=OneWay, StringFormat=F1}" />
@@ -3995,7 +3995,7 @@
                                                 Margin="0,0,0,6"
                                                 FontSize="11"
                                                 FontWeight="Bold"
-                                                Foreground="#78909c"
+                                                Foreground="{StaticResource Brush.Text.Muted}"
                                                 Text="折线属性" />
                                             <!--  闭合形状开关：勾选后骨架点直连单环 → 可填充的闭合多边形，每骨架点可设圆角半径  -->
                                             <CheckBox
@@ -4003,19 +4003,19 @@
                                                 VerticalAlignment="Center"
                                                 Content="闭合形状（可填充多边形）"
                                                 FontSize="10"
-                                                Foreground="#a8c4d8"
+                                                Foreground="{StaticResource Brush.Text.Primary}"
                                                 IsChecked="{Binding SelectedItem.IsClosed, Mode=TwoWay}" />
                                             <!--  闭合后进入轮廓编辑模式（Round/Miter/半径）：复用带状折线的轮廓分支  -->
                                             <StackPanel Margin="0,2,0,0" Visibility="{Binding SelectedItem.IsClosed, Converter={StaticResource BoolToVis}}">
                                                 <Border
                                                     Margin="0,0,0,6"
-                                                    Background="#0f1820"
-                                                    BorderBrush="#2a3a4a"
+                                                    Background="{StaticResource Brush.Bg.Darker}"
+                                                    BorderBrush="{StaticResource Brush.Border.Subtle}"
                                                     BorderThickness="1"
                                                     CornerRadius="3">
                                                     <Button
                                                         Padding="6,4"
-                                                        Background="Transparent"
+                                                        Background="{StaticResource Brush.Bg.Transparent}"
                                                         BorderThickness="0"
                                                         Command="{Binding ToggleEditModeCommand}"
                                                         Cursor="Hand">
@@ -4031,10 +4031,10 @@
                                                         </Button.Template>
                                                         <Button.Style>
                                                             <Style TargetType="Button">
-                                                                <Setter Property="Foreground" Value="#78909c" />
+                                                                <Setter Property="Foreground" Value="{StaticResource Brush.Text.Muted}" />
                                                                 <Style.Triggers>
                                                                     <DataTrigger Binding="{Binding IsOutlineEditMode}" Value="True">
-                                                                        <Setter Property="Foreground" Value="#A5D6A7" />
+                                                                        <Setter Property="Foreground" Value="{StaticResource Brush.State.SuccessLight}" />
                                                                     </DataTrigger>
                                                                 </Style.Triggers>
                                                             </Style>
@@ -4057,7 +4057,7 @@
                                             <TextBlock
                                                 Margin="0,0,0,4"
                                                 FontSize="10"
-                                                Foreground="#a8c4d8"
+                                                Foreground="{StaticResource Brush.Text.Primary}"
                                                 Text="开放形态：仅骨架描边，无填充。勾选闭合形状后，骨架点首尾相接形成可填充多边形；进入轮廓编辑可对每个骨架点设置圆角半径（0=尖角 Miter，&gt;0=圆角 Round）。"
                                                 TextWrapping="Wrap" />
                                         </StackPanel>
@@ -4071,7 +4071,7 @@
                                                 Margin="0,0,0,4"
                                                 FontSize="11"
                                                 FontWeight="Bold"
-                                                Foreground="#78909c">
+                                                Foreground="{StaticResource Brush.Text.Muted}">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
                                                         <Setter Property="Text" Value="带状折线属性" />
@@ -4092,8 +4092,8 @@
                                             -->
                                             <Border
                                                 Margin="0,0,0,6"
-                                                Background="#0f1820"
-                                                BorderBrush="#2a3a4a"
+                                                Background="{StaticResource Brush.Bg.Darker}"
+                                                BorderBrush="{StaticResource Brush.Border.Subtle}"
                                                 BorderThickness="1"
                                                 CornerRadius="3">
                                                 <ItemsControl ItemsSource="{Binding EditModeChoices}">
@@ -4106,7 +4106,7 @@
                                                         <DataTemplate>
                                                             <Button
                                                                 Padding="0,4"
-                                                                Background="Transparent"
+                                                                Background="{StaticResource Brush.Bg.Transparent}"
                                                                 BorderThickness="0"
                                                                 Command="{Binding Command}"
                                                                 CommandParameter="{Binding CommandParameter}"
@@ -4123,12 +4123,12 @@
                                                                 </Button.Template>
                                                                 <Button.Style>
                                                                     <Style TargetType="Button">
-                                                                        <Setter Property="Background" Value="Transparent" />
-                                                                        <Setter Property="Foreground" Value="#78909c" />
+                                                                        <Setter Property="Background" Value="{StaticResource Brush.Bg.Transparent}" />
+                                                                        <Setter Property="Foreground" Value="{StaticResource Brush.Text.Muted}" />
                                                                         <Style.Triggers>
                                                                             <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                                                <Setter Property="Background" Value="#1a3a3a" />
-                                                                                <Setter Property="Foreground" Value="#A5D6A7" />
+                                                                                <Setter Property="Background" Value="{StaticResource Brush.Bg.SuccessSoft}" />
+                                                                                <Setter Property="Foreground" Value="{StaticResource Brush.State.SuccessLight}" />
                                                                             </DataTrigger>
                                                                         </Style.Triggers>
                                                                     </Style>
@@ -4136,10 +4136,10 @@
                                                                 <TextBlock FontSize="10" Text="{Binding Label}">
                                                                     <TextBlock.Style>
                                                                         <Style TargetType="TextBlock">
-                                                                            <Setter Property="Foreground" Value="#78909c" />
+                                                                            <Setter Property="Foreground" Value="{StaticResource Brush.Text.Muted}" />
                                                                             <Style.Triggers>
                                                                                 <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                                                    <Setter Property="Foreground" Value="#A5D6A7" />
+                                                                                    <Setter Property="Foreground" Value="{StaticResource Brush.State.SuccessLight}" />
                                                                                 </DataTrigger>
                                                                             </Style.Triggers>
                                                                         </Style>
@@ -4166,7 +4166,7 @@
                                                 <CheckBox
                                                     Content="共线同向时合并连接点"
                                                     FontSize="10"
-                                                    Foreground="#a8c4d8"
+                                                    Foreground="{StaticResource Brush.Text.Primary}"
                                                     IsChecked="{Binding SelectedItem.CollinearSplitPairs, Mode=TwoWay}"
                                                     ToolTip="骨线两段共线同方向时的轮廓点数量：勾选=保留两对（带宽突变台阶，可逐侧圆角）；不勾选=合并为一对（忽略台阶）。本项属于骨架几何配置。" />
                                             </StackPanel>
@@ -4180,13 +4180,13 @@
                                                             HorizontalAlignment="Left"
                                                             VerticalAlignment="Center"
                                                             FontSize="10"
-                                                            Foreground="#a8c4d8"
+                                                            Foreground="{StaticResource Brush.Text.Primary}"
                                                             Text="带宽" />
                                                         <TextBlock
                                                             HorizontalAlignment="Right"
                                                             VerticalAlignment="Center"
                                                             FontSize="10"
-                                                            Foreground="#546e7a">
+                                                            Foreground="{StaticResource Brush.Text.Tertiary}">
                                                             <Run Text="{Binding SelectedItem.BandWidth, Mode=OneWay, StringFormat={}{0:0.#}}" />
                                                             <Run Text=" / " />
                                                             <Run Text="{Binding SelectedBandWidthMax, Mode=OneWay, StringFormat=F0}" />
@@ -4228,12 +4228,12 @@
                                                 <Border
                                                     Height="1"
                                                     Margin="0,6,0,6"
-                                                    Background="#1f2a36" />
+                                                    Background="{StaticResource Brush.Bg.Hover}" />
                                                 <!--  骨点列表标题  -->
                                                 <TextBlock
                                                     Margin="0,0,0,4"
                                                     FontSize="10"
-                                                    Foreground="#78909c"
+                                                    Foreground="{StaticResource Brush.Text.Muted}"
                                                     Text="顶点带宽" />
                                                 <ItemsControl ItemsSource="{Binding SelectedItem.VertexBandWidths}">
                                                     <ItemsControl.ItemTemplate>
@@ -4243,12 +4243,12 @@
                                                                 <Border
                                                                     Margin="0,0,0,4"
                                                                     Padding="4,2"
-                                                                    Background="Transparent"
+                                                                    Background="{StaticResource Brush.Bg.Transparent}"
                                                                     CornerRadius="2"
                                                                     Cursor="Hand">
                                                                     <Border.Style>
                                                                         <Style TargetType="Border">
-                                                                            <Setter Property="Background" Value="Transparent" />
+                                                                            <Setter Property="Background" Value="{StaticResource Brush.Bg.Transparent}" />
                                                                             <Style.Triggers>
                                                                                 <!--  选中态：组标题底色加深  -->
                                                                                 <DataTrigger Value="True">
@@ -4258,7 +4258,7 @@
                                                                                             <Binding Path="DataContext.SelectedBonePointIndex" RelativeSource="{RelativeSource AncestorType=ItemsControl}" />
                                                                                         </MultiBinding>
                                                                                     </DataTrigger.Binding>
-                                                                                    <Setter Property="Background" Value="#1a3a3a" />
+                                                                                    <Setter Property="Background" Value="{StaticResource Brush.Bg.SuccessSoft}" />
                                                                                 </DataTrigger>
                                                                             </Style.Triggers>
                                                                         </Style>
@@ -4272,7 +4272,7 @@
                                                                     <TextBlock
                                                                         FontSize="11"
                                                                         FontWeight="SemiBold"
-                                                                        Foreground="#cfd8dc">
+                                                                        Foreground="{StaticResource Brush.Text.Hint}">
                                                                         <Run Text="骨点 " /><Run Text="{Binding Index, Mode=OneWay}" />
                                                                     </TextBlock>
                                                                 </Border>
@@ -4306,7 +4306,7 @@
                                                                             HorizontalAlignment="Left"
                                                                             VerticalAlignment="Center"
                                                                             Data="M0,7 L10,7 L5,0 Z"
-                                                                            Fill="#90a4ae"
+                                                                            Fill="{StaticResource Brush.Brand.Hint}"
                                                                             Stretch="Fill"
                                                                             ToolTip="入端：该骨点作为前一段末端时的带宽" />
                                                                         <TextBlock
@@ -4314,7 +4314,7 @@
                                                                             HorizontalAlignment="Right"
                                                                             VerticalAlignment="Center"
                                                                             FontSize="10"
-                                                                            Foreground="#546e7a">
+                                                                            Foreground="{StaticResource Brush.Text.Tertiary}">
                                                                             <Run Text="{Binding IncomingBandWidth, Mode=OneWay, StringFormat={}{0:0.#}}" />
                                                                             <Run Text=" / " />
                                                                             <Run Text="{Binding DataContext.SelectedBandWidthMax, RelativeSource={RelativeSource AncestorType=ItemsControl}, StringFormat=F0}" />
@@ -4323,7 +4323,7 @@
                                                                     <Border Padding="0">
                                                                         <Border.Style>
                                                                             <Style TargetType="Border">
-                                                                                <Setter Property="BorderBrush" Value="Transparent" />
+                                                                                <Setter Property="BorderBrush" Value="{StaticResource Brush.Bg.Transparent}" />
                                                                                 <Setter Property="BorderThickness" Value="0,0,0,0" />
                                                                                 <Style.Triggers>
                                                                                     <DataTrigger Value="True">
@@ -4333,7 +4333,7 @@
                                                                                                 <Binding Path="DataContext.SelectedBonePointIndex" RelativeSource="{RelativeSource AncestorType=ItemsControl}" />
                                                                                             </MultiBinding>
                                                                                         </DataTrigger.Binding>
-                                                                                        <Setter Property="BorderBrush" Value="#4DD0E1" />
+                                                                                        <Setter Property="BorderBrush" Value="{StaticResource Brush.Port.Output2}" />
                                                                                         <Setter Property="BorderThickness" Value="3,0,0,0" />
                                                                                     </DataTrigger>
                                                                                 </Style.Triggers>
@@ -4376,7 +4376,7 @@
                                                                             HorizontalAlignment="Left"
                                                                             VerticalAlignment="Center"
                                                                             Data="M0,0 L10,0 L5,7 Z"
-                                                                            Fill="#90a4ae"
+                                                                            Fill="{StaticResource Brush.Brand.Hint}"
                                                                             Stretch="Fill"
                                                                             ToolTip="出端：该骨点作为后一段首端时的带宽" />
                                                                         <TextBlock
@@ -4384,7 +4384,7 @@
                                                                             HorizontalAlignment="Right"
                                                                             VerticalAlignment="Center"
                                                                             FontSize="10"
-                                                                            Foreground="#546e7a">
+                                                                            Foreground="{StaticResource Brush.Text.Tertiary}">
                                                                             <Run Text="{Binding OutgoingBandWidth, Mode=OneWay, StringFormat={}{0:0.#}}" />
                                                                             <Run Text=" / " />
                                                                             <Run Text="{Binding DataContext.SelectedBandWidthMax, RelativeSource={RelativeSource AncestorType=ItemsControl}, StringFormat=F0}" />
@@ -4393,7 +4393,7 @@
                                                                     <Border Padding="0">
                                                                         <Border.Style>
                                                                             <Style TargetType="Border">
-                                                                                <Setter Property="BorderBrush" Value="Transparent" />
+                                                                                <Setter Property="BorderBrush" Value="{StaticResource Brush.Bg.Transparent}" />
                                                                                 <Setter Property="BorderThickness" Value="0,0,0,0" />
                                                                                 <Style.Triggers>
                                                                                     <DataTrigger Value="True">
@@ -4403,7 +4403,7 @@
                                                                                                 <Binding Path="DataContext.SelectedBonePointIndex" RelativeSource="{RelativeSource AncestorType=ItemsControl}" />
                                                                                             </MultiBinding>
                                                                                         </DataTrigger.Binding>
-                                                                                        <Setter Property="BorderBrush" Value="#4DD0E1" />
+                                                                                        <Setter Property="BorderBrush" Value="{StaticResource Brush.Port.Output2}" />
                                                                                         <Setter Property="BorderThickness" Value="3,0,0,0" />
                                                                                     </DataTrigger>
                                                                                 </Style.Triggers>
@@ -4433,21 +4433,21 @@
                                                             HorizontalAlignment="Left"
                                                             VerticalAlignment="Center"
                                                             FontSize="10"
-                                                            Foreground="#a8c4d8"
+                                                            Foreground="{StaticResource Brush.Text.Primary}"
                                                             Text="转角样式" />
                                                         <TextBlock
                                                             HorizontalAlignment="Right"
                                                             VerticalAlignment="Center"
                                                             FontSize="10"
-                                                            Foreground="#546e7a"
+                                                            Foreground="{StaticResource Brush.Text.Tertiary}"
                                                             Text="{Binding SelectedItem.OutlineJoinStyle, Mode=OneWay}" />
                                                     </Grid>
                                                     <ComboBox
                                                         Margin="0,0,0,0"
-                                                        Background="#0a0e1a"
-                                                        BorderBrush="#2a3a4a"
+                                                        Background="{StaticResource Brush.Bg.InputDeep}"
+                                                        BorderBrush="{StaticResource Brush.Border.Subtle}"
                                                         FontSize="11"
-                                                        Foreground="#a8c4d8"
+                                                        Foreground="{StaticResource Brush.Text.Primary}"
                                                         SelectedItem="{Binding SelectedItem.OutlineJoinStyle, Mode=TwoWay}">
                                                         <models:JoinStyle>Miter</models:JoinStyle>
                                                         <models:JoinStyle>Bevel</models:JoinStyle>
@@ -4474,7 +4474,7 @@
                                                                                 HorizontalAlignment="Left"
                                                                                 VerticalAlignment="Center"
                                                                                 FontSize="10"
-                                                                                Foreground="#a8c4d8">
+                                                                                Foreground="{StaticResource Brush.Text.Primary}">
                                                                                 <Run Text="顶点 " /><Run Text="{Binding Index, Mode=OneWay}" />
                                                                                 <Run Text=" Round 内径" />
                                                                             </TextBlock>
@@ -4482,7 +4482,7 @@
                                                                                 HorizontalAlignment="Right"
                                                                                 VerticalAlignment="Center"
                                                                                 FontSize="10"
-                                                                                Foreground="#546e7a"
+                                                                                Foreground="{StaticResource Brush.Text.Tertiary}"
                                                                                 Text="{Binding JoinInnerRadius, Mode=OneWay, StringFormat=F1}" />
                                                                         </Grid>
                                                                         <controls:SliderSpinBox
@@ -4505,21 +4505,21 @@
                                                         <TextBlock
                                                             VerticalAlignment="Center"
                                                             FontSize="10"
-                                                            Foreground="#a8c4d8"
+                                                            Foreground="{StaticResource Brush.Text.Primary}"
                                                             Text="非转角点样式" />
                                                         <TextBlock
                                                             HorizontalAlignment="Right"
                                                             VerticalAlignment="Center"
                                                             FontSize="10"
-                                                            Foreground="#546e7a"
+                                                            Foreground="{StaticResource Brush.Text.Tertiary}"
                                                             Text="{Binding CornerArcRadius, Mode=OneWay, StringFormat={}{0:0.#}}" />
                                                     </Grid>
                                                     <ComboBox
                                                         Margin="0,0,0,6"
-                                                        Background="#0a0e1a"
-                                                        BorderBrush="#2a3a4a"
+                                                        Background="{StaticResource Brush.Bg.InputDeep}"
+                                                        BorderBrush="{StaticResource Brush.Border.Subtle}"
                                                         FontSize="11"
-                                                        Foreground="#a8c4d8"
+                                                        Foreground="{StaticResource Brush.Text.Primary}"
                                                         SelectedItem="{Binding NonCornerStyle, Mode=TwoWay}">
                                                         <models:JoinStyle>Round</models:JoinStyle>
                                                         <models:JoinStyle>Miter</models:JoinStyle>
@@ -4546,8 +4546,8 @@
                                                     </StackPanel>
                                                     <Border
                                                         Padding="6,4"
-                                                        Background="#0f1820"
-                                                        BorderBrush="#2a3a4a"
+                                                        Background="{StaticResource Brush.Bg.Darker}"
+                                                        BorderBrush="{StaticResource Brush.Border.Subtle}"
                                                         BorderThickness="1"
                                                         CornerRadius="3"
                                                         Cursor="Hand"
@@ -4555,7 +4555,7 @@
                                                         <TextBlock
                                                             HorizontalAlignment="Center"
                                                             FontSize="10"
-                                                            Foreground="#A5D6A7"
+                                                            Foreground="{StaticResource Brush.State.SuccessLight}"
                                                             Text="应用到全部接缝" />
                                                     </Border>
                                                 </StackPanel>
@@ -4566,14 +4566,14 @@
                                                         Margin="0,0,0,8"
                                                         FontSize="11"
                                                         FontWeight="Bold"
-                                                        Foreground="#78909c"
+                                                        Foreground="{StaticResource Brush.Text.Muted}"
                                                         Text="接缝编辑" />
                                                     <Grid Margin="0,0,0,6">
                                                         <TextBlock
                                                             HorizontalAlignment="Left"
                                                             VerticalAlignment="Center"
                                                             FontSize="10"
-                                                            Foreground="#a8c4d8">
+                                                            Foreground="{StaticResource Brush.Text.Primary}">
                                                             <Run Text="顶点 " />
                                                             <Run Text="{Binding SelectedOutlineCorner.Index, Mode=OneWay, TargetNullValue='-'}" />
                                                             <Run Text=" (" />
@@ -4584,7 +4584,7 @@
                                                             HorizontalAlignment="Right"
                                                             VerticalAlignment="Center"
                                                             FontSize="10"
-                                                            Foreground="#546e7a"
+                                                            Foreground="{StaticResource Brush.Text.Tertiary}"
                                                             Text="{Binding SelectedOutlineCorner.CurrentStyleEffective, Mode=OneWay, TargetNullValue='-'}" />
                                                     </Grid>
                                                     <!--
@@ -4594,10 +4594,10 @@
                                                         BandPolyline / 闭合 Polyline / BooleanPath 统一三态（布尔无带宽，Bevel 视同尖角）。
                                                     -->
                                                     <ComboBox
-                                                        Background="#0a0e1a"
-                                                        BorderBrush="#2a3a4a"
+                                                        Background="{StaticResource Brush.Bg.InputDeep}"
+                                                        BorderBrush="{StaticResource Brush.Border.Subtle}"
                                                         FontSize="11"
-                                                        Foreground="#a8c4d8"
+                                                        Foreground="{StaticResource Brush.Text.Primary}"
                                                         IsEnabled="{Binding HasSelectedOutlineCorner}"
                                                         SelectedItem="{Binding SelectedOutlineCorner.CurrentStyleEffective, Mode=TwoWay}">
                                                         <models:JoinStyle>Miter</models:JoinStyle>
@@ -4613,7 +4613,7 @@
                                                         <TextBlock
                                                             VerticalAlignment="Center"
                                                             FontSize="10"
-                                                            Foreground="#a8c4d8"
+                                                            Foreground="{StaticResource Brush.Text.Primary}"
                                                             Text="圆角半径" />
                                                         <Slider
                                                             x:Name="CornerRadiusSlider"
@@ -4645,7 +4645,7 @@
                                                             HorizontalAlignment="Right"
                                                             VerticalAlignment="Center"
                                                             FontSize="10"
-                                                            Foreground="#546e7a"
+                                                            Foreground="{StaticResource Brush.Text.Tertiary}"
                                                             Text="{Binding SelectedOutlineCorner.CurrentRadius, Mode=OneWay, StringFormat={}{0:0.#}, TargetNullValue=-}" />
                                                     </Grid>
                                                 </StackPanel>
@@ -4669,19 +4669,19 @@
                                     <TextBlock
                                         VerticalAlignment="Center"
                                         FontSize="10"
-                                        Foreground="#78909c">
+                                        Foreground="{StaticResource Brush.Text.Muted}">
                                         <Run Text="共 " /><Run Text="{Binding ItemCount, Mode=OneWay}" /><Run Text=" 个元素" />
                                     </TextBlock>
                                     <!--  隐藏数徽标（无隐藏元素时不显示）  -->
                                     <Border
                                         Margin="6,0,0,0"
                                         Padding="4,1"
-                                        Background="#3a1a1a"
-                                        BorderBrush="#5a2a2a"
+                                        Background="{StaticResource Brush.Bg.DangerSoft}"
+                                        BorderBrush="{StaticResource Brush.Border.Danger}"
                                         BorderThickness="1"
                                         CornerRadius="2"
                                         Visibility="{Binding HasHiddenElements, Converter={StaticResource BoolToVis}}">
-                                        <TextBlock FontSize="10" Foreground="#ef9a9a">
+                                        <TextBlock FontSize="10" Foreground="{StaticResource Brush.State.DangerLight}">
                                             <Run Text="已隐藏 " /><Run Text="{Binding HiddenCount, Mode=OneWay}" />
                                         </TextBlock>
                                     </Border>
@@ -4690,8 +4690,8 @@
                                 <Border
                                     Padding="8,3"
                                     HorizontalAlignment="Right"
-                                    Background="#1a3a1a"
-                                    BorderBrush="#3a5a3a"
+                                    Background="{StaticResource Brush.Bg.Success}"
+                                    BorderBrush="{StaticResource Brush.Border.Success}"
                                     BorderThickness="1"
                                     CornerRadius="3"
                                     Cursor="Hand"
@@ -4712,7 +4712,7 @@
                                     </Border.InputBindings>
                                     <TextBlock
                                         FontSize="10"
-                                        Foreground="#A5D6A7"
+                                        Foreground="{StaticResource Brush.State.SuccessLight}"
                                         Text="全部显示" />
                                 </Border>
                             </Grid>
@@ -4723,7 +4723,7 @@
                             -->
                             <ListBox
                                 Grid.Row="1"
-                                Background="Transparent"
+                                Background="{StaticResource Brush.Bg.Transparent}"
                                 BorderThickness="0"
                                 ItemsSource="{Binding Primitives}"
                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -4731,17 +4731,17 @@
                                 SelectedItem="{Binding SelectedItem, Mode=TwoWay}">
                                 <ListBox.ItemContainerStyle>
                                     <Style TargetType="ListBoxItem">
-                                        <Setter Property="Background" Value="Transparent" />
+                                        <Setter Property="Background" Value="{StaticResource Brush.Bg.Transparent}" />
                                         <Setter Property="Padding" Value="2" />
                                         <Setter Property="Margin" Value="0,0,0,2" />
                                         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                                         <Setter Property="Cursor" Value="Hand" />
                                         <Style.Triggers>
                                             <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter Property="Background" Value="#182430" />
+                                                <Setter Property="Background" Value="{StaticResource Brush.Bg.SelectedAlt}" />
                                             </Trigger>
                                             <Trigger Property="IsSelected" Value="True">
-                                                <Setter Property="Background" Value="#1a3a3a" />
+                                                <Setter Property="Background" Value="{StaticResource Brush.Bg.SuccessSoft}" />
                                             </Trigger>
                                         </Style.Triggers>
                                     </Style>
@@ -4771,16 +4771,16 @@
                                                 ToolTip="点击切换显示/隐藏">
                                                 <Border.Style>
                                                     <Style TargetType="Border">
-                                                        <Setter Property="Background" Value="Transparent" />
+                                                        <Setter Property="Background" Value="{StaticResource Brush.Bg.Transparent}" />
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding IsVisible}" Value="True">
-                                                                <Setter Property="Background" Value="#1a3a2a" />
-                                                                <Setter Property="BorderBrush" Value="#2a5a3a" />
+                                                                <Setter Property="Background" Value="{StaticResource Brush.Bg.SuccessSub}" />
+                                                                <Setter Property="BorderBrush" Value="{StaticResource Brush.Border.SuccessSoft}" />
                                                                 <Setter Property="BorderThickness" Value="1" />
                                                             </DataTrigger>
                                                             <DataTrigger Binding="{Binding IsVisible}" Value="False">
-                                                                <Setter Property="Background" Value="#3a1a1a" />
-                                                                <Setter Property="BorderBrush" Value="#5a2a2a" />
+                                                                <Setter Property="Background" Value="{StaticResource Brush.Bg.DangerSoft}" />
+                                                                <Setter Property="BorderBrush" Value="{StaticResource Brush.Border.Danger}" />
                                                                 <Setter Property="BorderThickness" Value="1" />
                                                             </DataTrigger>
                                                         </Style.Triggers>
@@ -4805,9 +4805,9 @@
                                                         HorizontalAlignment="Center"
                                                         VerticalAlignment="Center"
                                                         Data="M8,3 C4.667,3 1.992,5.4 1,8.5 C1.992,11.6 4.667,14 8,14 C11.333,14 14.008,11.6 15,8.5 C14.008,5.4 11.333,3 8,3 Z M8,11.5 A3,3 0 0,1 5,8.5 A3,3 0 0,1 8,5.5 A3,3 0 0,1 11,8.5 A3,3 0 0,1 8,11.5 Z"
-                                                        Fill="Transparent"
+                                                        Fill="{StaticResource Brush.Bg.Transparent}"
                                                         Stretch="Uniform"
-                                                        Stroke="#81C784"
+                                                        Stroke="{StaticResource Brush.State.SuccessBorder}"
                                                         StrokeThickness="1.4">
                                                         <Path.Style>
                                                             <Style TargetType="Path">
@@ -4831,9 +4831,9 @@
                                                         HorizontalAlignment="Center"
                                                         VerticalAlignment="Center"
                                                         Data="M2,8.5 C2.992,5.4 5.667,3 9,3 C12.333,3 15.008,5.4 16,8.5 C15.008,11.6 12.333,14 9,14 C5.667,14 2.992,11.6 2,8.5 Z M5,8.5 A4,4 0 0,0 13,8.5 M4,4 L12,12"
-                                                        Fill="Transparent"
+                                                        Fill="{StaticResource Brush.Bg.Transparent}"
                                                         Stretch="Uniform"
-                                                        Stroke="#ef9a9a"
+                                                        Stroke="{StaticResource Brush.State.DangerLight}"
                                                         StrokeThickness="1.4">
                                                         <Path.Style>
                                                             <Style TargetType="Path">
@@ -4863,8 +4863,8 @@
                                                     Height="22"
                                                     Margin="0,0,4,0"
                                                     VerticalAlignment="Center"
-                                                    Background="#1a2a3a"
-                                                    BorderBrush="#2a3a5a"
+                                                    Background="{StaticResource Brush.Bg.Selected}"
+                                                    BorderBrush="{StaticResource Brush.Border.AccentDeep}"
                                                     BorderThickness="1"
                                                     CornerRadius="3"
                                                     Cursor="Hand"
@@ -4880,7 +4880,7 @@
                                                         VerticalAlignment="Center"
                                                         FontFamily="Segoe MDL2 Assets"
                                                         FontSize="14"
-                                                        Foreground="#90CAF9"
+                                                        Foreground="{StaticResource Brush.Port.Input3}"
                                                         Text="&#xE81E;" />
                                                 </Border>
                                                 <!--  删除该元素  -->
@@ -4888,8 +4888,8 @@
                                                     Width="22"
                                                     Height="22"
                                                     VerticalAlignment="Center"
-                                                    Background="#2a1818"
-                                                    BorderBrush="#4a2828"
+                                                    Background="{StaticResource Brush.Bg.Danger}"
+                                                    BorderBrush="{StaticResource Brush.Border.DangerDeep}"
                                                     BorderThickness="1"
                                                     CornerRadius="3"
                                                     Cursor="Hand"
@@ -4905,7 +4905,7 @@
                                                         VerticalAlignment="Center"
                                                         FontFamily="Segoe MDL2 Assets"
                                                         FontSize="14"
-                                                        Foreground="#EF5350"
+                                                        Foreground="{StaticResource Brush.State.Danger}"
                                                         Text="&#xE74D;" />
                                                 </Border>
                                             </StackPanel>
@@ -4914,26 +4914,26 @@
                                                     <TextBlock
                                                         FontSize="11"
                                                         FontWeight="SemiBold"
-                                                        Foreground="#cfd8dc"
+                                                        Foreground="{StaticResource Brush.Text.Hint}"
                                                         Text="{Binding TypeKey}" />
                                                     <Border
                                                         Margin="6,0,0,0"
                                                         Padding="4,0"
-                                                        Background="#3a1a1a"
-                                                        BorderBrush="#5a2a2a"
+                                                        Background="{StaticResource Brush.Bg.DangerSoft}"
+                                                        BorderBrush="{StaticResource Brush.Border.Danger}"
                                                         BorderThickness="1"
                                                         CornerRadius="2"
                                                         Visibility="{Binding IsVisible, Converter={StaticResource InverseBoolToVis}}">
                                                         <TextBlock
                                                             FontSize="9"
-                                                            Foreground="#ef9a9a"
+                                                            Foreground="{StaticResource Brush.State.DangerLight}"
                                                             Text="已隐藏" />
                                                     </Border>
                                                 </StackPanel>
                                                 <TextBlock
                                                     Margin="0,1,0,0"
                                                     FontSize="9"
-                                                    Foreground="#546e7a"
+                                                    Foreground="{StaticResource Brush.Text.Tertiary}"
                                                     Text="{Binding PositionInfo}" />
                                             </StackPanel>
                                         </Grid>
@@ -4949,7 +4949,7 @@
         <!--  XAML 导出弹窗：覆盖在最上层，半透明遮罩  -->
         <Grid Grid.ColumnSpan="3" Visibility="{Binding IsExportDialogOpen, Converter={StaticResource BoolToVis}}">
             <!--  半透明遮罩：点击关闭弹窗  -->
-            <Rectangle Fill="#80000000" MouseLeftButtonDown="OnExportDialogCloseClick" />
+            <Rectangle Fill="{StaticResource Brush.Overlay.Dim}" MouseLeftButtonDown="OnExportDialogCloseClick" />
 
             <!--  弹窗主体  -->
             <Border
@@ -4957,8 +4957,8 @@
                 MaxHeight="560"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
-                Background="#141420"
-                BorderBrush="#4FC3F7"
+                Background="{StaticResource Brush.Bg.Deep}"
+                BorderBrush="{StaticResource Brush.State.Accent}"
                 BorderThickness="1"
                 CornerRadius="6">
                 <Grid Margin="12">
@@ -4975,20 +4975,20 @@
                             VerticalAlignment="Center"
                             FontSize="14"
                             FontWeight="Bold"
-                            Foreground="#a8c4d8"
+                            Foreground="{StaticResource Brush.Text.Primary}"
                             Text="导出画布 XAML" />
                         <Border
                             Padding="8,2"
                             HorizontalAlignment="Right"
-                            Background="#2a2a3a"
-                            BorderBrush="#4a4a5a"
+                            Background="{StaticResource Brush.Bg.Raised}"
+                            BorderBrush="{StaticResource Brush.Border.AccentBlue}"
                             BorderThickness="1"
                             CornerRadius="3"
                             Cursor="Hand"
                             MouseLeftButtonDown="OnExportDialogCloseClick">
                             <TextBlock
                                 FontSize="11"
-                                Foreground="#a8c4d8"
+                                Foreground="{StaticResource Brush.Text.Primary}"
                                 Text="✕ 关闭" />
                         </Border>
                     </Grid>
@@ -4996,19 +4996,19 @@
                     <!--  XAML 内容（只读 TextBox，可全选复制）  -->
                     <Border
                         Grid.Row="1"
-                        Background="#0a0a14"
-                        BorderBrush="#2a3a4a"
+                        Background="{StaticResource Brush.Bg.Input}"
+                        BorderBrush="{StaticResource Brush.Border.Subtle}"
                         BorderThickness="1"
                         CornerRadius="3">
                         <TextBox
                             x:Name="ExportTextBox"
                             Padding="8"
                             AcceptsReturn="True"
-                            Background="Transparent"
+                            Background="{StaticResource Brush.Bg.Transparent}"
                             BorderThickness="0"
                             FontFamily="Consolas, Courier New"
                             FontSize="11"
-                            Foreground="#b0c4d8"
+                            Foreground="{StaticResource Brush.Text.Secondary}"
                             HorizontalScrollBarVisibility="Auto"
                             IsReadOnly="True"
                             Text="{Binding ExportedXaml, Mode=OneWay}"
@@ -5025,28 +5025,28 @@
                         <Border
                             Margin="0,0,6,0"
                             Padding="12,5"
-                            Background="#1a3a1a"
-                            BorderBrush="#3a5a3a"
+                            Background="{StaticResource Brush.Bg.Success}"
+                            BorderBrush="{StaticResource Brush.Border.Success}"
                             BorderThickness="1"
                             CornerRadius="3"
                             Cursor="Hand"
                             MouseLeftButtonDown="OnCopyXamlClick">
                             <TextBlock
                                 FontSize="11"
-                                Foreground="#A5D6A7"
+                                Foreground="{StaticResource Brush.State.SuccessLight}"
                                 Text="📋 复制到剪贴板" />
                         </Border>
                         <Border
                             Padding="12,5"
-                            Background="#1a2a3a"
-                            BorderBrush="#3a5a7a"
+                            Background="{StaticResource Brush.Bg.Selected}"
+                            BorderBrush="{StaticResource Brush.Border.Mid}"
                             BorderThickness="1"
                             CornerRadius="3"
                             Cursor="Hand"
                             MouseLeftButtonDown="OnSaveXamlClick">
                             <TextBlock
                                 FontSize="11"
-                                Foreground="#a8c4d8"
+                                Foreground="{StaticResource Brush.Text.Primary}"
                                 Text="💾 另存为 .xaml…" />
                         </Border>
                     </StackPanel>

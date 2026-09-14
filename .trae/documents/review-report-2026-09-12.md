@@ -5,7 +5,7 @@
 - 流水线：detect-stack → 业务/结构 → WPF 语言/主题 → 几何/通用质量 → 权衡
 - 技术栈确认：C# / WPF（.NET8 `net8.0-windows`）+ CommunityToolkit.Mvvm + Nodify
 - 原则：只审不改；每条可指认 `文件:行`；P0/P1 为主。
-- 处理总览：已修复 13 条（#1/2/3/5/8/10/11/12/13/14/15/16/17）· 待确认 3 条（#6/7/9）· 暂缓不修 1 条（#4）
+- 处理总览：已修复 14 条（#1/2/3/5/7/8/10/11/12/13/14/15/16/17）· 待确认 2 条（#6/9）· 暂缓不修 1 条（#4）
 
 ---
 
@@ -56,7 +56,7 @@
    影响：全局换肤失效、与"先改 token 再接引用"约定相悖。
    改法：增量替换，优先覆盖面大的 `Brush.State.*/Brush.Brand.Stroke/Brush.Text.*`。
 
-   > **状态：待确认（未处理）**
+   > **状态：已修复**（约 215 处硬编码色全部替换为 Brush.* token；新增 10 个 token：InputDeep/Raised/Transparent/StrokeMuted/StrokeDim/OutputDeep/Diagnostic/PickCenter/PickEndpoint/AccentGlass；SymbolDesignerView/Generic/SwatchesPicker/ColorDialog 四文件替换完毕；PickCenter/TagToBrushes Converter 改资源引用；grep 复查仅剩注释内文字；编译 0 错误 / 8 警告（既有）；豁免注：ColorDialog 色相光谱、HSV 算法、取色器等属颜色数据/工具功能）
 
 8. **[SliderSpinBox.xaml:32 / .cs:104] 数值读数不随 Value 刷新**
    `TextBlock` 绑 `DisplayText`，但它是普通 CLR 属性，控件未实现 INPC → 拖动/点按钮时读数停留在初始值（功能缺陷）。

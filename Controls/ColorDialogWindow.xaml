@@ -54,7 +54,7 @@
                 </Grid.Background>
                 <!-- 当前选点指示（圆圈） -->
                 <Ellipse x:Name="SvIndicator" Width="12" Height="12" IsHitTestVisible="False"
-                         Stroke="White" StrokeThickness="2" />
+                         Stroke="{StaticResource Brush.Brand.Stroke}" StrokeThickness="2" />
             </Grid>
         </Border>
 
@@ -74,7 +74,7 @@
                     </LinearGradientBrush>
                 </Border.Background>
             </Border>
-            <Canvas x:Name="HueCanvas" Background="Transparent"
+            <Canvas x:Name="HueCanvas" Background="{StaticResource Brush.Bg.Transparent}"
                     MouseDown="OnHueMouseDown" MouseMove="OnHueMouseMove"
                     MouseUp="OnHueMouseUp" Cursor="Hand" />
             <!-- 当前 Hue 指示器（横向小三角） -->

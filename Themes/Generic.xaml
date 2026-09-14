@@ -40,8 +40,8 @@
                     <ControlTemplate.Resources>
                         <!-- Resize 手柄的视觉模板：小方块 + 半透明蓝填充 + 深色描边 -->
                         <ControlTemplate x:Key="ResizeThumbVisual" TargetType="{x:Type Thumb}">
-                            <Border Background="#B04FC3F7"
-                                    BorderBrush="#0a0e1a" BorderThickness="0.1" />
+                            <Border Background="{StaticResource Brush.State.AccentGlass}"
+                                    BorderBrush="{StaticResource Brush.Bg.InputDeep}" BorderThickness="0.1" />
                         </ControlTemplate>
 
                         <!-- Resize 手柄的公共样式：1.5×1.5 逻辑像素（缩放通过 RenderTransform，与 token 无关）
@@ -63,7 +63,7 @@
 
                         <!-- 拖动手柄：铺满整个容器，点击任意位置都能拖动 -->
                         <Thumb x:Name="PART_Thumb"
-                               Background="Transparent"
+                               Background="{StaticResource Brush.Bg.Transparent}"
                                Cursor="SizeAll">
                             <Thumb.Template>
                                 <ControlTemplate TargetType="{x:Type Thumb}">

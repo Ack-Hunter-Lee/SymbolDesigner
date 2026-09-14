@@ -79,8 +79,14 @@ public class TagToBrushesConverter : IValueConverter
     private SolidColorBrush DefaultBrush()
     {
         if (_cache.TryGetValue(DefaultBrushKey, out var cached)) return (SolidColorBrush)cached;
-        var b = new SolidColorBrush(Color.FromRgb(0x2a, 0x3a, 0x4a));
-        b.Freeze();
+        // 默认色统一走 Theme.xaml 的 Brush.Border.Subtle（AGENTS 颜色规范）
+        var b = Application.Current?.TryFindResource("Brush.Border.Subtle") as SolidColorBrush;
+        if (b is null)
+        {
+            // 仅资源缺失防御（正常必然命中）：固定色保底，保证 UI 始终可显示
+            b = new SolidColorBrush(Color.FromRgb(0x2a, 0x3a, 0x4a));
+            b.Freeze();
+        }
         _cache[DefaultBrushKey] = b;
         return b;
     }

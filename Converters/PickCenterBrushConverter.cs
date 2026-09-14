@@ -1,23 +1,22 @@
 using System;
 using System.Globalization;
+using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
 
 namespace SymbolDesigner.Converters;
 
 /// <summary>多选拾取标记填充色：圆心用橙色、端点用绿色（Visible 区分圆心 vs 端点）。
-/// 表明"被识别为子对象"的命中点类型，让用户直观区分。</summary>
+/// 表明"被识别为子对象"的命中点类型，让用户直观区分。
+/// 颜色统一从 Theme.xaml 的 Brush.State.PickCenter / Brush.State.PickEndpoint 读取（AGENTS 颜色规范）。</summary>
 public sealed class PickCenterBrushConverter : IValueConverter
 {
-    private static readonly Brush CenterBrush = CreateFrozen(Color.FromRgb(0xFF, 0x98, 0x00)); // 橙
-    private static readonly Brush EndpointBrush = CreateFrozen(Color.FromRgb(0x4C, 0xAF, 0x50)); // 绿
+    private static readonly Brush CenterBrush = Resolve("Brush.State.PickCenter");
+    private static readonly Brush EndpointBrush = Resolve("Brush.State.PickEndpoint");
 
-    private static Brush CreateFrozen(Color color)
-    {
-        var brush = new SolidColorBrush(color);
-        brush.Freeze();
-        return brush;
-    }
+    private static Brush Resolve(string key)
+        // 兜底 Transparent 仅防资源缺失（Theme.xaml 为应用级合并字典，正常必然命中）
+        => Application.Current?.TryFindResource(key) as Brush ?? Brushes.Transparent;
 
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         => value is bool isCenter && isCenter ? CenterBrush : EndpointBrush;
