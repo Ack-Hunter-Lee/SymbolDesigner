@@ -35,69 +35,72 @@ public static class ClipperBooleanEngine
     /// <summary>对两个画布坐标几何执行布尔，返回局部坐标段结构 PathData。失败/不支持 → null。</summary>
     public static BooleanOps.BooleanResult? Compute(Geometry a, Geometry b, GeometryCombineMode mode)
     {
+        // —— 参数准备（自身逻辑：异常应上抛暴露 bug，不吞） ——
+        var subject = new PathsD();
+        var clip = new PathsD();
+        if (!GeometryToPaths(a, subject) || !GeometryToPaths(b, clip)) return null;
+        if (subject.Count == 0 || clip.Count == 0) return null;
+
+        ClipType? clipType = mode switch
+        {
+            GeometryCombineMode.Union => ClipType.Union,
+            GeometryCombineMode.Exclude => ClipType.Difference,   // a - b（subject - clip）
+            GeometryCombineMode.Intersect => ClipType.Intersection,
+            _ => null,
+        };
+        if (clipType is null) return null;
+
+        // —— Clipper2 交互段（第三方内核：异常降级 Combine，由调用方兜底；留痕不吞） ——
+        var solution = new PathsD();
         try
         {
-            var subject = new PathsD();
-            var clip = new PathsD();
-            if (!GeometryToPaths(a, subject) || !GeometryToPaths(b, clip)) return null;
-            if (subject.Count == 0 || clip.Count == 0) return null;
-
             var c = new ClipperD();
             c.AddPaths(subject, PathType.Subject, false);
             c.AddPaths(clip, PathType.Clip, false);
-
-            ClipType? clipType = mode switch
-            {
-                GeometryCombineMode.Union => ClipType.Union,
-                GeometryCombineMode.Exclude => ClipType.Difference,   // a - b（subject - clip）
-                GeometryCombineMode.Intersect => ClipType.Intersection,
-                _ => null,
-            };
-            if (clipType is null) return null;
-
-            var solution = new PathsD();
             if (!c.Execute(clipType.Value, Clipper2Lib.FillRule.EvenOdd, solution)) return null;
-            if (solution.Count == 0) return null;
-
-            // 计算包围盒，转换为局部坐标
-            double minX = double.MaxValue, minY = double.MaxValue;
-            double maxX = double.MinValue, maxY = double.MinValue;
-            foreach (var path in solution)
-                foreach (var p in path)
-                {
-                    if (p.x < minX) minX = p.x;
-                    if (p.x > maxX) maxX = p.x;
-                    if (p.y < minY) minY = p.y;
-                    if (p.y > maxY) maxY = p.y;
-                }
-            double ox = minX, oy = minY;
-
-            var sb = new System.Text.StringBuilder();
-            sb.Append("F0");
-            bool any = false;
-            foreach (var path in solution)
-            {
-                if (path.Count < 3) continue;
-                if (Math.Abs(SignedDoubleArea(path)) < SliverAreaTol) continue;   // 丢数值碎环
-                string ring = SerializeRing(path, ox, oy);
-                if (string.IsNullOrEmpty(ring)) continue;
-                any = true;
-                sb.Append(ring).Append(" Z");
-            }
-            if (!any) return null;
-
-            return new BooleanOps.BooleanResult(
-                sb.ToString(),
-                Round(minX),
-                Round(minY),
-                Math.Max(0.01, Round(maxX - minX)),
-                Math.Max(0.01, Round(maxY - minY)));
         }
-        catch
+        catch (Exception ex)
         {
-            // 任何异常回退 Combine（由调用方处理）
+            // Clipper 侧缺陷/资源异常 → 降级 Geometry.Combine（BooleanOps 兜底）。
+            // 留痕仅调试可见，生产不弹窗打断；触发即表明 Clipper 对当前输入有缺陷。
+            System.Diagnostics.Debug.WriteLine($"[ClipperBooleanEngine] {mode} 降级 Combine: {ex}");
             return null;
         }
+        if (solution.Count == 0) return null;
+
+        // —— 序列化/装配（自身 bug：异常上抛，不静默回退） ——
+        double minX = double.MaxValue, minY = double.MaxValue;
+        double maxX = double.MinValue, maxY = double.MinValue;
+        foreach (var path in solution)
+            foreach (var p in path)
+            {
+                if (p.x < minX) minX = p.x;
+                if (p.x > maxX) maxX = p.x;
+                if (p.y < minY) minY = p.y;
+                if (p.y > maxY) maxY = p.y;
+            }
+        double ox = minX, oy = minY;
+
+        var sb = new System.Text.StringBuilder();
+        sb.Append("F0");
+        bool any = false;
+        foreach (var path in solution)
+        {
+            if (path.Count < 3) continue;
+            if (Math.Abs(SignedDoubleArea(path)) < SliverAreaTol) continue;   // 丢数值碎环
+            string ring = SerializeRing(path, ox, oy);
+            if (string.IsNullOrEmpty(ring)) continue;
+            any = true;
+            sb.Append(ring).Append(" Z");
+        }
+        if (!any) return null;
+
+        return new BooleanOps.BooleanResult(
+            sb.ToString(),
+            Round(minX),
+            Round(minY),
+            Math.Max(0.01, Round(maxX - minX)),
+            Math.Max(0.01, Round(maxY - minY)));
     }
 
     /// <summary>把 Geometry 转为画布坐标折线集合。椭圆 2° 均匀离散；其余走原生折线 + 套 Transform。</summary>
