@@ -17,11 +17,38 @@ public partial class SymbolDesignerViewModel
 
     partial void OnSelectedItemChanged(PrimitiveItem? value)
     {
-        // 编辑源模式：选中切到其它图元 / 取消选图 → 先提交并退出编辑源（AutoCAD：单击别处结束源编辑）
+        // 三方"模式状态"联动退出/互斥（按依赖顺序：阵列源 → 阵列整体 → 布尔调整源）
+        ExitArraySourceEditIfSwitched(value);   // 编辑源模式切走 → 提交并退出
+        ClearArraySelectionIfNeeded(value);     // 阵列整体选择与图元选中互斥
+        CollapseSourceAdjustIfSwitched(value);  // 布尔"调整源"自动收起，避免源残留画布
+
+        // 选中/取消选中的高亮与多选状态同步
+        SyncSelectedHighlight(value);
+
+        // 按钮可用态 / 布尔命令 / 格式刷 → 随选中变化通知刷新
+        NotifySelectionStateProperties(value);
+
+        // 选中 BandPolyline/Polyline → 联动画线模式（尊重用户手动选择）
+        ApplyDrawModeFromSelection(value);
+
+        // 事件订阅切换到新选中项（含取消选中时清理挂载的子状态）
+        ResubscribeSelectedItemEvents(value);
+
+        // 能力上限 / 手柄刷新（渲染层与选中保持一致，放最后）
+        RefreshSelectionDependentState(value);
+    }
+
+    /// <summary>编辑源模式：选中切到其它图元 / 取消选图 → 先提交并退出编辑源
+    ///（AutoCAD：单击别处结束源编辑）。</summary>
+    private void ExitArraySourceEditIfSwitched(PrimitiveItem? value)
+    {
         if (_isArraySourceEditMode && value?.Id != _arraySourceEditGuid)
             CollapseArraySourceEdit();
+    }
 
-        // 阵列选择互斥：选中或取消选中图元 → 清除阵列整体选择（阵列是"单一对象"语义，与图元不共存）
+    /// <summary>阵列选择互斥：选中或取消选中图元 → 清除阵列整体选择（阵列是"单一对象"语义，与图元不共存）。</summary>
+    private void ClearArraySelectionIfNeeded(PrimitiveItem? value)
+    {
         if (SelectedArray is not null)
         {
             // 编辑源模式：SelectedItem=借出的编辑源图元（本体），不清阵列、不关浮层
@@ -33,8 +60,11 @@ public partial class SymbolDesignerViewModel
                 if (_isArrayEditMode) ExitArrayEdit();
             }
         }
+    }
 
-        // 正处于"调整源"而选中切换到其它（含取消；点物化源本身不算切走）→ 自动收起源，避免源残留画布
+    /// <summary>正处于"调整源"而选中切换到其它（含取消；点物化源本身不算切走）→ 自动收起源，避免源残留画布。</summary>
+    private void CollapseSourceAdjustIfSwitched(PrimitiveItem? value)
+    {
         if (IsSourceAdjustMode
             && value?.Id != _sourceAdjustTarget
             && !IsActiveBooleanSourceItem(value))
@@ -52,18 +82,23 @@ public partial class SymbolDesignerViewModel
                 IsSourceAdjustMode = false;
             }
         }
+    }
 
-        // 单选：把选中状态同步到所有 item
+    /// <summary>单选：把选中状态同步到所有 item；取消选中（null/点击空白）→ 清空多选，避免高亮残留。</summary>
+    private void SyncSelectedHighlight(PrimitiveItem? value)
+    {
         foreach (var p in Primitives)
         {
             // 高亮同步：单选焦点高亮 + 多选集合成员高亮（累积式多选保留高亮）
             p.IsSelected = p == value || MultiSelected.Contains(p);
         }
-
-        // 取消选中（选中 null / 点击画布空白）→ 清空多选，避免高亮残留
         if (value is null)
             ClearMultiSelect();
+    }
 
+    /// <summary>选中变化 → 刷新按钮态/属性面板可见性 + 布尔命令可用态 + 格式刷可用态。</summary>
+    private void NotifySelectionStateProperties(PrimitiveItem? value)
+    {
         SelectedItemIsRect = value is not null &&
                              (value.TypeKey == nameof(L1Primitive.Rectangle) ||
                               value.TypeKey == nameof(L1Primitive.RoundedRectangle));
@@ -78,11 +113,14 @@ public partial class SymbolDesignerViewModel
         NotifyBooleanCanExecuteChanged(); // 刷新"CanRecomputeBoolean"属性 + 调整源/重新合并按钮
         // 格式刷按钮可用态：选中变化（多选累积切到单选、选中切到 null）→ 通知 PickFormatPainter 重新评估 CanExecute
         PickFormatPainterCommand.NotifyCanExecuteChanged();
+    }
 
-        // 选中 BandPolyline / Polyline → 自动进入对应画线模式（光标变十字，CanvasHost 直接接收点击起笔）。
-        // 尊重用户手动选择：若用户从 ComboBox 手动选定过模式（_userChangedDrawMode），
-        // 则选中联动不再覆盖；取消选中 / 选中其它类型时，若当前正处于"自动进入"的
-        // 画线模式则退回 None，避免残留绘制状态误伤后续操作。
+    /// <summary>选中 BandPolyline / Polyline → 自动进入对应画线模式（光标变十字，CanvasHost 直接接收点击起笔）。
+    /// 尊重用户手动选择：若用户从 ComboBox 手动选定过模式（_userChangedDrawMode），
+    /// 则选中联动不再覆盖；取消选中 / 选中其它类型时，若当前正处于"自动进入"的
+    /// 画线模式则退回 None，避免残留绘制状态误伤后续操作。</summary>
+    private void ApplyDrawModeFromSelection(PrimitiveItem? value)
+    {
         var isBandPolyline = value is not null
             && value.TypeKey == nameof(L1Primitive.BandPolyline);
         var isPolyline = value is not null
@@ -100,8 +138,12 @@ public partial class SymbolDesignerViewModel
         {
             SetDrawModeFromSelection(DrawMode.None);
         }
+    }
 
-        // 监听 SelectedItem 的 Width/Height/PathData 变化（尺寸改 → 刷 Max；PathData 改 → 刷顶点手柄）
+    /// <summary>监听 SelectedItem 的 Width/Height/PathData 变化（尺寸改 → 刷 Max；PathData 改 → 刷顶点手柄）；
+    /// 取消选中时清掉所有挂在旧 item 上的子状态，避免画布残留接缝/带宽手柄和属性面板误显示。</summary>
+    private void ResubscribeSelectedItemEvents(PrimitiveItem? value)
+    {
         if (_lastSelected != null)
         {
             _lastSelected.PropertyChanged -= OnSelectedItemPropertyChanged;
@@ -116,7 +158,6 @@ public partial class SymbolDesignerViewModel
         }
         else
         {
-            // 取消选中元素：清掉所有挂在旧 item 上的子状态，避免画布残留接缝/带宽手柄和属性面板误显示
             SelectedOutlineCorner = null;
             SelectedBonePointIndex = -1;
             // BandWidthHandles / OutlineCornerHandles 集合里残留的是上一个 item 的 X/Y，
@@ -126,7 +167,11 @@ public partial class SymbolDesignerViewModel
             if (OutlineEditMode == OutlineEditMode.Outline)
                 RefreshOutlineCornerHandles();
         }
+    }
 
+    /// <summary>选中变化 → 能力上限属性通知 + 选区缩放/顶点/接缝等手柄统一刷新（渲染层与选中一致）。</summary>
+    private void RefreshSelectionDependentState(PrimitiveItem? value)
+    {
         RaiseMaxChanged();
         OnPropertyChanged(nameof(CanEnterOutlineMode));
         OnPropertyChanged(nameof(CanEnterBandWidthMode));

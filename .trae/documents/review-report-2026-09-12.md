@@ -5,7 +5,7 @@
 - 流水线：detect-stack → 业务/结构 → WPF 语言/主题 → 几何/通用质量 → 权衡
 - 技术栈确认：C# / WPF（.NET8 `net8.0-windows`）+ CommunityToolkit.Mvvm + Nodify
 - 原则：只审不改；每条可指认 `文件:行`；P0/P1 为主。
-- 处理总览：已修复 15 条（#1/2/3/5/6/7/8/10/11/12/13/14/15/16/17）· 待确认 1 条（#9）· 暂缓不修 1 条（#4）
+- 处理总览：已修复 16 条（#1/2/3/5/6/7/8/9/10/11/12/13/14/15/16/17）· 待确认 0 条 · 暂缓不修 1 条（#4）
 
 ---
 
@@ -68,7 +68,7 @@
    `OnSelectedItemChanged`（~130 行）同时管阵列源编辑、多选、绘制模式联动、事件订阅、UI 按钮态；25 个 partial 堆在同一 VM 上并通过兄弟字段（`_sourceAdjTemp` 等）强耦合。
    改法：抽 `SelectionCoordinator`/`ArrayEditService` 组合注入。单点性能：`Elements.cs:118` 每次属性变化全量 JSON 快照（350ms 去抖仍成本高），可手势包裹收口时快照。
 
-   > **状态：待确认（未处理）**
+   > **状态：已修复**（方法级提炼：`OnSelectedItemChanged` 130 行按 10 类关注点拆为 8 个单一职责方法——阵列源退出/阵列互斥/调整源收起/高亮同步/按钮态/画线联动/事件订阅/手柄刷新，方法序与行为完全不变；经确认不抽 service 类，保持 25-partial 单体架构）；编译 0 错误
 
 10. **[SelectionScale.cs:233] 每帧重解析 PathData，未用缓存**
     `GetItemBounds` 直接 `ParsePathData` 每帧 Split；同文件 `:160 GetUnionBounds` 已复用 `PrimitiveItem.ParsedPathPoints`。两处行为不一致。
