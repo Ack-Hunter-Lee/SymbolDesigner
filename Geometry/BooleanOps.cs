@@ -398,7 +398,7 @@ public static class BooleanOps
                 if (inD.Length < 1e-9 || outD.Length < 1e-9) continue;
                 double det = Vector.Determinant(inD, outD);
                 if (Math.Abs(det) < 1e-9) continue;  // 共线退化为直线，不圆角（与 MakeNormalArcStep 一致）
-                double sinHalf = Math.Sqrt(Math.Max(0, (1.0 - Vector.Multiply(-inD, outD)) / 2.0));
+                double sinHalf = BandOutlineBuilder.SinHalfAngle(inD, outD);
                 double cosHalf = sinHalf < 1e-9 ? 0 : Math.Sqrt(Math.Max(0, 1.0 - sinHalf * sinHalf));
                 double len = (sinHalf < 1e-9 || cosHalf <= 0) ? r : r * cosHalf / sinHalf;
                 double legA = (sp.P0 - P).Length, legB = (sc.End - P).Length;

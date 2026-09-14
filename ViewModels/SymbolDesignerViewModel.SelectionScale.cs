@@ -321,7 +321,7 @@ public partial class SymbolDesignerViewModel
                 W = item.Width,
                 H = item.Height,
                 PathData = pd,
-                PathDataClosed = pd.Length > 0 && (pd[^1] == 'Z' || pd[^1] == 'z'),
+                PathDataClosed = SymbolDesigner.Converters.BandOutlineBuilder.IsPathDataClosed(pd),
                 CornerRadius = item.CornerRadius,
                 InnerRadius = item.InnerRadius,
                 BandWidth = item.BandWidth,
@@ -545,7 +545,7 @@ public partial class SymbolDesignerViewModel
         if (string.IsNullOrEmpty(pd)) return;
         var pts = SymbolDesigner.Converters.BandOutlineBuilder.ParsePathData(pd);
         if (pts.Count == 0) return;
-        bool closed = pd[^1] == 'Z' || pd[^1] == 'z';
+        bool closed = SymbolDesigner.Converters.BandOutlineBuilder.IsPathDataClosed(pd);
 
         double bx1 = double.MaxValue, by1 = double.MaxValue, bx2 = double.MinValue, by2 = double.MinValue;
         var mx = new List<Point>(pts.Count);

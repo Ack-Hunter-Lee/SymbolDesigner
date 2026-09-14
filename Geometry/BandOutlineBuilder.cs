@@ -578,10 +578,23 @@ public static class BandOutlineBuilder
     ///   cosHalf = cos(θ/2 之补) 对应 cos((180°−θ)/2) = sin(θ/2)
     ///   len = r·cosHalf/sinHalf = r·cot(α/2)   （切点偏移 = r·cot(半跨角)）
     /// 注意：θ>90° 时 cosθ 变负，sinHalf/cosHalf 数值含义随之变化，不能直接沿方向乘 r。</summary>
+    /// <summary>相邻段方向 in/out 的转向半角正弦 sin(θ/2)，θ = ∠(-inDir, outDir) 为转向角。
+    /// 半角公式 sin(θ/2) = sqrt((1 + in·out)/2)（in、out 应预先归一化）。
+    /// 圆角切点偏移（GetArcTangentOffset）与 miter 距离（MiterPoint）共用，避免各点写法漂移。</summary>
+    public static double SinHalfAngle(Vector inDir, Vector outDir)
+        => Math.Sqrt(Math.Max(0, (1.0 + inDir.X * outDir.X + inDir.Y * outDir.Y) / 2.0));
+
+    /// <summary>PathData 是否以 Z/z 结尾（几何闭合判定）。
+    /// 注意：不等同于 PrimitiveItem.IsClosed——IsClosed 是用户设置的闭合语义（仅对 Polyline 有效，
+    /// 变更时不写 PathData 的 Z），二者存在失配窗口。需要"当前 PathData 几何事实"的调用方
+    /// （缩放快照、镜像重建等）使用本方法。</summary>
+    public static bool IsPathDataClosed(string? pathData)
+        => !string.IsNullOrEmpty(pathData) && (pathData[^1] == 'Z' || pathData[^1] == 'z');
+
     public static double GetArcTangentOffset(Vector inDir, Vector outDir, double radius)
     {
-        // 入线反向 (-inDir) 与出线方向的夹角 = 转向角 θ
-        double sinHalf = Math.Sqrt((1.0 - Vector.Multiply(-inDir, outDir)) / 2.0);
+        // 入线反向 (-inDir) 与出线方向的夹角 = 转向角 θ；sinHalf = sin(θ/2)
+        double sinHalf = SinHalfAngle(inDir, outDir);
         if (sinHalf < 1e-9)
             return radius; // 完全共线（0°/180°）退化，取半径兜底，避免除零
         double cosHalf = Math.Sqrt(1.0 - sinHalf * sinHalf);
@@ -651,10 +664,8 @@ public static class BandOutlineBuilder
         var sumVec = fromVec - toVec;
         sumVec.Normalize();
 
-        // sin(θ/2) = √((1 - cos θ) / 2)
-        //   cos θ = (-fromVec) · toVec（两个方向反向了再点乘，绕开正负号干扰）
-        double dot = (-fromVec.X) * toVec.X + (-fromVec.Y) * toVec.Y;
-        double sinHalf = Math.Sqrt((1 - dot) / 2);
+        // sin(θ/2) = sqrt((1 + fromVec·toVec)/2)，fromVec / toVec 已归一化
+        double sinHalf = SinHalfAngle(fromVec, toVec);
 
         // 半带宽（接缝处左右均值）
         double halfWidth = 0.5 * (from.LeftHalfEnd + to.LeftHalfStart);
