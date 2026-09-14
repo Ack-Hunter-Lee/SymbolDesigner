@@ -23,15 +23,6 @@ public static class ClipperBooleanEngine
     /// <summary>椭圆离散步长（度）。越小越圆、输出段数越多。</summary>
     public const double EllipseStepDeg = 2.0;
 
-    /// <summary>弧重拟合：点到拟合圆的最大允许径向偏离（画布单位）。2° 采样点心到真圆偏差远小于此。</summary>
-    private const double ArcFitTol = 0.35;
-
-    /// <summary>直线合并：共线中间点到两点连线的最大允许侧偏（真正直线段的合并容差。</summary>
-    private const double CollinearTol = 0.02;
-
-    /// <summary>碎环剔除：|环绕面积| 小于此值的环视为数值噪声（重叠相切产生的细长/退化环）丢弃。</summary>
-    private const double SliverAreaTol = 1e-3;
-
     /// <summary>对两个画布坐标几何执行布尔，返回局部坐标段结构 PathData。失败/不支持 → null。</summary>
     public static BooleanOps.BooleanResult? Compute(Geometry a, Geometry b, GeometryCombineMode mode)
     {
@@ -87,7 +78,7 @@ public static class ClipperBooleanEngine
         foreach (var path in solution)
         {
             if (path.Count < 3) continue;
-            if (Math.Abs(SignedDoubleArea(path)) < SliverAreaTol) continue;   // 丢数值碎环
+            if (Math.Abs(SignedDoubleArea(path)) < GeometryMath.SliverAreaTol) continue;   // 丢数值碎环
             string ring = SerializeRing(path, ox, oy);
             if (string.IsNullOrEmpty(ring)) continue;
             any = true;
@@ -198,7 +189,7 @@ public static class ClipperBooleanEngine
     }
 
     private static double Round(double v)
-        => Math.Abs(v) < 1e-3 ? 0 : Math.Round(v, 3, MidpointRounding.AwayFromZero);
+        => Math.Abs(v) < GeometryMath.CoordEps ? 0 : Math.Round(v, 3, MidpointRounding.AwayFromZero);
 
     /// <summary>环绕有向面积（shoelace）。正 = 屏幕顺时针（y 向下），负 = 逆时针。用于碎环剔除与弧方向。</summary>
     private static double SignedDoubleArea(PathD path)
@@ -253,7 +244,7 @@ public static class ClipperBooleanEngine
                 double maxDev = 0;
                 for (int k = i; k <= end; k++)
                     maxDev = Math.Max(maxDev, Math.Abs(Dist(ring[k], C) - R));
-                if (maxDev > ArcFitTol) break;
+                if (maxDev > GeometryMath.ArcFitTol) break;
                 bestEnd = end; bestC = C; bestR = R; haveArc = true;
             }
             // 只有真正跨越多点的圆弧才收编为 A。短 window（3~7 点）任何三元组都能"精确"拟合出圆
@@ -337,7 +328,7 @@ public static class ClipperBooleanEngine
         int n = ring.Count;
         outList.Add(ring[0]);
         for (int j = 1; j < n - 1; j++)
-            if (SideOffset(outList[outList.Count - 1], ring[j + 1], ring[j]) > CollinearTol)
+            if (SideOffset(outList[outList.Count - 1], ring[j + 1], ring[j]) > GeometryMath.CollinearTol)
                 outList.Add(ring[j]);
         outList.Add(ring[n - 1]);
         ring.Clear();
@@ -391,7 +382,7 @@ public static class ClipperBooleanEngine
 
     private static string Fmt(double v)
     {
-        v = Math.Abs(v) < 1e-3 ? 0 : Math.Round(v, 3, MidpointRounding.AwayFromZero);
+        v = Math.Abs(v) < GeometryMath.CoordEps ? 0 : Math.Round(v, 3, MidpointRounding.AwayFromZero);
         if (v == Math.Floor(v) && Math.Abs(v) < 1e9) return ((long)v).ToString(System.Globalization.CultureInfo.InvariantCulture);
         return v.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
     }

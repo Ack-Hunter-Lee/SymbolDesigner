@@ -65,14 +65,6 @@ public static class BooleanOps
     /// <summary>运算容差（画布逻辑坐标，与厚度/圆角精度同量级）。</summary>
     public const double Tolerance = 0.05;
 
-    /// <summary>近重合合并阈值：Combine 在切点处把同一交点算成两个数值不等的端点，圆被采样为贝塞尔后
-    /// 求交误差可达 ~0.46 逻辑单位（实测 矩形∩圆 = 0.458）；小于此值的相邻点视为同一点并合并。
-    /// 有效消除"剪除/相交后轮廓点一堆近重合点 + 微段"的视觉问题。</summary>
-    public const double MergeTol = 0.5;
-
-    /// <summary>坐标序列化精度（3 位小数足够画布粒度，避免快照字符串膨胀）。</summary>
-    private const double CoordEps = 1e-3;
-
     /// <summary>布尔运算结果快照：段结构 PathData（M/L/A/C/Q/Z + F0 前缀）+ 包围盒（局部坐标）。</summary>
     public sealed record BooleanResult(string PathData, double X, double Y, double Width, double Height);
 
@@ -324,9 +316,9 @@ public static class BooleanOps
             var dedup = new List<Point>();
             foreach (var p in RingPoints(fig))
             {
-                if (dedup.Count == 0 || DistSq(dedup[^1], p) > MergeTol * MergeTol) dedup.Add(p);
+                if (dedup.Count == 0 || DistSq(dedup[^1], p) > GeometryMath.MergeTol * GeometryMath.MergeTol) dedup.Add(p);
             }
-            if (dedup.Count > 1 && DistSq(dedup[^1], dedup[0]) <= MergeTol * MergeTol) dedup.RemoveAt(dedup.Count - 1);
+            if (dedup.Count > 1 && DistSq(dedup[^1], dedup[0]) <= GeometryMath.MergeTol * GeometryMath.MergeTol) dedup.RemoveAt(dedup.Count - 1);
             if (dedup.Count >= 2) rings.Add(dedup);
         }
         return rings;
@@ -371,7 +363,7 @@ public static class BooleanOps
             for (int k = 0; k < m; k++)
             {
                 var P = k == 0 ? fig.Start : segs[k].P0;
-                if (k == 0 || DistSq(lastKeep, P) > MergeTol * MergeTol) { skel++; lastKeep = P; }
+                if (k == 0 || DistSq(lastKeep, P) > GeometryMath.MergeTol * GeometryMath.MergeTol) { skel++; lastKeep = P; }
                 skelMap[k] = skel;
             }
             int ringSkel = skel + 1;  // 本环骨架点数 = 合并后顶点数
@@ -409,7 +401,7 @@ public static class BooleanOps
                     r = len * sinHalf / cosHalf;  // 缩小半径保持切点处相切
                 }
                 (rounds ??= new List<(int, double, double, int)>())
-                    .Add((k, len, Math.Max(CoordEps, r), det < 0 ? 0 : 1));
+                    .Add((k, len, Math.Max(GeometryMath.CoordEps, r), det < 0 ? 0 : 1));
             }
             if (rounds is { Count: > 0 })
             {
@@ -484,14 +476,14 @@ public static class BooleanOps
 
     /// <summary>近重合判定（Combine 输出数值噪声上界 ≤ MergeTol）：相邻点距离 &lt; MergeTol 视为同一点。
     /// 仅用于 Combine 结果的段过滤（ParsePathGeometry）；快照回读（ParseFigures）走 CoordEps。</summary>
-    private static bool Close(Point p, Point q) => DistSq(p, q) <= MergeTol * MergeTol;
+    private static bool Close(Point p, Point q) => DistSq(p, q) <= GeometryMath.MergeTol * GeometryMath.MergeTol;
 
     private static double DistSq(Point p, Point q)
         => (p.X - q.X) * (p.X - q.X) + (p.Y - q.Y) * (p.Y - q.Y);
 
     private static double Round(double v)
     {
-        if (Math.Abs(v) < CoordEps) return 0;
+        if (Math.Abs(v) < GeometryMath.CoordEps) return 0;
         return Math.Round(v, 3, MidpointRounding.AwayFromZero);
     }
 

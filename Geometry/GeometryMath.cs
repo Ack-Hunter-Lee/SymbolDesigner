@@ -29,6 +29,25 @@ public static class GeometryMath
     /// <summary>子对象命中容差（画布逻辑单位）。点击位置距端点/圆心 ≤ 此值 → 命中该子对象。</summary>
     public const double SubObjectSnapTol = 6.0;
 
+    // —— 布尔 / 折线数值容差（集中自 BooleanOps / ClipperBooleanEngine，统一语义，避免散布） ——
+
+    /// <summary>近重合合并阈值：Combine 在切点处把同一交点算成两个数值不等的端点，圆被采样为贝塞尔后
+    /// 求交误差可达 ~0.46 逻辑单位（实测 矩形∩圆 = 0.458）；小于此值的相邻点视为同一点并合并。
+    /// 有效消除"剪除/相交后轮廓点一堆近重合点 + 微段"的视觉问题。</summary>
+    public const double MergeTol = 0.5;
+
+    /// <summary>坐标容差 / 序列化精度（画布逻辑单位）。绝对值小于此值的坐标量零（快照字符串 3 位小数足够）。</summary>
+    public const double CoordEps = 1e-3;
+
+    /// <summary>弧重拟合：点到拟合圆的最大允许径向偏离（画布单位）。2° 采样点心到真圆偏差远小于此。</summary>
+    public const double ArcFitTol = 0.35;
+
+    /// <summary>直线合并：共线中间点到两点连线的最大允许侧偏（真正直线段的合并容差）。</summary>
+    public const double CollinearTol = 0.02;
+
+    /// <summary>碎环剔除：|环绕面积| 小于此值的环视为数值噪声（重叠相切产生的细长/退化环）丢弃。</summary>
+    public const double SliverAreaTol = 1e-3;
+
     /// <summary>形状两段式 Shift 锁正形：让 |dx| = |dy|（取较大值，CAD 习惯）。
     /// 形状模式下 Shift 按住 → 矩形变正方形、椭圆变正圆、圆环变正圆、三角形变为等边。
     /// 坐标系：center 为形状中心点（DraftPoints[0]），target 为当前鼠标位置。
