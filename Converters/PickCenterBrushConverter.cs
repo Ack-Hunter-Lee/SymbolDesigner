@@ -9,8 +9,15 @@ namespace SymbolDesigner.Converters;
 /// 表明"被识别为子对象"的命中点类型，让用户直观区分。</summary>
 public sealed class PickCenterBrushConverter : IValueConverter
 {
-    private static readonly Brush CenterBrush = new SolidColorBrush(Color.FromRgb(0xFF, 0x98, 0x00)); // 橙
-    private static readonly Brush EndpointBrush = new SolidColorBrush(Color.FromRgb(0x4C, 0xAF, 0x50)); // 绿
+    private static readonly Brush CenterBrush = CreateFrozen(Color.FromRgb(0xFF, 0x98, 0x00)); // 橙
+    private static readonly Brush EndpointBrush = CreateFrozen(Color.FromRgb(0x4C, 0xAF, 0x50)); // 绿
+
+    private static Brush CreateFrozen(Color color)
+    {
+        var brush = new SolidColorBrush(color);
+        brush.Freeze();
+        return brush;
+    }
 
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         => value is bool isCenter && isCenter ? CenterBrush : EndpointBrush;

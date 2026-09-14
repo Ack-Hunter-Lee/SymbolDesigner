@@ -20,6 +20,9 @@ namespace SymbolDesigner.Converters;
 /// </summary>
 public class TagToBrushesConverter : IValueConverter
 {
+    /// <summary>按 token（hex 或默认标记）缓存已冻结画刷，避免悬停/重绘时反复 new SolidColorBrush。</summary>
+    private readonly Dictionary<string, Brush> _cache = new(StringComparer.Ordinal);
+    private const string DefaultBrushKey = "\u0000default";
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         // parameter = "0" / "1" / "2"
@@ -35,13 +38,15 @@ public class TagToBrushesConverter : IValueConverter
         var token = parts[idx].Trim();
         if (token.Length == 0) return DefaultBrush();
 
-        // 1. hex 形式
+        // 1. hex 形式（按 token 缓存，命中直接返回冻结画刷）
         if (token.StartsWith("#", StringComparison.Ordinal))
         {
+            if (_cache.TryGetValue(token, out var cached)) return cached;
             try
             {
                 var brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(token)!);
                 brush.Freeze();
+                _cache[token] = brush;
                 return brush;
             }
             catch
@@ -71,10 +76,12 @@ public class TagToBrushesConverter : IValueConverter
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => throw new NotSupportedException();
 
-    private static SolidColorBrush DefaultBrush()
+    private SolidColorBrush DefaultBrush()
     {
+        if (_cache.TryGetValue(DefaultBrushKey, out var cached)) return (SolidColorBrush)cached;
         var b = new SolidColorBrush(Color.FromRgb(0x2a, 0x3a, 0x4a));
         b.Freeze();
+        _cache[DefaultBrushKey] = b;
         return b;
     }
 }
