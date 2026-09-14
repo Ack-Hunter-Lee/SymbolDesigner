@@ -357,6 +357,10 @@ public static class PathDataSampler
     private static void SampleArc(Point p1, Point p2, double rx, double ry, double xAxisRotationDeg,
         bool largeArc, bool sweep, List<Point> outList, SvgParser.SvgTransform t)
     {
+        // 退化:终点 == 起点 → 整段忽略(SVG 规范视作空弧)。若照常解析会出现 0/0 → NaN 采样点,污染几何。
+        if (System.Math.Abs(p1.X - p2.X) < 1e-9 && System.Math.Abs(p1.Y - p2.Y) < 1e-9)
+            return;
+
         if (rx == 0 || ry == 0)
         {
             // 退化为直线
