@@ -5,7 +5,7 @@
 - 流水线：detect-stack → 业务/结构 → WPF 语言/主题 → 几何/通用质量 → 权衡
 - 技术栈确认：C# / WPF（.NET8 `net8.0-windows`）+ CommunityToolkit.Mvvm + Nodify
 - 原则：只审不改；每条可指认 `文件:行`；P0/P1 为主。
-- 处理总览：已修复 7 条（#2/3/5/8/10/11/12）· 待确认 4 条（#1/6/7/9/13~17）· 暂缓不修 1 条（#4）
+- 处理总览：已修复 9 条（#2/3/5/8/10/11/12/13/14）· 待确认 7 条（#1/6/7/9/15/16/17）· 暂缓不修 1 条（#4）
 
 ---
 
@@ -86,13 +86,17 @@
 
 ## P2 可读性 / 可选优化
 
-> **状态：以下 13~17 待确认（未处理）**
+> **状态：以下 15~17 待确认（未处理）**
 
 12. 语义重复且微差：半角圆角公式三处（`BooleanOps.cs:401`、`BandOutlineBuilder.cs:581`、`MiterPoint:642`）；闭合标志用字符串 `pd[^1]=='Z'`（`SelectionScale.cs:323/547`）而 `PrimitiveItem.IsClosed` 已存在——双套真相易失配。
 
     > **状态：已修复**（新增 `BandOutlineBuilder.SinHalfAngle` / `IsPathDataClosed` 共享方法，三处半角公式与两处闭合判定统一调用；`IsPathDataClosed` 语义为"PathData 几何闭合"，不等同 `IsClosed` 用户属性）
 13. 精度魔法数散布不统一：`MergeTol=0.5`/`ArcFitTol=0.35`/`CollinearTol=0.02`/`CoordEps=1e-3`/`SliverAreaTol=1e-3`，建议集中为常量。
+
+    > **状态：已修复**（集中到 `GeometryMath` 5 个 public const 并保留原语义注释；`BooleanOps` / `ClipperBooleanEngine` 删除本地定义改引用；Clipper 两处裸 `1e-3` 量零统一走 `CoordEps`）
 14. `Constraints.cs`、`BandOutlineBuilder.cs` 遗留大量 `Debug.WriteLine`（含插值），发布前应清理。
+
+    > **状态：已修复**（`Constraints.cs` 删除全部 17 处 `Debug.WriteLine`；`BandOutlineBuilder.cs` 清理 2 处注释残留；无 `[DEBUG-REMOVE]` 日志遗留）
 15. `TagToBrushesConverter`/`PickCenterBrushConverter` 每次求值 `new SolidColorBrush`（未缓存/未冻结），工具栏多按钮时略浪费。
 16. `PrimitiveTemplateSelector.cs:41` 未知 `TypeKey` 返回 null → 图元静默不可见，建议给兜底模板。
 17. 仓库 `obj/` 囤了一次性调试工程 `pietest/`、`ArcFitTest/`（gitignored，不影响产物）——可选删除整理。

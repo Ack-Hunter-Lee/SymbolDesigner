@@ -25,12 +25,10 @@ public partial class SymbolDesignerViewModel
     /// </summary>
     public void ApplyTangent(PrimitiveItem line, PrimitiveItem circle, bool anchorIsLine)
     {
-        System.Diagnostics.Debug.WriteLine($"[ApplyTangent] anchorIsLine={anchorIsLine} line={line.Id} ({line.TypeKey})  circle={circle.Id} ({circle.TypeKey})");
         // 只拦截"同类型"重复（重复建两条相切无意义）；不同类型（如已有重合约束）允许共存。
         if (Constraints.Any(c => c is LineCircleTangentConstraint
             && c.Participants.Contains(line.Id) && c.Participants.Contains(circle.Id)))
         {
-            System.Diagnostics.Debug.WriteLine($"  -> 早返回：已存在同 line+circle 相切约束");
             return;
         }
 
@@ -45,12 +43,10 @@ public partial class SymbolDesignerViewModel
 
         if (!Converters.TangentSolver.TryGetLineEndpoints(line, out var a, out var b))
         {
-            System.Diagnostics.Debug.WriteLine($"  -> 早返回：无法取得线端点");
             return;
         }
         if (!Converters.TangentSolver.TryGetCircle(circle, out var c, out _))
         {
-            System.Diagnostics.Debug.WriteLine($"  -> 早返回：无法取得圆心");
             return;
         }
 
@@ -90,7 +86,6 @@ public partial class SymbolDesignerViewModel
             var tp = Converters.TangentSolver.SolveEndpointAtTangentPoint(circle, line, existingCo.EndpointIndex);
             if (tp is { } t)
                 Converters.TangentSolver.SetLineEndpointAt(line, existingCo.EndpointIndex, t);
-            System.Diagnostics.Debug.WriteLine($"  -> 升级已有重合端点吸附切点 -> ({t.X:0.##},{t.Y:0.##})");
         }
     }
 
@@ -106,23 +101,19 @@ public partial class SymbolDesignerViewModel
     /// </summary>
     public void ApplyCoincident(PrimitiveItem line, PrimitiveItem circle)
     {
-        System.Diagnostics.Debug.WriteLine($"[ApplyCoincident] line={line.Id} ({line.TypeKey})  circle={circle.Id} ({circle.TypeKey})");
         // 只拦截"同类型"重复；不同类型（如已有相切约束）允许共存（端点在圆上的相切切点自洽）。
         if (Constraints.Any(c => c is LineCircleCoincidentConstraint
             && c.Participants.Contains(line.Id) && c.Participants.Contains(circle.Id)))
         {
-            System.Diagnostics.Debug.WriteLine($"  -> 早返回：已存在同 line+circle 重合约束");
             return;
         }
 
         if (!Converters.TangentSolver.TryGetLineEndpoints(line, out var a, out var b))
         {
-            System.Diagnostics.Debug.WriteLine($"  -> 早返回：无法取得线端点");
             return;
         }
         if (!Converters.TangentSolver.TryGetCircle(circle, out var c, out double r))
         {
-            System.Diagnostics.Debug.WriteLine($"  -> 早返回：无法取得圆心");
             return;
         }
 
@@ -132,8 +123,6 @@ public partial class SymbolDesignerViewModel
             ? lk == PickKind.EndPoint0 ? 0 : lk == PickKind.EndPoint1 ? 1 : -1
             : -1;
         bool circleIsCenter = _pickKindByItem.TryGetValue(circle.Id, out var ck) && ck == PickKind.Center;
-
-        System.Diagnostics.Debug.WriteLine($"  -> lineEndIdx={lineEndIdx} circleIsCenter={circleIsCenter}");
 
         // 2) 组合决定模式
         if (lineEndIdx >= 0 && circleIsCenter)
@@ -147,7 +136,6 @@ public partial class SymbolDesignerViewModel
                 EndpointIndex = lineEndIdx,
             });
             Converters.TangentSolver.PlaceLineEndpointAtCircleCenter(circle, line, lineEndIdx);
-            System.Diagnostics.Debug.WriteLine($"  -> PointCoincide idx={lineEndIdx}");
         }
         else if (lineEndIdx < 0 && circleIsCenter)
         {
@@ -157,7 +145,6 @@ public partial class SymbolDesignerViewModel
             if (Constraints.Any(c => c is LineCircleTangentConstraint cast
                 && cast.Participants.Contains(line.Id) && cast.Participants.Contains(circle.Id)))
             {
-                System.Diagnostics.Debug.WriteLine($"  -> 拒绝：已有相切约束，圆心落直线与之冲突（无解）");
                 return;
             }
             Constraints.Add(new LineCircleCoincidentConstraint
@@ -167,7 +154,6 @@ public partial class SymbolDesignerViewModel
                 Mode = CoincidentMode.CenterOnLine,
             });
             Converters.TangentSolver.PlaceCircleCenterOnLine(line, circle);
-            System.Diagnostics.Debug.WriteLine($"  -> CenterOnLine");
         }
         else if (lineEndIdx >= 0)
         {
@@ -189,14 +175,12 @@ public partial class SymbolDesignerViewModel
                 var tp = Converters.TangentSolver.SolveEndpointAtTangentPoint(circle, line, lineEndIdx);
                 if (tp is { } t)
                     Converters.TangentSolver.SetLineEndpointAt(line, lineEndIdx, t);
-                System.Diagnostics.Debug.WriteLine($"  -> EndPointOnArc idx={lineEndIdx} 吸附切点 -> ({t.X:0.##},{t.Y:0.##}) (与相切双重约束)");
             }
             else
             {
                 var newP = Converters.TangentSolver.SolveEndpointOnArc(circle, line, lineEndIdx);
                 if (newP is { } p)
                     Converters.TangentSolver.SetLineEndpointAt(line, lineEndIdx, p);
-                System.Diagnostics.Debug.WriteLine($"  -> EndPointOnArc idx={lineEndIdx} 投影端点 -> ({p.X:0.##},{p.Y:0.##})");
             }
         }
         else
@@ -220,14 +204,12 @@ public partial class SymbolDesignerViewModel
                 var tp2 = Converters.TangentSolver.SolveEndpointAtTangentPoint(circle, line, endpointIndex);
                 if (tp2 is { } t2)
                     Converters.TangentSolver.SetLineEndpointAt(line, endpointIndex, t2);
-                System.Diagnostics.Debug.WriteLine($"  -> (回退)EndPointOnArc idx={endpointIndex} 吸附切点 -> ({t2.X:0.##},{t2.Y:0.##}) (与相切双重约束)");
             }
             else
             {
                 var proj = Converters.TangentSolver.SolveEndpointOnArc(circle, line, endpointIndex);
                 if (proj is { } pp)
                     Converters.TangentSolver.SetLineEndpointAt(line, endpointIndex, pp);
-                System.Diagnostics.Debug.WriteLine($"  -> (回退)EndPointOnArc idx={endpointIndex} 投影端点 -> ({pp.X:0.##},{pp.Y:0.##})");
             }
         }
     }

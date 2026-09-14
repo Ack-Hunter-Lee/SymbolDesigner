@@ -120,9 +120,6 @@ public static class BandOutlineBuilder
         // 这样 ComputeMiterOutline 职责单一：不识别 join，只产出 Miter baseline。
         var (lefts, rights) = ComputeMiterOutline(segs, collinearSplitPairs);
 
-        //Debug.WriteLine("lefts");
-        //Debug.WriteLine("Rights");
-
         // ===== 按 join 模式扰动接缝点（直接写在主流程，不封装）=====
         // 旧版：按骨架接缝索引 k 遍历，miterIdx = 1 + k（已注释保留，逻辑可用）——
         //   if (segCount >= 2)
