@@ -1,0 +1,16 @@
+{
+  "canvasWidth": 1600,
+  "canvasHeight": 900,
+  "canvasBackgroundColor": "#23232B",
+  "primitives": [
+    {"type": "rect",            "x": 80,  "y": 90,  "width": 140, "height": 70, "strokeColor": "#FFFFFF", "fillColor": "#40FFFFFF"},
+    {"type": "roundedRect",     "x": 80,  "y": 210, "width": 140, "height": 70, "cornerRadius": 14},
+    {"type": "ellipse",         "centerX": 260, "centerY": 90, "radius": 40},
+    {"type": "ring",            "centerX": 260, "centerY": 210, "radius": 42, "innerRadius": 22},
+    {"type": "triangle",        "x": 380, "y": 90,  "width": 90, "height": 78},
+    {"type": "line",            "points": [[600, 90], [700, 140]], "thickness": 2},
+    {"type": "polyline",        "points": [[500, 210], [540, 250], [600, 210], [660, 250]], "thickness": 3},
+    {"type": "bandPolyline",    "points": [[750, 90], [820, 90], [820, 160]], "thickness": 4, "strokeColor": "#FFB74D"},
+    {"type": "pie",             "centerX": 900, "centerY": 90, "radius": 46, "startAngle": 0, "sweepAngle": 120, "fillStyle": "Solid", "fillColor": "#FF7043"}
+  ]
+}

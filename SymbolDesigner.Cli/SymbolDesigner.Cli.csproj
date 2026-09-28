@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <!-- render 子命令用 WPF 离屏渲染(PresentationCore 的 DrawingVisual/RenderTargetBitmap)，
+         故引入 WindowsDesktop WPF 框架引用（仅类型引用，不要求 ApplicationDefinition/Main）。
+         非 render 子命令仍是纯数据序列化，不触碰 WPF 运行时。
+         ProjectReference 主工程仅为复用 Models.SymbolProject/PrimitiveItemDto 序列化。 -->
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>sym</AssemblyName>
+    <RootNamespace>SymbolDesigner.Cli</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- WPF 类型引用（DrawingVisual / RenderTargetBitmap / Geometry 等）。不加此 FrameworkReference 会报
+         “System.Windows.Media 不存在”（WindowsBase 冲突 + PresentationCore 缺失）。 -->
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App.WPF" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 复用主工程 Models.SymbolProject/PrimitiveItemDto 的序列化。
+         改用已编译 DLL 的 Reference（而非 ProjectReference）：
+         避免 WPF(WinExe) 被控制台引用时触发 wpftmp 临时工程导致 AssemblyInfo 重复。
+         CLI 只触纯 DTO，不加载 WPF 运行时。需主工程先 build 出该 DLL。 -->
+    <Reference Include="SymbolDesigner">
+      <HintPath>..\bin\Debug\net8.0-windows\SymbolDesigner.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>
