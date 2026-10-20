@@ -123,3 +123,20 @@ public class ArrayTypeOption
 
     public override string ToString() => Label;
 }
+
+/// <summary>阵列"参考路径"下拉选项（可读标签 + 目标图元），供预览浮层 ComboBox 绑定。
+/// 候选 = 画布上除源之外**任何能产出几何的图元**（不按类型列白名单），由用户显式指定哪一个当路径。
+/// 持有图元引用（仅存在于一次预览会话内，不入 DTO）。</summary>
+public class ArrayPathOption
+{
+    public string Label { get; }
+    public PrimitiveItem Item { get; }
+
+    public ArrayPathOption(string label, PrimitiveItem item)
+    {
+        Label = label;
+        Item = item;
+    }
+
+    public override string ToString() => Label;
+}

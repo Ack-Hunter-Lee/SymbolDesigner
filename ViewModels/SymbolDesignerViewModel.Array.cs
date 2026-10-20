@@ -142,6 +142,7 @@ public partial class SymbolDesignerViewModel
         _isArrayEditMode = true;
         OnPropertyChanged(nameof(ArrayPanelTitle));
         OnPropertyChanged(nameof(ArrayPanelConfirmText));
+        OnPropertyChanged(nameof(ArrayPathPickerVisible)); // 编辑模式无路径候选 → 隐藏下拉
         LoadArrayParamsToPreview(arr);
         // 显式刷新一次：编辑态打开即按该阵列生成参考圆环 + 重建渲染。
         // 不能只依赖 LoadArrayParamsToPreview 的副作用（参数与上次同值时 ObservableProperty
@@ -159,6 +160,7 @@ public partial class SymbolDesignerViewModel
         PathArrayPreviewItems.Clear();
         OnPropertyChanged(nameof(ArrayPanelTitle));
         OnPropertyChanged(nameof(ArrayPanelConfirmText));
+        OnPropertyChanged(nameof(ArrayPathPickerVisible));
     }
 
     /// <summary>把阵列当前参数回填到浮层绑定属性（进入编辑时显示现有值）。</summary>

@@ -58,8 +58,13 @@ public partial class SymbolDesignerViewModel
     /// <summary>预览态源（用户选中的图形，确认时深拷贝入 ArrayInstance）。</summary>
     private PrimitiveItem? _previewSource;
 
-    /// <summary>预览态路径（BandPolyline，仅 Path 类型需要，确认时拷贝 PathData）。</summary>
-    private PrimitiveItem? _previewPath;
+    /// <summary>预览态"参考路径"候选（创建模式填充；编辑模式清空 —— 老阵列只存几何快照，
+    /// 没有路径图元的引用，无法反查当初用的是哪一个）。</summary>
+    public ObservableCollection<ArrayPathOption> PathOptions { get; } = new();
+
+    /// <summary>参考路径下拉当前选中项（用户在浮层里显式指定哪一个图元当路径）。
+    /// 不用"按类型猜"的自动链路：那样选什么都会被某条优先链劫持，用户无法表达意图。</summary>
+    [ObservableProperty] private ArrayPathOption? _selectedPathOption;
 
     /// <summary>类型下拉选项（中文显示名 + 枚举值），供浮层 ComboBox 绑定。</summary>
     public IReadOnlyList<ArrayTypeOption> ArrayTypeOptions { get; } = new[]
@@ -76,6 +81,9 @@ public partial class SymbolDesignerViewModel
     /// <summary>路径阵列参数区可见（仅 Type==Path）。</summary>
     public bool ArrayPathParamsVisible => ArrayPreviewType == Models.ArrayType.Path;
 
+    /// <summary>"参考路径"下拉可见（仅创建模式的路径阵列；编辑模式 PathOptions 为空，见其注释）。</summary>
+    public bool ArrayPathPickerVisible => ArrayPathParamsVisible && !_isArrayEditMode;
+
     /// <summary>矩形阵列参数区可见（仅 Type==Rectangular）。</summary>
     public bool ArrayRectParamsVisible => ArrayPreviewType == Models.ArrayType.Rectangular;
 
@@ -88,6 +96,7 @@ public partial class SymbolDesignerViewModel
         SelectedArrayTypeOption = ArrayTypeOptions.FirstOrDefault(o => o.Value == value);
         // 同步参数区可见性（XAML 三组参数行）
         OnPropertyChanged(nameof(ArrayPathParamsVisible));
+        OnPropertyChanged(nameof(ArrayPathPickerVisible));
         OnPropertyChanged(nameof(ArrayRectParamsVisible));
         OnPropertyChanged(nameof(ArrayPolarParamsVisible));
         // 切到环形：创建预览若无显式圆心，按源位置预设一个合理圆心（源右侧约一个源宽）；
@@ -110,6 +119,12 @@ public partial class SymbolDesignerViewModel
     {
         if (value is not null && value.Value != ArrayPreviewType)
             ArrayPreviewType = value.Value;
+    }
+
+    /// <summary>换参考路径 → 立即重建预览（仅创建模式；编辑模式无候选、路径取老阵列快照不改）。</summary>
+    partial void OnSelectedPathOptionChanged(ArrayPathOption? value)
+    {
+        if (IsPathArrayPreviewOpen && !_isArrayEditMode) RebuildArrayPreview();
     }
 
     partial void OnPathArrayCountChanged(int value) => OnArrayParamsChanged();
@@ -135,33 +150,26 @@ public partial class SymbolDesignerViewModel
         if (IsPathArrayPreviewOpen) RebuildArrayPreview();
     }
 
-    /// <summary>开始预览式创建。源 = 当前选中图形；类型默认取上次选择。
-    /// - 若当前选中 BandPolyline → 自动把类型定为 Path（路径=选中折线）。
-    /// - 否则默认 Path，若画布没有可用折线 → 自动切换 Rectangular（无需参考路径即可阵列）。
-    /// 立即生成预览，浮层可改类型与全套参数，✓ 确认 / ✕ 或 Esc 取消。</summary>
+    /// <summary>开始预览式创建。源 = 当前选中图形（任意类型，能出几何就能阵列）；
+    /// 参考路径 = 浮层里的"路径"下拉，由用户显式指定（默认第一个候选）。
+    /// 类型默认取上次选择；若为 Path 但画布上没有可用路径 → 自动切 Rectangular（无需参考路径即可阵列）。
+    /// 立即生成预览，浮层可改类型 / 路径 / 全套参数，✓ 确认 / ✕ 或 Esc 取消。</summary>
     [RelayCommand]
     private void StartArrayPreview()
     {
-        // 源 = 选中的非 BandPolyline 图形（矩形/椭圆/圆环等）
-        var src = SelectedItem is { } sel && sel.TypeKey != nameof(L1Primitive.BandPolyline)
-            ? sel
-            : null;
-        // 路径 = 选中的 BandPolyline；否则画布第一条可用 BandPolyline
-        var path = SelectedItem is { } sel2 && sel2.TypeKey == nameof(L1Primitive.BandPolyline)
-            ? sel2
-            : null;
-        path ??= Primitives.FirstOrDefault(p => p.TypeKey == nameof(L1Primitive.BandPolyline)
-            && Converters.BandOutlineBuilder.ParsePathData(p.PathData).Count >= 2);
-
+        var src = SelectedItem;
         if (src is null)
         {
-            System.Windows.MessageBox.Show("请先选中要阵列的源图形（矩形 / 椭圆 / 圆环等，不含折线）。", "阵列",
+            System.Windows.MessageBox.Show("请先选中要阵列的源图形（矩形 / 椭圆 / 圆环 / 折线 / 履带等任意图形）。", "阵列",
                 System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
             return;
         }
         _previewSource = src;
-        _previewPath = path;
-        if (ArrayPreviewType == Models.ArrayType.Path && path is null)
+        // 路径候选 = 画布上除源之外任何"能产出几何"的图元；选哪一个由用户在浮层下拉里定，
+        // 不再"按类型猜"（旧实现的两条 BandPolyline 优先链会劫持用户选择，选什么都落到折线上）。
+        RefreshPathOptions(src);
+        SelectedPathOption = PathOptions.FirstOrDefault();
+        if (ArrayPreviewType == Models.ArrayType.Path && PathOptions.Count == 0)
         {
             // 无可用路径 → 自动切矩形阵列（用户不必先画一条参考线）
             ArrayPreviewType = Models.ArrayType.Rectangular;
@@ -171,6 +179,40 @@ public partial class SymbolDesignerViewModel
         IsPathArrayPreviewOpen = true;
         RebuildArrayPreview();
     }
+
+    /// <summary>填充"参考路径"候选：画布上除源之外、任何能产出几何的图元（几何入口 =
+    /// PrimitiveItem.SelectionGeometry，不按类型列白名单）。标签带序号便于同类图形区分。</summary>
+    private void RefreshPathOptions(PrimitiveItem? src)
+    {
+        PathOptions.Clear();
+        var counters = new Dictionary<string, int>();
+        foreach (var p in Primitives)
+        {
+            if (src is not null && ReferenceEquals(p, src)) continue;
+            if (CanvasPathData(p) is null) continue;
+            string name = TypeDisplayName(p.TypeKey);
+            counters.TryGetValue(name, out int n);
+            counters[name] = ++n;
+            PathOptions.Add(new ArrayPathOption($"{name} #{n}", p));
+        }
+    }
+
+    /// <summary>图元类型的中文名（仅用于路径下拉的可读标签）。</summary>
+    private static string TypeDisplayName(string typeKey) => typeKey switch
+    {
+        nameof(L1Primitive.Rectangle) => "矩形",
+        nameof(L1Primitive.RoundedRectangle) => "圆角矩形",
+        nameof(L1Primitive.Ellipse) => "椭圆",
+        nameof(L1Primitive.Triangle) => "三角形",
+        nameof(L1Primitive.Ring) => "圆环",
+        nameof(L1Primitive.Pie) => "扇形",
+        nameof(L1Primitive.Line) => "直线",
+        nameof(L1Primitive.Polyline) => "折线",
+        nameof(L1Primitive.BandPolyline) => "带状折线",
+        nameof(L1Primitive.BooleanPath) => "布尔结果",
+        nameof(L1Primitive.Belt) => "履带",
+        _ => typeKey,
+    };
 
     /// <summary>按当前类型/参数重建预览层：生成 N 份半透明克隆填充 PathArrayPreviewItems。
     /// 与正式渲染共用 BuildArrayClones（同一套 Placement 计算），保证预览所见 = 确认所得。
@@ -220,8 +262,12 @@ public partial class SymbolDesignerViewModel
                 arr.RotateItems = ArrayPreviewRotateItems;
                 break;
             default:
-                if (_previewPath is null) return null;
-                arr.PathData = _previewPath.PathData;
+                // 路径几何必须为**画布绝对坐标**：BuildArrayClones 把副本中心直接放到锚点上
+                // （clone.X = p.X - ox），不加任何偏移。故这里存通用入口产出的画布坐标路径，
+                // 而非路径图元自己的 PathData（那是局部坐标：折线/履带的几何都相对自身 X/Y）。
+                if (SelectedPathOption?.Item is not { } pathItem) return null;
+                if (CanvasPathData(pathItem) is not { } pathData) return null;
+                arr.PathData = pathData;
                 arr.Count = Math.Clamp(PathArrayCount, 1, 100);
                 arr.IncludeSource = PathArrayIncludeSource;
                 break;
@@ -249,7 +295,16 @@ public partial class SymbolDesignerViewModel
             return;
         }
         var arr = ArrayInstanceFromPreview();
-        if (arr is null) return;
+        if (arr is null)
+        {
+            // 静默 return 会让「✓ 确定」看起来毫无反应 —— 用户分不清"没点中"和"条件不满足"。
+            // 路径阵列唯一可能失败处就是找不到可用作路径的图元 → 明确告知。
+            System.Windows.MessageBox.Show(
+                "路径阵列需要一个「参考路径」图元：画布上除源图形外，至少再有一个图形。"
+                + "直线 / 折线 / 圆 / 矩形 / 履带 / 布尔结果等任意图形都可以当路径。",
+                "阵列", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+            return;
+        }
         // 阵列吸收源：AutoCAD 关联阵列语义 —— 创建后源成为阵列的第一份副本，不再作为独立图元存在。
         // 否则源（Primitives）与同位置第一份克隆双层重叠，用户会看到"两个元素"。
         // 顺序：先 Add 阵列（克隆补位渲染）→ 再摘除源 → 视觉无缝；撤销一次整体回滚（源随快照还原）。
@@ -296,10 +351,11 @@ public partial class SymbolDesignerViewModel
     /// <summary>退出预览态：清空预览渲染层与临时候选引用。</summary>
     private void ExitArrayPreview()
     {
+        IsPathArrayPreviewOpen = false; // 先关（下拉清空会触发 SelectedItem 变更，勿在此时重建）
         PathArrayPreviewItems.Clear();
+        PathOptions.Clear();
+        SelectedPathOption = null;
         _previewSource = null;
-        _previewPath = null;
-        IsPathArrayPreviewOpen = false;
     }
 
     /// <summary>重建 ArrayRenderItems：遍历 ArrayInstances，对每条按类型计算 N 个 Placement，
@@ -483,14 +539,85 @@ public partial class SymbolDesignerViewModel
         }
     }
 
-    /// <summary>路径阵列布局：沿折线均匀分布（原 POC 1 逻辑）。</summary>
+    /// <summary>路径阵列布局：沿参考路径均匀分布（原 POC 1 逻辑）。
+    /// 路径走"几何 → 最长轮廓"通用入口，故圆轮廓 / 履带 / 布尔结果都能当路径，
+    /// 弧与闭合也由 PolylineToSegments 交给 WPF 摊平。</summary>
     private static void BuildPathPlacements(ArrayInstance arr, List<PlacementP> anchors)
     {
-        var segments = Converters.PolylineToSegments.Convert(arr.PathData);
+        var segments = Converters.PolylineToSegments.Convert(ParsePathData(arr.PathData));
         if (segments.Count == 0) return;
         var placements = Converters.PathDistributor.DistributeAlongPath(
             segments, arr.Count, arr.IncludeSource);
         foreach (var p in placements)
             anchors.Add(new PlacementP(p.X, p.Y, p.AngleDeg));
+    }
+
+    /// <summary>图元 → 画布坐标的路径 mini-language（保留弧/贝塞尔，不提前摊平）。
+    /// 走**通用几何入口**：PrimitiveItem.SelectionGeometry 已按类型分发、覆盖全部图元
+    /// （矩形/圆角/椭圆/三角/圆环/扇形/直线/折线(开+闭)/带状折线/布尔/履带），
+    /// 只是它是**局部坐标**（相对自身 X/Y），这里把各段整体平移到画布坐标。
+    /// 以后新增图元只要 SelectionGeometry 里有它，路径阵列自动支持 —— 不在此加类型分支。
+    /// 不用"几何挂 Transform + 收口 PathGeometry"的写法：实测该组合对 RectangleGeometry /
+    /// EllipseGeometry **不会**把变换烘进坐标（仍输出 M0,0），只有 GeometryGroup 会 —— 行为不一致。
+    /// 逐段平移与几何类型无关，结果确定。</summary>
+    private static string? CanvasPathData(PrimitiveItem? item)
+    {
+        if (item?.SelectionGeometry is not { } local) return null;
+        // CreateFromGeometry 对"已是 PathGeometry"的输入会**原样返回同一实例**（履带 / 带状折线 /
+        // 布尔的轮廓几何是冻结缓存）→ 直接改点会抛"不能修改冻结几何"。故这一类先克隆。
+        var pg = local is System.Windows.Media.PathGeometry
+            ? (System.Windows.Media.PathGeometry)local.Clone()
+            : System.Windows.Media.PathGeometry.CreateFromGeometry(local);
+        var offset = new System.Windows.Vector(item.X, item.Y);
+        if (offset.X != 0 || offset.Y != 0)
+        {
+            foreach (var figure in pg.Figures)
+            {
+                figure.StartPoint += offset;
+                foreach (var segment in figure.Segments) ShiftSegment(segment, offset);
+            }
+        }
+        // 空几何（如宽高为 0 的图元）序列化为 "" → 视为"不可作路径"，避免建出 0 份副本的空阵列。
+        string data = pg.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        return string.IsNullOrWhiteSpace(data) ? null : data;
+    }
+
+    /// <summary>把一段路径段整体平移（保留段类型，不摊平）。</summary>
+    private static void ShiftSegment(System.Windows.Media.PathSegment segment, System.Windows.Vector offset)
+    {
+        switch (segment)
+        {
+            case System.Windows.Media.LineSegment line:
+                line.Point += offset; break;
+            case System.Windows.Media.PolyLineSegment poly:
+                for (int i = 0; i < poly.Points.Count; i++) poly.Points[i] += offset;
+                break;
+            case System.Windows.Media.ArcSegment arc:
+                arc.Point += offset; break;
+            case System.Windows.Media.BezierSegment bezier:
+                bezier.Point1 += offset; bezier.Point2 += offset; bezier.Point3 += offset; break;
+            case System.Windows.Media.QuadraticBezierSegment quad:
+                quad.Point1 += offset; quad.Point2 += offset; break;
+            case System.Windows.Media.PolyBezierSegment polyBezier:
+                for (int i = 0; i < polyBezier.Points.Count; i++) polyBezier.Points[i] += offset;
+                break;
+            case System.Windows.Media.PolyQuadraticBezierSegment polyQuad:
+                for (int i = 0; i < polyQuad.Points.Count; i++) polyQuad.Points[i] += offset;
+                break;
+        }
+    }
+
+    /// <summary>路径 mini-language → 几何；空串 / 非法串 → null（调用方走"无可用路径"分支）。</summary>
+    private static System.Windows.Media.Geometry? ParsePathData(string? pathData)
+    {
+        if (string.IsNullOrWhiteSpace(pathData)) return null;
+        try
+        {
+            return System.Windows.Media.Geometry.Parse(pathData);
+        }
+        catch (System.FormatException)
+        {
+            return null;
+        }
     }
 }

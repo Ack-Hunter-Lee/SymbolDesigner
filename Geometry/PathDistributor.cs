@@ -205,7 +205,11 @@ public static class PathDistributor
                 double segLen = segLengths[s];
                 if (target <= acc + segLen || s == segments.Count - 1)
                 {
-                    double arcInSeg = target - acc;
+                    // 夹到 [0, segLen] 再采样：target 恰落在段末时，(target - acc) 可能比 segLen
+                    // 大 1ulp（浮点 (a+b)-a ≠ b），直接喂给 SampleAt 会撞上它的越界断言 →
+                    // ArgumentOutOfRangeException。误差量级 1e-13，几何上就是"段末端点"。
+                    // 多段路径（椭圆 / 折线 / 履带）必然踩到，单段直线恰好相等才躲过。
+                    double arcInSeg = Math.Clamp(target - acc, 0, segLen);
                     var (pos, ang) = segments[s].SampleAt(arcInSeg);
                     result.Add(new Placement(pos.X, pos.Y, ang, target));
                     break;

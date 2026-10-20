@@ -2503,7 +2503,7 @@
                     <!--
                         阵列预览浮层（AutoCAD 式"选中即预览"）：画布右上角轻量面板。
                         类型与参数改动 → 画布预览层实时重建；✓ 确认创建 / ✕ 取消（Esc 同）。
-                        三类型：矩形（行列网格，无参考路径）/ 环形（绕圆心圆周）/ 路径（沿折线）。
+                        三类型：矩形（行列网格，无参考路径）/ 环形（绕圆心圆周）/ 路径（沿指定图元的轮廓）。
                         放在画布 chrome 内（ZoomPan 之外）→ 固定屏幕位置，不随画布缩放/平移。
                     -->
                     <Border
@@ -2548,6 +2548,29 @@
 
                             <!--  ── 路径阵列参数区（Type == Path）──  -->
                             <StackPanel Visibility="{Binding ArrayPathParamsVisible, Converter={StaticResource BoolToVis}}">
+                                <!--  参考路径：由用户显式指定哪一个图元当路径（不按类型猜）  -->
+                                <StackPanel
+                                    Margin="0,0,0,4"
+                                    Orientation="Horizontal"
+                                    Visibility="{Binding ArrayPathPickerVisible, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock
+                                        Width="56"
+                                        VerticalAlignment="Center"
+                                        FontSize="11"
+                                        Foreground="{StaticResource Brush.Text.Primary}"
+                                        Text="路径：" />
+                                    <ComboBox
+                                        Width="140"
+                                        VerticalAlignment="Center"
+                                        Background="{StaticResource Brush.Bg.Input}"
+                                        BorderBrush="{StaticResource Brush.Border.Subtle}"
+                                        BorderThickness="1"
+                                        DisplayMemberPath="Label"
+                                        FontSize="11"
+                                        Foreground="{StaticResource Brush.Text.Primary}"
+                                        ItemsSource="{Binding PathOptions}"
+                                        SelectedItem="{Binding SelectedPathOption, Mode=TwoWay}" />
+                                </StackPanel>
                                 <StackPanel Margin="0,0,0,4" Orientation="Horizontal">
                                     <TextBlock
                                         Width="56"
