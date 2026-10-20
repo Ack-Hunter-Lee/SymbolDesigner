@@ -1,0 +1,105 @@
+# 无头 Agent CLI：用结构化 JSON 生成 SymbolDesigner 工程
+
+## Context（为什么做这个）
+
+用户希望"通过 Agent 画图"—— 让外部 AI-agent 用结构化描述创建图元，最终能被 SymbolDesigner 打开成可编辑工程。已确认形态（与用户对齐）：**无头 CLI + 结构化 JSON + 命令行/脚本消费**，不嵌 GUI 面板、不做进程实时推送。
+
+复用的现成内核：工程文件本就是 `.sym.json`（根 DTO `SymbolProject` + 图元 `PrimitiveItemDto`，`System.Text.Json` 缩进序列化）。整条 `Deserialize → CreateFromDto → Primitives.Add` 加载链路已存在。CLI 只需"把友好 DSL 组装成 SymbolProject 再写文件"，不碰 WPF 运行时、不模拟鼠标。
+
+因此本项目是**新增一个独立控制台子项目 SymbolDesigner.Cli**，主程序不改（除必要时轻微备注）。
+
+## 关键事实（已探明，勿再臆测）
+
+- 主程序 [SymbolDesigner.csproj](file:///f:/Codes/CSharp/SymbolDesigner/SymbolDesigner.csproj)：WinExe、net8.0-windows、UseWPF=true。模型全在 `Models` 命名空间。
+- `.sym.json` 结构：[Models/SymbolProject.cs](file:///f:/Codes/CSharp/SymbolDesigner/Models/SymbolProject.cs) — 根 `SymbolProject`(CanvasWidth/Height=1920/1080、CanvasBackgroundColor、BackgroundImagePath/Data/Type/Opacity/FitMode、`Primitives`、`ArrayInstances`、`Constraints`)；图元 `PrimitiveItemDto`(L80-170，全 string/double/bool/List，**无 WPF 依赖**)；`SymbolProject.Serialize()/Deserialize()` 已含旧字段 `JoinStyle`→`OutlineJoinStyle` 兼容。
+- 图元类型 `Models.L1Primitive`(enum)：Rectangle/Ellipse/Line/RoundedRectangle/Triangle/BandPolyline/Polyline/Ring/BooleanPath/Pie。`PrimitiveItemDto.TypeKey` = 枚举 `nameof`（如 `"Rectangle"`）。
+- `Draw.cs AddL1` 定义每种类型默认尺寸；`Persistence.cs CreateFromDto` 做缺省兜底（`SweepAngle`→60、`InnerRadius<=0→10`、Id 缺省按序分配）。DTO 的"兜底默认"(Width=30/Sweep=0)≠"设计默认"(AddL1)，CLI 要用后者主动补齐。
+- **PathData 是相对 (X,Y) 的局部坐标**（`GeometryMath.RecalcBoundingBox` 已证）。Path 类图元必须：算顶点 bbox → `X=minX,Y=minY,Width=maxX-minX,Height=maxY-minY` → `PathData=顶点平移(-minX,-minY)` 序列化，否则图形跑回 (0,0)/错位。
+- `GeometryMath.BuildPathData` / `BandOutlineBuilder.ParsePathData` 是 public——但为彻底不碰 WPF 类型，CLI 自写 8 行 `StringBuilder` 拼 `M x,y L x,y ...`（`CultureInfo.InvariantCulture`）。
+
+## 实现方案
+
+### 目录/文件（新增，主工程不动）
+
+```
+SymbolDesigner.Cli/
+  SymbolDesigner.Cli.csproj
+  Program.cs                 # Main + 子命令分发 + 退出码
+  Args.cs                    # 极简 --k=v / --k v / positional 解析(手写,零依赖)
+  Dsl.cs                     # DSL DTO: DslProject / DslPrimitive
+  DslToProject.cs            # DSL → SymbolProject 映射/默认值补齐
+  PathBuilder.cs             # 本地点序列化 M x,y L x,y ...
+  Validate.cs                # 校验规则(拒/容忍/补)
+  JsonReport.cs              # --json 机器可读输出
+```
+
+### csproj 要点
+
+- `OutputType=Exe`、`TargetFramework=net8.0-windows`、`Nullable`+`ImplicitUsings`。**不设 `UseWPF`**（不初始化 App/Dispatcher/STA）。
+- `<ProjectReference Include="..\SymbolDesigner\SymbolDesigner.csproj" />` —— 只复用 `Models` 的 DTO 序列化。
+- **零新增包**（离线 nuget 源，禁用 System.CommandLine/Spectre 等；翻编译会 NU1900/失败）。参数解析手写。
+- 红线：CLI 内**绝不** new `PrimitiveItem`、不调 `CreateFromDto`、不碰 `ObservableObject`/`System.Windows.*`/`MessageBox`——那是真拉起 WPF 运行时的路径。Serialization 只能走 `SymbolProject.Deserialize()`（保持版本兼容逻辑），不自己手写 STJ 反序列化绕过它。
+
+### DSL JSON（`.sym.json` 的人性化上层）
+
+顶层：
+```
+{ "canvasWidth":1920, "canvasHeight":1080, "canvasBackgroundColor":"#2A2A2A", "primitives":[...] }
+```
+图元通用字段：`type`(必填)、`id`、`x`/`y`、`width`/`height`、`rotation`、`zIndex`、`opacity`、`visible`、`strokeColor`、`strokeWidth`、`strokeDash`(Solid/Dash/Dot/DashDot)、`thickness`(默认6)、`fillStyle`(None/Solid/Gradient/Pattern)、`fillColor`、`gradientStart`/`gradientEnd`、`fillBrightness`/`fillOpacity`。颜色 hex 原样透传（是序列化**数据**，不违反 Theme 规则）。
+
+type 别名 → TypeKey 映射（LLM 友好）：
+| 别名 | TypeKey | 几何输入 |
+|---|---|---|
+| `rect` | Rectangle | width,height |
+| `roundedRect`|RoundRect `RoundedRectangle` | width,height `cornerRadius`(默认8) |
+| `ellipse` | Ellipse | width,height **或** `centerX,centerY,radius` |
+| `ring` | Ring | width,height(外径) `innerRadius`(默认 min/4) |
+| `line` | Line | `x1,y1,x2,y2` 或 `points:[[x,y],[x,y]]` |
+| `polyline` | Polyline | `points:[[x,y]...]` `closed` |
+| `bandPolyline` | BandPolyline | `points:[...]` `closed` `thickness` |
+| `triangle` | Triangle | width,height |
+| `pie` | Pie | width,height 或 `centerX,centerY,radius` `startAngle`(0) `sweepAngle`(60) |
+| `boolean` | BooleanPath | **不开放创建（见校验）** |
+
+Path 类（line/polyline/bandPolyline）用 `points` 顶点数组，CLI 内部按 §关键事实 的 bbox+平移生成 PathData——外部 agent 无需手写 PathData。
+
+### 子命令与退出码
+
+```
+new   [--dsl <file|->] [--canvas WxH] [--output p] [--json]
+add   <project.sym.json> --dsl <file|-> [--output p] [--json]
+info  <project.sym.json> [--json]
+validate [<project.sym.json>] [--dsl <file|->] [--json]
+help
+```
+- `--dsl -` 从 stdin 读（脚本管道）。
+- `--json`：机器可读 JSON 走 stdout，人类文案走 stderr（不污染管道）。
+- 退出码：`0`成功 / `1`参数错 / `2`校验失败 / `3`IO错 / `10`未捕获异常。
+
+### 校验规则（拒绝=退出2）
+
+1. `type` 缺失/别名无法映射、`boolean` 出现在 DSL（无 PathData 无从造，拒）。
+2. Path 类缺 `points` 或点 <2（line 恰 2）。
+3. 几何非法：width/height/radius/innerRadius ≤0；`innerRadius ≥ min(w,h)/2`。
+4. `opacity`∉[0,1]、`fillBrightness/fillOpacity/pattern*`∉[0,100]、`strokeDash/fillStyle/patternStyle/lineAxis` 非法枚举、hex 颜色正则不过、canvas 尺寸≤0。
+5. 数字/坐标非规范数字（防脏数据打不开工程）。
+
+自动补(仅 warning)：每类型缺省宽高按 AddL1、`ThickPolyline`→`BandPolyline`、`sweepAngle`→60、`innerRadius`→min/4、`id`→Guid。
+
+## 验证（端到端）
+
+1. `dotnet build SymbolDesigner.Cli/SymbolDesigner.Cli.csproj`：退出码0、末行含 `SymbolDesigner.Cli -> ...dll`、`0 个错误`（AGENTS 三标准）。
+2. 造 DSL 样例（rect/ellipse/line/polyline/bandPolyline/ring/pie 各1，含 points 与 center+radius 两种写法）→ `validate` 退出0；塞 `type:"foo"` → 退出2。
+3. `new --dsl sample.json --output out.sym.json --json`；`add` 追加更 JSON；`info` 列出图元。
+4. 肉检 `out.sym.json`：PathData 是否平移正确、Width/Height=bbox。
+5. **用 SymbolDesigner 打开 out.sym.json**，逐图元确认位置/尺寸/外观、可正常编辑保存（最终验收，不依赖 CLI 自己假设）。
+6. 反向：designer 另存一个工程 → `cli info` 能读它（兼容自产文件）。
+
+## 风险
+
+- 引用 WinExe 主工程：TFM 必须 `net8.0-windows`，不设 UseWPF；只要不碰 WPF 类型就不会加载 WPF 运行时。
+- PathData 局部坐标是最易错点，必须 bbox 平移。
+- 混淆 DTO"兜底默认"与 AddL1"设计默认"，CLI 用后者。
+- 控制台编码：入口设 `Console.OutputEncoding = Encoding.UTF8`；stdout 只放 `--json` 结果。
+- CLI 顶层类勿命名 `App`（与主工程 ApplicationDefinition 生成的类名冲突风格）。
