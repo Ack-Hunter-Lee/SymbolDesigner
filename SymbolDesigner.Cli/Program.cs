@@ -3,11 +3,12 @@ using SymbolDesigner.Models;
 
 namespace SymbolDesigner.Cli;
 
-/// <summary>sym — SymbolDesigner 无头 CLI：用结构化 JSON 生成/追加/检查 .sym.json 工程（供外部 AI-agent 画图）。
+/// <summary>sym — SymbolDesigner 无头 CLI：用结构化 JSON 生成/追加/检查工程文件，默认 .symz 压缩包
+/// （内部 project.json + assets/），也支持 .sym.json 纯文本单文件（供外部 AI-agent 画图）。
 /// 退出码：0 成功 | 1 参数错 | 2 校验失败 | 3 IO 错 | 10 未捕获异常。</summary>
 internal static class Program
 {
-    private const string DefaultOut = "project.sym.json";
+    private const string DefaultOut = "project.symz";
 
     static int Main(string[] args)
     {
@@ -87,15 +88,16 @@ internal static class Program
     private static int CmdAdd(ParsedArgs r, bool json)
     {
         var target = r.Positionals.Count == 1 ? r.Positionals[0] : null;
-        if (target is null) throw new ArgError("add 需要一个参数: <project.sym.json>");
+        if (target is null) throw new ArgError("add 需要一个参数: <工程文件>");
         string dslSource = r.Get("dsl") ?? throw new ArgError("缺少必填选项 --dsl <file|->");
 
-        var proj = LoadProject(target);
+        var doc = LoadProject(target);
+        var proj = doc.Project;
         var added = DslToProject.BuildPrimitives(ReadDslChecked(r).Primitives, proj.Primitives.Count);
         proj.Primitives.AddRange(added);
 
         string outPath = r.Get("output") ?? target;
-        WriteProject(outPath, proj);
+        WriteProject(outPath, proj, doc.Assets);
         if (json)
             JsonReport.Print(new { ok = true, path = outPath, existing = proj.Primitives.Count - added.Count, added = added.Count, total = proj.Primitives.Count });
         else
@@ -106,8 +108,8 @@ internal static class Program
     private static int CmdInfo(ParsedArgs r, bool json)
     {
         var target = r.Positionals.Count == 1 ? r.Positionals[0] : null;
-        if (target is null) throw new ArgError("info 需要一个参数: <project.sym.json>");
-        var proj = LoadProject(target);
+        if (target is null) throw new ArgError("info 需要一个参数: <工程文件>");
+        var proj = LoadProject(target).Project;
 
         var list = proj.Primitives.Select(d => new { id = d.Id, type = d.TypeKey, x = d.X, y = d.Y, width = d.Width, height = d.Height, zIndex = d.ZIndex }).ToList();
         int bools = proj.Primitives.Count(d => d.TypeKey == "BooleanPath");
@@ -151,7 +153,7 @@ internal static class Program
             try { LoadProject(r.Positionals[0]); warnings.Add("工程可正常解析"); }
             catch (Exception e) { errors.Add("工程无法解析: " + e.Message); }
         }
-        if (!any) throw new ArgError("validate 需要 --dsl <file> 或 <project.sym.json>，或两者都提供");
+        if (!any) throw new ArgError("validate 需要 --dsl <file> 或 <工程文件>，或两者都提供");
 
         if (json)
             JsonReport.Print(new { ok = errors.Count == 0, errors, warnings });
@@ -167,8 +169,8 @@ internal static class Program
     private static int CmdRender(ParsedArgs r, bool json)
     {
         var target = r.Positionals.Count == 1 ? r.Positionals[0] : null;
-        if (target is null) throw new ArgError("render 需要一个参数: <project.sym.json>");
-        var proj = LoadProject(target);
+        if (target is null) throw new ArgError("render 需要一个参数: <工程文件>");
+        var proj = LoadProject(target).Project;
 
         string outPath = r.Get("output") ?? Path.ChangeExtension(target, ".png");
         var size = ParseSize(r.Get("size"), proj.CanvasWidth, proj.CanvasHeight);
@@ -210,11 +212,12 @@ internal static class Program
     private static int CmdEdit(ParsedArgs r, bool json)
     {
         var target = r.Positionals.Count == 1 ? r.Positionals[0] : null;
-        if (target is null) throw new ArgError("edit 需要一个参数: <project.sym.json>");
+        if (target is null) throw new ArgError("edit 需要一个参数: <工程文件>");
         string id = r.Get("id") ?? throw new ArgError("edit 需要 --id <图元id>");
         if (r.Sets.Count == 0) throw new ArgError("edit 至少需要一条 --set field=value");
 
-        var proj = LoadProject(target);
+        var doc = LoadProject(target);
+        var proj = doc.Project;
         var dto = FindPrimitive(proj, id);
         foreach (var set in r.Sets)
         {
@@ -224,7 +227,7 @@ internal static class Program
         }
 
         string outPath = r.Get("output") ?? target;
-        WriteProject(outPath, proj);
+        WriteProject(outPath, proj, doc.Assets);
         if (json)
             JsonReport.Print(new { ok = true, path = outPath, id, changed = r.Sets.Count });
         else
@@ -235,15 +238,16 @@ internal static class Program
     private static int CmdRemove(ParsedArgs r, bool json)
     {
         var target = r.Positionals.Count == 1 ? r.Positionals[0] : null;
-        if (target is null) throw new ArgError("remove 需要一个参数: <project.sym.json>");
+        if (target is null) throw new ArgError("remove 需要一个参数: <工程文件>");
         string id = r.Get("id") ?? throw new ArgError("remove 需要 --id <图元id>");
 
-        var proj = LoadProject(target);
+        var doc = LoadProject(target);
+        var proj = doc.Project;
         var dto = FindPrimitive(proj, id);
         proj.Primitives.Remove(dto);
 
         string outPath = r.Get("output") ?? target;
-        WriteProject(outPath, proj);
+        WriteProject(outPath, proj, doc.Assets);
         if (json)
             JsonReport.Print(new { ok = true, path = outPath, id, removed = true, remaining = proj.Primitives.Count });
         else
@@ -288,18 +292,17 @@ internal static class Program
         proj.CanvasWidth = w; proj.CanvasHeight = h;
     }
 
-    private static SymbolProject LoadProject(string path)
+    private static SymbolProjectFile.LoadedProject LoadProject(string path)
     {
-        if (!File.Exists(path)) throw new IOException($"工程文件不存在: {path}");
-        string json = File.ReadAllText(path, Encoding.UTF8);
-        var proj = SymbolProject.Deserialize(json)
-                   ?? throw new FormatException($"工程文件无法解析: {path}");
-        proj.Primitives ??= new List<PrimitiveItemDto>();
-        return proj;
+        var doc = SymbolProjectFile.Load(path)
+                  ?? throw new FormatException($"工程文件无法解析: {path}");
+        doc.Project.Primitives ??= new List<PrimitiveItemDto>();
+        return doc;
     }
 
-    private static void WriteProject(string path, SymbolProject proj)
-        => File.WriteAllText(path, proj.Serialize(), new UTF8Encoding(false));
+    /// <summary>写回工程：assets 原样透传，避免把容器（.symz）里的底图资产丢掉。</summary>
+    private static void WriteProject(string path, SymbolProject proj, IReadOnlyDictionary<string, byte[]>? assets = null)
+        => SymbolProjectFile.Save(path, proj, assets);
 
     private static CliException ValidationFail(string cmd, ValidationResult v)
     {
@@ -311,16 +314,17 @@ internal static class Program
     private static void PrintHelp()
     {
         Console.Error.WriteLine("""
-symbol-designer sym — 用结构化 JSON 生成/追加/检查 .sym.json 工程（供外部 AI-agent 画图）
+symbol-designer sym — 用结构化 JSON 生成/追加/检查工程文件（供外部 AI-agent 画图）
+工程默认是 .symz 压缩包（内部含 project.json + assets/）；也可用 --output 指定 .sym.json 纯文本单文件。
 
 用法:
   sym new       [--dsl <file|->] [--canvas WxH] [--output <path>] [--json]     新建工程(缺省空工程)
-  sym add       <project.sym.json> --dsl <file|-> [--output <path>] [--json]  向已有工程追加图元
-  sym info      <project.sym.json> [--json]                                   查看工程图元清单
-  sym validate  [--dsl <file|->] [<project.sym.json>] [--json]                 校验 DSL/工程合法性
-  sym render    <project.sym.json> [--output <png>] [--size WxH] [--json]      渲染离屏 PNG 预览(视觉自检)
-  sym edit      <project.sym.json> --id <图元id> --set field=value [...]        按 id 修改图元字段(可多次 --set)
-  sym remove    <project.sym.json> --id <图元id> [--output <p>] [--json]        按 id 删除图元
+  sym add       <工程文件> --dsl <file|-> [--output <path>] [--json]             向已有工程追加图元
+  sym info      <工程文件> [--json]                                            查看工程图元清单
+  sym validate  [--dsl <file|->] [<工程文件>] [--json]                          校验 DSL/工程合法性
+  sym render    <工程文件> [--output <png>] [--size WxH] [--json]               渲染离屏 PNG 预览(视觉自检)
+  sym edit      <工程文件> --id <图元id> --set field=value [...]                 按 id 修改图元字段(可多次 --set)
+  sym remove    <工程文件> --id <图元id> [--output <p>] [--json]                 按 id 删除图元
   sym help
 
 选项:

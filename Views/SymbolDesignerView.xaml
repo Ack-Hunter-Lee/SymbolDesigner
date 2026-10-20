@@ -1271,7 +1271,7 @@
                         MouseLeftButtonDown="OnLoadProjectClick"
                         Style="{StaticResource ToolIconButton}"
                         Tag="Brush.Bg.Darker,Brush.Tool.BorderNeutral,Brush.Tool.Icon"
-                        ToolTip="加载工程 (.sym.json)">
+                        ToolTip="加载工程 (.symz / .sym.json)">
                         <TextBlock Style="{StaticResource ToolIconGlyph}" Text="&#xE8E5;" />
                     </Border>
                     <!--  导入 SVG：支持基本几何 + 折线 + path（曲线自动降采样）。

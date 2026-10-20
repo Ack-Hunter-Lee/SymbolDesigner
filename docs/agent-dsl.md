@@ -10,11 +10,13 @@
 ```text
 1. 想清楚画面    ← 确定画布尺寸、需要哪些形状、各放在哪、什么颜色
 2. sym validate  ← 先用校验器检查你的 DSL 语法（错误会精确告诉你哪里不对、合法值是什么）
-3. sym new/add   ← 校验通过后生成 .sym.json 工程
+3. sym new/add   ← 校验通过后生成 .symz 工程（压缩包容器）
 4. sym render    ← 把它渲染成 PNG，**打开图检查画面是否符合你的意图**
 ```
 
 > **关键原则：DSL 不是"一次写对考试"，而是"validate 纠错 + render 看图"的循环。** 语法错了看报错改，画面不对看 PNG 改坐标。不要手工推算坐标重叠/越界，交给 render 出来的图去判断。
+
+> **工程文件两种形态**：默认输出 `.symz`（ZIP 压缩包，内含可读清单 `project.json` + `assets/` 二进制资产，底图随包自包含）；若要**纯文本单文件**（便于直接读写 / diff / 文本工具处理），用 `--output xxx.sym.json` 显式指定。两种格式 `sym` 都能读，编辑时会原地维持原格式。
 
 ---
 
@@ -22,11 +24,11 @@
 
 | 命令 | 作用 | 示例 |
 |---|---|---|
-| `sym new [--dsl f] [--canvas WxH] [--output p]` | 新建工程（带 DSL 则为全量内容） | `sym new --dsl dsl.json --output a.sym.json` |
-| `sym add <proj> --dsl <f>` | 向已有工程追加图元 | `sym add a.sym.json --dsl more.json` |
-| `sym info <proj>` | 查看工程画布尺寸、图元清单 | `sym info a.sym.json` |
+| `sym new [--dsl f] [--canvas WxH] [--output p]` | 新建工程（带 DSL 则为全量内容） | `sym new --dsl dsl.json --output a.symz` |
+| `sym add <proj> --dsl <f>` | 向已有工程追加图元 | `sym add a.symz --dsl more.json` |
+| `sym info <proj>` | 查看工程画布尺寸、图元清单 | `sym info a.symz` |
 | `sym validate [--dsl f] [<proj>]` | 校验 DSL 或工程合法性 | `sym validate --dsl dsl.json` |
-| `sym render <proj> [--output png] [--size WxH]` | 离屏渲染 PNG 预览 | `sym render a.sym.json --output a.png --size 1280x720` |
+| `sym render <proj> [--output png] [--size WxH]` | 离屏渲染 PNG 预览 | `sym render a.symz --output a.png --size 1280x720` |
 | `sym help` | 帮助 | `sym help` |
 
 **通用选项**
@@ -170,11 +172,11 @@ render 出 PNG 后，打开看图，**对照你的意图检查**：
 CLI 支持**增量编辑同一幅图**，不必每次重抄整份 DSL：
 
 ```text
-1. 查 id:     sym info a.sym.json            ← 拿到每个图元的 id / type / 坐标
-2. 改单个:    sym edit a.sym.json --id <id> --set x=300 --set fillColor=#FF7043
+1. 查 id:     sym info a.symz              ← 拿到每个图元的 id / type / 坐标
+2. 改单个:    sym edit a.symz --id <id> --set x=300 --set fillColor=#FF7043
               （--set 可重复；一次改多个字段；改完默认存回原文件，或 --output 另存）
-3. 删单个:    sym remove a.sym.json --id <id>
-4. 看图自检:  sym render a.sym.json --output a.png --size 1280x720
+3. 删单个:    sym remove a.symz --id <id>
+4. 看图自检:  sym render a.symz --output a.png --size 1280x720
 ```
 
 **`edit --set` 可写字段**（小写，一次 `--set field=value` 一个）：

@@ -8,11 +8,19 @@ namespace SymbolDesigner.ViewModels;
 /// <summary>背景参考图（描图用底层图片，仅编辑器内显示，不导出到 XAML）的加载 / 清除。</summary>
 public partial class SymbolDesignerViewModel
 {
+    /// <summary>当前底图的原始字节缓存（导入或加载时记下）。保存工程时直接用它，
+    /// 不再回头读外部文件 → 外部原图被删/移动也不会丢底图；存 .symz 时这些字节进 assets/。</summary>
+    private byte[]? _backgroundImageBytes;
+
+    /// <summary>底图字节的来源扩展名提示（不带点号），写入 BackgroundImageType 供解码端参考。
+    /// 容器内资产无扩展名语义，缺省 "png"。</summary>
+    private string? _backgroundImageExt;
+
     // ============== 背景参考图导入/清除 ==============
 
     /// <summary>
     /// 从文件路径加载图片作为背景参考图。
-    /// 构造 BitmapImage（带缓存，关闭文件锁），设置到 BackgroundImageSource。
+    /// 读入字节后缓存（供保存工程复用），再解码为 BitmapImage（带缓存，无文件锁）。
     /// 失败时返回 false 并保持现有背景不变。
     /// </summary>
     public bool LoadBackgroundImage(string filePath)
@@ -22,13 +30,13 @@ public partial class SymbolDesignerViewModel
             if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
                 return false;
 
-            var bmp = new BitmapImage();
-            bmp.BeginInit();
-            bmp.CacheOption = BitmapCacheOption.OnLoad;   // 加载后释放文件锁
-            bmp.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
-            bmp.UriSource = new Uri(filePath, UriKind.Absolute);
-            bmp.EndInit();
-            bmp.Freeze();  // 允许跨线程访问
+            var bytes = File.ReadAllBytes(filePath);
+            var bmp = DecodeImage(bytes);
+            if (bmp is null) return false;
+
+            _backgroundImageBytes = bytes;
+            var ext = Path.GetExtension(filePath).TrimStart('.');
+            _backgroundImageExt = string.IsNullOrEmpty(ext) ? "png" : ext;
 
             BackgroundImageSource = bmp;
             BackgroundImagePath = filePath;
@@ -43,31 +51,26 @@ public partial class SymbolDesignerViewModel
     }
 
     /// <summary>
-    /// 从内存中的图片字节加载背景参考图（无需文件路径）。
-    /// 工程文件嵌入 Base64 时调此方法恢复图像,不依赖任何外部文件。
+    /// 从内存中的图片字节加载背景参考图（无需外部文件）。
+    /// 工程内嵌 Base64 / 容器 assets 里的底图都走这里，加载后不依赖任何外部文件。
     /// </summary>
-    /// <param name="imageBytes">图片原始字节（PNG/JPG/BMP/GIF/TIFF 等 WPF 支持格式）。</param>
-    /// <param name="extensionHint">扩展名提示（不带点号，如 "png"/"jpg"），
-    /// BitmapImage 内部用此 hint 决定解码器。null 时默认 "png"。</param>
+    /// <param name="imageBytes">图片原始字节（PNG/JPG/BMP/GIF/TIFF/WEBP 等 WPF 支持格式）。</param>
+    /// <param name="extensionHint">扩展名提示（不带点号，如 "png"），仅记录到 BackgroundImageType；
+    /// 解码本身由 WPF 按流内容自动识别格式，不依赖此值。</param>
     public bool LoadBackgroundImage(byte[] imageBytes, string? extensionHint = null)
     {
         try
         {
             if (imageBytes is null || imageBytes.Length == 0) return false;
+            var bmp = DecodeImage(imageBytes);
+            if (bmp is null) return false;
 
-            var ext = (extensionHint ?? "png").TrimStart('.');
-            // 缓存到临时目录，扩展名 hint 给 BitmapDecoder 用
-            var tempFile = Path.Combine(Path.GetTempPath(), $"fk_bg_{Guid.NewGuid():N}.{ext}");
-            File.WriteAllBytes(tempFile, imageBytes);
-            try
-            {
-                return LoadBackgroundImage(tempFile);
-            }
-            finally
-            {
-                // LoadBackgroundImage 内部用 OnLoad 缓存,加载完可安全删除临时文件
-                try { File.Delete(tempFile); } catch { /* ignore */ }
-            }
+            _backgroundImageBytes = imageBytes;
+            _backgroundImageExt = (extensionHint ?? "png").TrimStart('.');
+
+            BackgroundImageSource = bmp;
+            BackgroundImagePath = null;   // 字节加载没有外部来源文件
+            return true;
         }
         catch (Exception ex)
         {
@@ -77,11 +80,29 @@ public partial class SymbolDesignerViewModel
         }
     }
 
-    /// <summary>清除背景参考图（恢复纯色背景）。</summary>
+    /// <summary>清除背景参考图（恢复纯色背景），并丢弃字节缓存。</summary>
     [RelayCommand]
     private void ClearBackgroundImage()
     {
         BackgroundImageSource = null;
         BackgroundImagePath = null;
+        _backgroundImageBytes = null;
+        _backgroundImageExt = null;
+    }
+
+    /// <summary>把图片字节解码为可跨线程使用的 BitmapImage。
+    /// 用 StreamSource（OnLoad 缓存）直接从内存解码：无需临时文件，也不留文件锁。
+    /// WPF 由流内容自动识别格式。失败返回 null。</summary>
+    private static BitmapImage? DecodeImage(byte[] bytes)
+    {
+        if (bytes is null || bytes.Length == 0) return null;
+
+        var bmp = new BitmapImage();
+        bmp.BeginInit();
+        bmp.CacheOption = BitmapCacheOption.OnLoad;   // 解码完即入内存，流可释放
+        bmp.StreamSource = new MemoryStream(bytes);
+        bmp.EndInit();
+        bmp.Freeze();  // 允许跨线程访问
+        return bmp;
     }
 }

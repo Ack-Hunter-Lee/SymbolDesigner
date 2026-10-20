@@ -383,7 +383,7 @@ public partial class SymbolDesignerView : UserControl
             vm.SaveAsProjectCommand.Execute(null);
     }
 
-    /// <summary>加载工程按钮：从 .sym.json 恢复编辑状态。</summary>
+    /// <summary>加载工程按钮：从 .symz 容器 / .sym.json 纯文本工程恢复编辑状态。</summary>
     private void OnLoadProjectClick(object sender, MouseButtonEventArgs e)
     {
         if (DataContext is SymbolDesignerViewModel vm)

@@ -36,6 +36,17 @@ public partial class SymbolDesignerViewModel
     partial void OnCurrentFilePathChanged(string? value) => OnPropertyChanged(nameof(WindowTitle));
     partial void OnIsDirtyChanged(bool value) => OnPropertyChanged(nameof(WindowTitle));
 
+    /// <summary>取"另存为"的默认文件名：剥掉 .sym.json / .symz 这类多段后缀，
+    /// 避免把工程名带成 "a.sym" 后被追加新扩展名。</summary>
+    private static string ProjectBaseName(string? path)
+    {
+        if (string.IsNullOrEmpty(path)) return "Symbol";
+        var name = System.IO.Path.GetFileName(path);
+        if (name.EndsWith(SymbolProjectFile.LegacyExtension, System.StringComparison.OrdinalIgnoreCase))
+            return name[..^SymbolProjectFile.LegacyExtension.Length];
+        return System.IO.Path.GetFileNameWithoutExtension(name);
+    }
+
     /// <summary>保存到当前文件：若已有路径直接覆盖，否则转 SaveAs 让用户选位置。
     /// 是"保存"按钮的实际行为。</summary>
     [RelayCommand]
@@ -48,8 +59,8 @@ public partial class SymbolDesignerViewModel
         }
         try
         {
-            var project = ToSymbolProject();
-            System.IO.File.WriteAllText(CurrentFilePath, project.Serialize());
+            // 就地保存：格式跟随当前文件扩展名（.symz 打包 / .sym.json 纯文本），不擅自升级用户文件
+            SymbolProjectFile.Save(CurrentFilePath, ToSymbolProject());
             IsDirty = false;
         }
         catch (System.Exception ex)
@@ -66,19 +77,16 @@ public partial class SymbolDesignerViewModel
     {
         var dlg = new Microsoft.Win32.SaveFileDialog
         {
-            FileName = CurrentFilePath is null
-                ? "Symbol"
-                : System.IO.Path.GetFileNameWithoutExtension(CurrentFilePath),
-            DefaultExt = ".sym.json",
-            Filter = "元件图形工程 (*.sym.json)|*.sym.json|所有文件 (*.*)|*.*",
+            FileName = ProjectBaseName(CurrentFilePath),
+            DefaultExt = SymbolProjectFile.ContainerExtension,
+            Filter = "元件图形工程 (*.symz;*.sym.json)|*.symz;*.sym.json|压缩包工程 (*.symz)|*.symz|纯文本工程 (*.sym.json)|*.sym.json|所有文件 (*.*)|*.*",
             AddExtension = true,
             Title = "另存为元件图形工程",
         };
         if (dlg.ShowDialog() != true) return;
         try
         {
-            var project = ToSymbolProject();
-            System.IO.File.WriteAllText(dlg.FileName, project.Serialize());
+            SymbolProjectFile.Save(dlg.FileName, ToSymbolProject());
             CurrentFilePath = dlg.FileName;
             IsDirty = false;
         }
@@ -89,29 +97,28 @@ public partial class SymbolDesignerViewModel
         }
     }
 
-    /// <summary>从 .sym.json 工程文件加载，重建 Primitives 集合。
+    /// <summary>从工程文件（.symz 容器 / .sym.json 纯文本）加载，重建 Primitives 集合。
     /// 加载后选中状态清空，VertexHandles 按新选中项刷新。</summary>
     [RelayCommand]
     private void LoadProject()
     {
         var dlg = new Microsoft.Win32.OpenFileDialog
         {
-            DefaultExt = ".sym.json",
-            Filter = "元件图形工程 (*.sym.json)|*.sym.json|所有文件 (*.*)|*.*",
+            DefaultExt = SymbolProjectFile.ContainerExtension,
+            Filter = "元件图形工程 (*.symz;*.sym.json)|*.symz;*.sym.json|压缩包工程 (*.symz)|*.symz|纯文本工程 (*.sym.json)|*.sym.json|所有文件 (*.*)|*.*",
             Title = "加载元件图形工程",
         };
         if (dlg.ShowDialog() != true) return;
         try
         {
-            var json = System.IO.File.ReadAllText(dlg.FileName);
-            var project = SymbolProject.Deserialize(json);
-            if (project is null)
+            var loaded = SymbolProjectFile.Load(dlg.FileName);
+            if (loaded is null)
             {
                 System.Windows.MessageBox.Show("文件格式无效", "错误",
                     System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
                 return;
             }
-            FromSymbolProject(project);
+            FromSymbolProject(loaded.Project, loaded.Assets);
             // 加载成功后，记录路径、清 IsDirty（加载后是"干净"状态）
             CurrentFilePath = dlg.FileName;
             IsDirty = false;
@@ -148,25 +155,13 @@ public partial class SymbolDesignerViewModel
             BackgroundFitMode = BackgroundFitMode,
         };
 
-        // 背景图：把文件读成 byte[] 嵌入到工程 JSON,实现工程自包含。
-        // 工程文件会变大(几百 KB 到几 MB),但彻底避免"工程移动/分享后背景图丢失"问题。
-        // 加载时优先用 BackgroundImageData,BackgroundImagePath 作为老工程兼容 fallback。
-        if (!string.IsNullOrEmpty(BackgroundImagePath) && File.Exists(BackgroundImagePath))
+        // 背景图：直接用导入/加载时缓存的字节（不再回头读外部文件）→
+        // 外部原图被删/移动也不会丢底图。存 .sym.json 时内联 Base64；
+        // 存 .symz 时由 SymbolProjectFile 自动迁入 assets/ 并清空内联字段。
+        if (_backgroundImageBytes is { Length: > 0 } bgBytes)
         {
-            try
-            {
-                var bytes = File.ReadAllBytes(BackgroundImagePath);
-                project.BackgroundImageData = bytes;
-                // 用扩展名作 hint（BitmapDecoder 需要格式提示）
-                project.BackgroundImageType = Path.GetExtension(BackgroundImagePath).TrimStart('.');
-                if (string.IsNullOrEmpty(project.BackgroundImageType))
-                    project.BackgroundImageType = "png";
-            }
-            catch (Exception ex)
-            {
-                // 读取失败不影响工程保存(背景图静默不嵌入,但 Path 字段仍写入)
-                System.Diagnostics.Debug.WriteLine($"[SymbolDesigner] 嵌入背景图失败:{ex.Message}");
-            }
+            project.BackgroundImageData = bgBytes;
+            project.BackgroundImageType = string.IsNullOrEmpty(_backgroundImageExt) ? "png" : _backgroundImageExt;
         }
         foreach (var p in Primitives)
             project.Primitives.Add(ToDto(p));
@@ -285,8 +280,9 @@ public partial class SymbolDesignerViewModel
         return System.Enum.TryParse<Models.PatternStyle>(s, out var result) ? result : Models.PatternStyle.Diagonal;
     }
 
-    /// <summary>从 SymbolProject 重建 Primitives 集合（清空原集合后填充）。</summary>
-    private void FromSymbolProject(SymbolProject project)
+    /// <summary>从 SymbolProject 重建 Primitives 集合（清空原集合后填充）。
+    /// <paramref name="assets"/> 为容器（.symz）内解出的资产（逻辑键 → 原始字节）；纯文本工程传 null。</summary>
+    private void FromSymbolProject(SymbolProject project, IReadOnlyDictionary<string, byte[]>? assets = null)
     {
         // 加载画布尺寸
         CanvasWidth = project.CanvasWidth;
@@ -296,10 +292,18 @@ public partial class SymbolDesignerViewModel
         if (!string.IsNullOrEmpty(project.CanvasBackgroundColor))
             CanvasBackgroundColor = project.CanvasBackgroundColor!;
 
-        // 加载背景参考图：优先用嵌入的 BackgroundImageData(工程自包含,移动/分享不丢图),
-        // 老工程只有 BackgroundImagePath 时 fallback 到外部文件(可能路径失效)。
-        // 都拿不到则静默不显示。
-        if (project.BackgroundImageData is { Length: > 0 } bytes)
+        // 加载背景参考图，优先级：容器资产(.symz) → 内联 Base64(.sym.json) → 老工程外部路径。
+        // 前两者都随文件自包含；外部路径仅作老工程兼容（路径可能已失效）。都拿不到则静默不显示。
+        if (assets is not null
+            && assets.TryGetValue(SymbolProjectFile.BackgroundAssetKey, out var assetBytes)
+            && assetBytes.Length > 0)
+        {
+            var mediaType = project.Assets?
+                .FirstOrDefault(a => a.Key == SymbolProjectFile.BackgroundAssetKey)?.MediaType;
+            LoadBackgroundImage(assetBytes, mediaType?.Split('/').LastOrDefault());
+            BackgroundImagePath = null;   // 资产随包自包含，没有外部来源文件
+        }
+        else if (project.BackgroundImageData is { Length: > 0 } bytes)
         {
             // 嵌入数据优先：无需任何外部文件
             LoadBackgroundImage(bytes, project.BackgroundImageType);

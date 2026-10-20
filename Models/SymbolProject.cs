@@ -4,7 +4,9 @@ using System.Text.Json.Serialization;
 
 namespace SymbolDesigner.Models;
 
-/// <summary>元件图形设计工程文件（.sym.json）。
+/// <summary>元件图形设计工程文件的清单模型，两种落盘形态共用同一 schema：
+///  - .symz 压缩包容器：本模型序列化为包内 project.json，二进制资产（底图）放包内 assets/
+///  - .sym.json 纯文本单文件：底图以内联 Base64（BackgroundImageData）存放
 /// 保存画布上所有 PrimitiveItem 的编辑数据（位置/尺寸/PathData/厚度/顶点厚度等），
 /// 以便加载回来接着编辑。不保存渲染后的 XAML（XAML 是导出产物，由 XamlExporter 生成）。</summary>
 public class SymbolProject
@@ -16,6 +18,15 @@ public class SymbolProject
         // byte[] 用 Base64 编码,既紧凑又可读（git diff 也能看清大致大小）。
         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
+
+    /// <summary>容器格式版本（仅 .symz 压缩包写入 = 1；纯文本 .sym.json 为 0 且不输出）。
+    /// 供将来演进容器结构时判定兼容性。</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int FormatVersion { get; set; }
+
+    /// <summary>容器内二进制资产清单（仅 .symz 写入）。纯文本 .sym.json 时为 null
+    /// （底图走 BackgroundImageData 内联 Base64）。</summary>
+    public List<AssetDto>? Assets { get; set; }
 
     /// <summary>画布宽度（逻辑坐标，默认 1920，16:9 标准画布）。</summary>
     public double CanvasWidth { get; set; } = 1920;
@@ -266,4 +277,18 @@ public class VertexThicknessDto
     public double LeftCornerRadius { get; set; }
     /// <summary>右侧普通轮廓点圆角半径（0 = 无）。</summary>
     public double RightCornerRadius { get; set; }
+}
+
+/// <summary>容器（.symz）内一个二进制资产的清单条目：逻辑键 + 包内相对路径 + 媒体类型。
+/// 加载方按 Key 取用资产（当前只有底图 "background"），Path 仅用于定位包内条目。</summary>
+public class AssetDto
+{
+    /// <summary>逻辑键（当前仅 "background"）。</summary>
+    public string Key { get; set; } = string.Empty;
+
+    /// <summary>包内相对路径，固定位于 assets/ 下（如 "assets/background.png"）。</summary>
+    public string Path { get; set; } = string.Empty;
+
+    /// <summary>媒体类型（如 "image/png"），供读取端判断图片格式。</summary>
+    public string MediaType { get; set; } = string.Empty;
 }
