@@ -83,13 +83,22 @@ public static class BeltSolver
             var asm = Build(a, b, isClosed, ResolveNodes(anchors, rollers));
 
             // —— (1) 剔除"其实没绕"的滚轮（弧 < 2°）+ 组装时被降级丢弃的滚轮 ——
-            var liveIds = new HashSet<Guid>(asm.Nodes.Select(n => n.Id));
-            var tinyIds = new HashSet<Guid>();
+            // 同一滚轮允许在拓扑里出现多次（S 形回程二次接触），故不再按 Id 一刀切全部剔除：
+            // 统计每个 Id 的"真绕弧数量"当额度，按出现顺序保留前 quota 次，多出的（回程只是擦过）剔除。
+            var quota = new Dictionary<Guid, int>();
             foreach (var op in asm.Ops)
-                if (op.Kind == OpKind.Arc && op.NodeId != Guid.Empty && op.SweepRad < MinWrapAngle)
-                    tinyIds.Add(op.NodeId);
-            var kept = anchors.Where(x => liveIds.Contains(x.Id) && !tinyIds.Contains(x.Id)).ToList();
-            if (kept.Count != anchors.Count)
+                if (op.Kind == OpKind.Arc && op.NodeId != Guid.Empty && op.SweepRad >= MinWrapAngle)
+                    quota[op.NodeId] = quota.GetValueOrDefault(op.NodeId) + 1;
+
+            var kept = new List<BeltAnchorSpec>(anchors.Count);
+            bool dropped = false;
+            foreach (var x in anchors)
+            {
+                int q = quota.GetValueOrDefault(x.Id);
+                if (q > 0) { quota[x.Id] = q - 1; kept.Add(x); }
+                else dropped = true;
+            }
+            if (dropped)
             {
                 anchors = kept;
                 continue;
@@ -414,6 +423,8 @@ public static class BeltSolver
     private static Blocker? FindBlocker(Point a, Point b, bool isClosed,
         IReadOnlyList<BeltRoller> rollers, IReadOnlyList<BeltAnchorSpec> anchors, Assembly asm)
     {
+        // 已收录的圆集合：只用于下面"端点落在圆内"那一条
+        // （避免同一圆因端点被反复插入成相邻重复项 —— 相邻重复必然无解）
         var engaged = new HashSet<Guid>(anchors.Select(x => x.Id));
         foreach (var n in asm.Nodes) engaged.Add(n.Id);
 
@@ -423,10 +434,12 @@ public static class BeltSolver
 
         foreach (var r in rollers)
         {
-            if (engaged.Contains(r.Id) || r.Radius <= 0) continue;
-            // 与某个已收录滚轮相交 → 几何上不可行，跳过（否则会来回插入）
-            if (asm.Nodes.Any(n => Dist(n.C, r.Center) < n.Radius + r.Radius - 0.5)) continue;
+            if (r.Radius <= 0) continue;
+            // 与"别的"已收录滚轮相交 → 几何上不可行，跳过（否则会来回插入）。
+            // 同一个圆自身允许再次收录（蛇形 / S 形回程二次接触：[大圆, 小圆, 大圆]），故按 Id 排除自身。
+            if (asm.Nodes.Any(n => n.Id != r.Id && Dist(n.C, r.Center) < n.Radius + r.Radius - 0.5)) continue;
 
+            // 被线段穿过 → 即使该圆已收录也允许再收录一次（回程段穿过 → 插入第二次）
             foreach (var op in asm.Ops)
             {
                 if (op.Kind != OpKind.Line) continue;
@@ -439,7 +452,8 @@ public static class BeltSolver
                 }
             }
 
-            if (!isClosed)
+            // 端点落在圆内：只对"尚未收录"的圆判（已收录的圆若在此重复插入会造出相邻重复项，几何必然无解）
+            if (!isClosed && !engaged.Contains(r.Id))
             {
                 double depthA = r.Radius - Dist(r.Center, a);
                 if (depthA > bestDepth)
@@ -472,6 +486,8 @@ public static class BeltSolver
 
             int idx = anchors.FindIndex(x => x.Id == op.NodeId);
             if (idx < 0) continue;
+            // 同一滚轮在拓扑中出现多次（S 形）时，Arc 只带 Id 分不清是第几次 → 翻错了会破坏已收敛拓扑，保守跳过
+            if (anchors.FindIndex(idx + 1, x => x.Id == op.NodeId) >= 0) continue;
 
             var trial = new List<BeltAnchorSpec>(anchors);
             trial[idx] = new BeltAnchorSpec(op.NodeId, -anchors[idx].Wrap);
@@ -538,11 +554,11 @@ public static class BeltSolver
 
     private static List<Node> ResolveNodes(IReadOnlyList<BeltAnchorSpec> anchors, IReadOnlyList<BeltRoller> rollers)
     {
+        // 不去重：同一个滚轮允许在拓扑中出现多次（蛇形 / S 形回程二次接触，如 [大圆, 小圆, 大圆]）。
+        // 相邻重复项（[大圆, 大圆, ...]）会在 CircleTangent 里因 D≈0 无解，由 Build 的降级逻辑剔除。
         var list = new List<Node>(anchors.Count);
-        var seen = new HashSet<Guid>();
         foreach (var spec in anchors)
         {
-            if (!seen.Add(spec.Id)) continue;
             for (int i = 0; i < rollers.Count; i++)
             {
                 if (rollers[i].Id != spec.Id) continue;
