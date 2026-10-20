@@ -42,6 +42,8 @@ public partial class SymbolDesignerViewModel
         if (MultiSelected.Count != 2) return;
         var a = MultiSelected[0]; // 先选 = 被减对象（剪除语义：a ∖ b）
         var b = MultiSelected[1];
+        // 锁定保护：任一源图元锁定 → 拒绝布尔运算（结果会吞掉锁定图元，视为破坏）
+        if (a.IsLocked || b.IsLocked) return;
 
         var ga = a.CanvasFillGeometry;
         var gb = b.CanvasFillGeometry;
@@ -218,6 +220,7 @@ public partial class SymbolDesignerViewModel
     private void RecomputeBoolean()
     {
         if (SelectedItem is not { TypeKey: nameof(L1Primitive.BooleanPath) } item) return;
+        if (item.IsLocked) return;   // 锁定保护：锁定结果禁止重新合并（会改动几何）
         if (TryRecomputeBooleanCore(item) is null) return;
         CollapseSourceAdjust(item); // 重合并成功 → 收起源（丢弃物化源，一步撤销收口）
         OnPropertyChanged(nameof(SelectedBooleanSkeletonInfo));

@@ -25,6 +25,9 @@ public partial class SymbolDesignerViewModel
     /// </summary>
     public void ApplyTangent(PrimitiveItem line, PrimitiveItem circle, bool anchorIsLine)
     {
+        // 锁定保护：任一参与图元锁定 → 拒绝建立相切（相切会移动图元，视为编辑操作）
+        if (line.IsLocked || circle.IsLocked) return;
+
         // 只拦截"同类型"重复（重复建两条相切无意义）；不同类型（如已有重合约束）允许共存。
         if (Constraints.Any(c => c is LineCircleTangentConstraint
             && c.Participants.Contains(line.Id) && c.Participants.Contains(circle.Id)))

@@ -31,6 +31,7 @@
         <conv:DivideByScaleConverter x:Key="DivByScale" />
         <!-- 枚举相等比较（RadioButton 列表用：当前枚举值 == 该 RadioButton 代表的枚举值 → 选中） -->
         <conv:EnumEqualsConverter x:Key="EnumEqualsConverter" />
+        <conv:InverseBoolConverter x:Key="InverseBool" />
         <!--  BandOutlineBuilder 为静态工具类，不再需要 XAML 实例  -->
 
         <!--
@@ -2888,8 +2889,35 @@
                     <!--  页面内容区：属性页 / 元素页 互斥显示  -->
                     <Grid Grid.Row="2">
                         <!--  ═══ 属性页（原右侧属性栏内容） ═══  -->
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" Visibility="{Binding IsPropertiesPaneVisible, Converter={StaticResource BoolToVis}}">
-                            <StackPanel>
+                        <Grid Visibility="{Binding IsPropertiesPaneVisible, Converter={StaticResource BoolToVis}}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <!--  锁定开关：选中图元时显示，始终可点（多选时组锁定由 VM 广播）。  -->
+                            <Border
+                                Grid.Row="0"
+                                Margin="0,0,0,6"
+                                Padding="6"
+                                Background="{StaticResource Brush.Bg.Darker}"
+                                BorderBrush="{StaticResource Brush.Border.Subtle}"
+                                BorderThickness="1"
+                                CornerRadius="3"
+                                Visibility="{Binding HasSelectedItem, Converter={StaticResource BoolToVis}}">
+                                <CheckBox
+                                    IsChecked="{Binding SelectedItem.IsLocked, Mode=TwoWay}"
+                                    Content="锁定图元（禁止移动 / 编辑）"
+                                    FontSize="10"
+                                    Foreground="{StaticResource Brush.Text.Primary}" />
+                            </Border>
+
+                            <!--  编辑区：锁定后整体禁用（透明度 / 外观 / 几何等全部编辑控件）  -->
+                            <ScrollViewer
+                                Grid.Row="1"
+                                VerticalScrollBarVisibility="Auto"
+                                IsEnabled="{Binding SelectedItem.IsLocked, Converter={StaticResource InverseBool}}">
+                                <StackPanel>
                                 <!--  扇形属性组（仅 Pie 时显示）：起始角（旋转）+ 扫掠角（夹角）。放最顶部，选中扇形时第一个出现。  -->
                                 <StackPanel
                                     Margin="0,0,0,6"
@@ -4655,6 +4683,7 @@
                                 </Border>
                             </StackPanel>
                         </ScrollViewer>
+                        </Grid>
 
                         <!--  ═══ 元素页：全量元素清单 + 隐藏/显示控制（用于排查画布上不可见的多余元素） ═══  -->
                         <Grid Visibility="{Binding IsElementsPaneVisible, Converter={StaticResource BoolToVis}}">

@@ -105,6 +105,8 @@ public class PrimitiveItemDto
     /// <summary>元素可见性（false=编辑期隐藏，用于排查不可见的多余元素）。
     /// 老工程缺省 = true(可见)。保存以在加载后继续排查/恢复。</summary>
     public bool IsVisible { get; set; } = true;
+    /// <summary>元素锁定（true=仍可选中但禁止移动与编辑）。老工程缺省 = false(未锁定)。</summary>
+    public bool IsLocked { get; set; }
     /// <summary>转角连接方式（Miter/Bevel/Round），老文件缺省 = Miter。</summary>
     public string? OutlineJoinStyle { get; set; }
     /// <summary>共线同向直通点拆分模式：true=两对（默认，保留厚度台阶）；false=合并为一对。

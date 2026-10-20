@@ -15,6 +15,8 @@ internal static class EditFields
         // 几何 / 定位
         "x", "y", "width", "height", "cornerRadius", "innerRadius",
         "startAngle", "sweepAngle", "rotation", "zIndex",
+        // 状态
+        "isLocked",
         // 外观
         "thickness", "opacity", "isVisible", "isClosed",
         "strokeColor", "strokeWidth", "strokeDashStyle",

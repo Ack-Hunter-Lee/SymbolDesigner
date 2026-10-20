@@ -66,6 +66,8 @@ public class DraggablePrimitive : ContentControl
     private void OnDragDelta(object sender, DragDeltaEventArgs e)
     {
         if (DataContext is not PrimitiveItem item) return;
+        // 锁定图元：禁止一切移动（单图元/多选/阵列）。早退不移动 → 手势结束位移≈0 → Click 仍触发，可正常选中。
+        if (item.IsLocked) return;
         var view = FindAncestor<SymbolDesignerView>(this);
         var vm = view?.DataContext as SymbolDesignerViewModel;
 

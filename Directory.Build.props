@@ -1,0 +1,18 @@
+<Project>
+
+  <!--
+    仓库根同时容纳两个独立工程：主工程 SymbolDesigner.csproj（位于根，WPF WinExe）与
+    SymbolDesigner.Cli（子目录，控制台工具）。
+    WPF 的 MarkupCompilePass 会在主工程目录（仓库根）生成 wpftmp 临时工程，其默认 **/*.cs
+    glob 会把子目录 SymbolDesigner.Cli\ 的源码及其 obj 生成文件（AssemblyInfo.cs /
+    AssemblyAttributes.cs / GlobalUsings.g.cs）一并收编进编译集，与主工程自身生成的同名特性文件
+    冲突，报 CS0579"特性重复"。这里把该子目录从默认项排除：
+      - 对主工程 / wpftmp 临时工程生效（排除路径相对仓库根 = SymbolDesigner.Cli\**）；
+      - 对 CLI 工程自身无副作用（其目录是 SymbolDesigner.Cli\，相对路径 SymbolDesigner.Cli\**
+        匹配不到任何文件，不会误伤它自己的源码）。
+  -->
+  <PropertyGroup>
+    <DefaultItemExcludes>$(DefaultItemExcludes);SymbolDesigner.Cli\**</DefaultItemExcludes>
+  </PropertyGroup>
+
+</Project>

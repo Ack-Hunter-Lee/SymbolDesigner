@@ -63,6 +63,7 @@ public partial class SymbolDesignerViewModel
     public void ApplyFormatPainterTo(PrimitiveItem target)
     {
         if (!IsFormatPainterActive || _formatPainterSnapshot is null || target is null) return;
+        if (target.IsLocked) return;   // 锁定图元禁止格式刷修改
 
         // 开始编辑：把"应用格式刷"登记为一次可撤销步骤（按一次按钮 = 一次撤销）
         BeginEdit();

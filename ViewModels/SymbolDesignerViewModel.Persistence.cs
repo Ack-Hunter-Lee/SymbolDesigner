@@ -204,6 +204,7 @@ public partial class SymbolDesignerViewModel
             CollinearSplitPairs = p.CollinearSplitPairs,
             Opacity = p.Opacity,
             IsVisible = p.IsVisible,
+            IsLocked = p.IsLocked,
             IsClosed = p.IsClosed,
             BooleanMode = p.BooleanMode,
             // 外观（线条/填充）——始终写出当前值
@@ -503,6 +504,8 @@ public partial class SymbolDesignerViewModel
         item.Opacity = dto.Opacity <= 0 ? 1.0 : Math.Min(1.0, dto.Opacity);
         // 恢复元素可见性：老工程文件没这字段 → 默认 true（可见,行为不变）
         item.IsVisible = dto.IsVisible;
+        // 恢复元素锁定：老工程文件没这字段 → 默认 false（未锁定,行为不变）
+        item.IsLocked = dto.IsLocked;
         return item;
     }
 

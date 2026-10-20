@@ -223,6 +223,11 @@ public partial class PrimitiveItem : ObservableObject
     partial void OnIsVisibleChanged(bool value)
         => VisibilityChanged?.Invoke(this, EventArgs.Empty);
 
+    /// <summary>元素锁定（默认 false 未锁定）。true = 仍可选中，但禁止移动与编辑：
+    /// 拖动/微移/缩放/顶点编辑/属性面板修改/格式刷/删除/清空全部拦截，几何与外观保持不可变。
+    /// 仅供编辑保护，不影响渲染与命中。</summary>
+    [ObservableProperty] private bool _isLocked;
+
     /// <summary>元素页列表显示的位置尺寸辅助信息（如 "X=12 Y=8  40×24"）。
     /// 拖动/改尺寸时随坐标变化实时刷新。</summary>
     public string PositionInfo =>

@@ -28,6 +28,7 @@ public partial class SymbolDesignerViewModel
     {
         VertexHandles.Clear();
         if (SelectedItem is not { } item) return;
+        if (item.IsLocked) return;   // 锁定图元不渲染顶点手柄
         if (string.IsNullOrEmpty(item.PathData)) return;
 
         // BooleanPath：骨架模式不出拖拽手柄（轮廓点不允许拖拽）
@@ -44,6 +45,7 @@ public partial class SymbolDesignerViewModel
     public void UpdateVertexPosition(int index, double newCanvasX, double newCanvasY)
     {
         if (SelectedItem is not { } item) return;
+        if (item.IsLocked) return;   // 锁定图元禁止顶点编辑
         if (string.IsNullOrEmpty(item.PathData)) return;
         if (item.TypeKey == nameof(L1Primitive.BooleanPath))
             return;  // 布尔结果轮廓点不可拖拽（需求），骨架模式也不显示手柄，此分支为防御
@@ -110,6 +112,7 @@ public partial class SymbolDesignerViewModel
     {
         SegmentHandles.Clear();
         if (SelectedItem is not { } item) return;
+        if (item.IsLocked) return;   // 锁定图元不渲染段手柄
         if (item.TypeKey != nameof(L1Primitive.BandPolyline))
             return;
         if (string.IsNullOrEmpty(item.PathData)) return;
@@ -135,6 +138,7 @@ public partial class SymbolDesignerViewModel
     {
         BandWidthHandles.Clear();
         if (SelectedItem is not { } item) return;
+        if (item.IsLocked) return;   // 锁定图元不渲染带宽手柄
         if (item.TypeKey != nameof(L1Primitive.BandPolyline))
             return;
         if (string.IsNullOrEmpty(item.PathData)) return;
@@ -213,6 +217,7 @@ public partial class SymbolDesignerViewModel
     {
         RingHandles.Clear();
         if (SelectedItem is not { } item) return;
+        if (item.IsLocked) return;   // 锁定图元不渲染圆环手柄
         if (item.TypeKey != nameof(L1Primitive.Ring)) return;
         if (item.Width <= 0 || item.Height <= 0 || item.InnerRadius <= 0) return;
 
@@ -236,6 +241,7 @@ public partial class SymbolDesignerViewModel
     public void UpdateRingHandle(RingHandleKind kind, double mouseX, double mouseY)
     {
         if (SelectedItem is not { } item) return;
+        if (item.IsLocked) return;   // 锁定图元禁止圆环手柄拖拽
         if (item.TypeKey != nameof(L1Primitive.Ring)) return;
 
         double halfW = item.Width / 2;
@@ -320,6 +326,7 @@ public partial class SymbolDesignerViewModel
     {
         PieHandles.Clear();
         if (SelectedItem is not { } item) return;
+        if (item.IsLocked) return;   // 锁定图元不渲染扇形手柄
         if (item.TypeKey != nameof(L1Primitive.Pie)) return;
         if (item.Width <= 0 || item.Height <= 0) return;
 
@@ -344,6 +351,7 @@ public partial class SymbolDesignerViewModel
     public void UpdatePieHandle(PieHandleKind kind, double mouseX, double mouseY)
     {
         if (SelectedItem is not { } item) return;
+        if (item.IsLocked) return;   // 锁定图元禁止扇形手柄拖拽
         if (item.TypeKey != nameof(L1Primitive.Pie)) return;
 
         double halfW = item.Width / 2;
@@ -454,6 +462,7 @@ public partial class SymbolDesignerViewModel
     {
         OutlineCornerHandles.Clear();
         if (SelectedItem is not { } item) return;
+        if (item.IsLocked) return;   // 锁定图元不渲染轮廓手柄
         bool isBand = item.TypeKey == nameof(L1Primitive.BandPolyline);
         bool isClosedPolyline = item.TypeKey == nameof(L1Primitive.Polyline) && item.IsClosed;
         bool isBoolean = item.TypeKey == nameof(L1Primitive.BooleanPath);
@@ -688,6 +697,7 @@ public partial class SymbolDesignerViewModel
     public void UpdateSegmentPosition(int segmentIndex, double newCanvasX, double newCanvasY)
     {
         if (SelectedItem is not { } item) return;
+        if (item.IsLocked) return;   // 锁定图元禁止段编辑
         if (string.IsNullOrEmpty(item.PathData)) return;
 
         var pts = Converters.BandOutlineBuilder.ParsePathData(item.PathData);

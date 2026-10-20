@@ -93,6 +93,13 @@ public partial class SymbolDesignerViewModel
             return;
         }
 
+        // 锁定保护：选中集含锁定图元时不显示缩放手柄（防误缩；混合选择整体降级为无手柄）
+        if (items.Any(p => p.IsLocked))
+        {
+            ClearScaleHandles();
+            return;
+        }
+
         // 普通形状（矩形/椭圆/三角/圆环/圆角矩形/直线）单选仍由 ResizeThumb 提供四角缩放，
         // 选区缩放手柄只在"多选"或"PathData 型单选"（ResizeThumb 无效）时显示，避免两套手柄重叠。
         if (items.Count == 1 && !HasPathDataGeometry(items[0]))
@@ -130,13 +137,14 @@ public partial class SymbolDesignerViewModel
             || item.TypeKey == nameof(L1Primitive.BooleanPath);
     }
 
-    /// <summary>取当前参与缩放/框选的图元集合 = SelectedItem ∪ MultiSelected（去重,不含阵列副本）。</summary>
+    /// <summary>取当前参与缩放/框选的图元集合 = SelectedItem ∪ MultiSelected（去重,不含阵列副本）。
+    /// 锁定图元不参与（纵深防御：Begin/Update/EndScale 均经此取目标）。</summary>
     private List<PrimitiveItem> ScaleTargetItems()
     {
         var list = new List<PrimitiveItem>();
-        if (SelectedItem is { ArrayOwner: null } s && !list.Contains(s)) list.Add(s);
+        if (SelectedItem is { ArrayOwner: null } s && !list.Contains(s) && !s.IsLocked) list.Add(s);
         foreach (var p in MultiSelected)
-            if (p.ArrayOwner is null && !list.Contains(p)) list.Add(p);
+            if (p.ArrayOwner is null && !p.IsLocked && !list.Contains(p)) list.Add(p);
         return list;
     }
 
@@ -256,6 +264,7 @@ public partial class SymbolDesignerViewModel
         if (MultiSelected.Count < 2 || !MultiSelected.Contains(primary)) return false;
         foreach (var p in MultiSelected)
         {
+            if (p.IsLocked) continue;   // 锁定成员不参与整体平移（相对位置允许被拉开）
             p.X += dx;
             p.Y += dy;
         }
@@ -280,10 +289,10 @@ public partial class SymbolDesignerViewModel
             case "Down": dy = NudgeStep; break;
             default: return;
         }
-        // 目标集：多选优先（≥1 即整体平移），否则单选焦点。
+        // 目标集：多选优先（≥1 即整体平移），否则单选焦点。锁定图元不参与微移。
         IEnumerable<PrimitiveItem> targets;
-        if (MultiSelected.Count > 0) targets = MultiSelected;
-        else if (SelectedItem is { } single) targets = new[] { single };
+        if (MultiSelected.Count > 0) targets = MultiSelected.Where(p => !p.IsLocked);
+        else if (SelectedItem is { } single && !single.IsLocked) targets = new[] { single };
         else return;
         if (!targets.Any()) return;
 

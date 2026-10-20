@@ -227,6 +227,12 @@ public partial class SymbolDesignerViewModel
             SyncAppearanceToMultiSelected(sender as PrimitiveItem, e.PropertyName!);
         }
 
+        // 组锁定：多选时切换 IsLocked → 广播到其余成员（复用外观同步的反射机制，但走独立分支避免混入外观语义）
+        if (MultiSelected.Count > 1 && e.PropertyName == nameof(PrimitiveItem.IsLocked))
+        {
+            SyncAppearanceToMultiSelected(sender as PrimitiveItem, e.PropertyName!);
+        }
+
         if (e.PropertyName == nameof(PrimitiveItem.Width) ||
             e.PropertyName == nameof(PrimitiveItem.Height))
         {
@@ -346,6 +352,9 @@ public partial class SymbolDesignerViewModel
     [RelayCommand]
     private void DeleteSelected()
     {
+        // 锁定保护：当前焦点图元锁定 → 整个删除命令 no-op（覆盖阵列/编辑源路径）
+        if (SelectedItem is { IsLocked: true }) return;
+
         // 阵列整体删除：AutoCAD 关联阵列语义，Delete 整组移除（点任一副本 → 整组删除）
         if (SelectedArray is { } arr)
         {
@@ -360,10 +369,10 @@ public partial class SymbolDesignerViewModel
         if (SelectedItem is { } src && _isArraySourceEditMode && src.Id == _arraySourceEditGuid)
             return;
 
-        // 确定删除集合：多选优先（右键框选 / Ctr 多选 → 整组删）；否则退回单选焦点
-        var toRemove = MultiSelected.Count > 0
-            ? MultiSelected.ToList()
-            : (SelectedItem is { } single ? new List<PrimitiveItem> { single } : null);
+        // 确定删除集合：多选优先（右键框选 / Ctr 多选 → 整组删）；否则退回单选焦点。
+        // 锁定图元不参与删除（锁定即不可破坏）。
+        var toRemove = (MultiSelected.Count > 0 ? MultiSelected.AsEnumerable() : SelectedItem is { } single ? new List<PrimitiveItem> { single } : null)
+            ?.Where(p => !p.IsLocked).ToList();
         if (toRemove is null || toRemove.Count == 0) return;
 
         // 先收口上一段未完成编辑:每次删除按钮点击 = 独立撤销步骤
@@ -398,14 +407,27 @@ public partial class SymbolDesignerViewModel
         if (_isArrayEditMode) ExitArrayEdit(); // 清空/撤销恢复关闭编辑浮层，避免 _editingArray 悬空
         if (scheduleUndo)
             ScheduleUndoCommit(); // 清空是可撤销步骤:先记前置快照
-        // 清空画布 → 调整源现场一并废弃（物化源随 Primitives.Clear 一并移除）
+        // 清空画布 → 调整源现场一并废弃（物化源随图元移除一并移除）
         _sourceAdjustTarget = Guid.Empty;
         _sourceAdjTemp.Clear();
         IsSourceAdjustMode = false;
-        Primitives.Clear();
-        ArrayInstances.Clear();
-        Constraints.Clear(); // 清空画布 → 相切约束一并清空
-        ItemCount = 0;
+        // 锁定保护：锁定图元不能被清空。正常时全清；存在锁定 → 只清非锁定部分。
+        var locked = Primitives.Where(p => p.IsLocked).ToList();
+        if (locked.Count == 0)
+        {
+            Primitives.Clear();
+            ArrayInstances.Clear();
+            Constraints.Clear(); // 清空画布 → 相切约束一并清空
+            ItemCount = 0;
+        }
+        else
+        {
+            foreach (var it in Primitives.Where(p => !p.IsLocked).ToList())
+                Primitives.Remove(it);
+            // 阵列/约束：锁定图元所属的整组保留；其余清。为保持简单，含锁定时保留全部阵列与约束，
+            // 仅清非锁定普通图元（锁定图元本身不可能是阵列副本成员,故其阵列一定整体保留）。
+            ItemCount = Primitives.Count;
+        }
     }
 
     /// <summary>剪贴板 DTO 缓存：Ctrl+C 复制当前选中图元的深拷贝（DTO 序列化，与撤销/保存同源）。
