@@ -154,6 +154,12 @@ public partial class SymbolDesignerViewModel
         SelectedItem is not null
         && SelectedItem.TypeKey == nameof(L1Primitive.Pie);
 
+    /// <summary>当前选中的是否为传送带（Belt）。为 true 时画布显示两个自由端点拖拽手柄
+    /// （拖端点 → 自动穿绕挡路的圆 / 脱离 / 靠近吸合闭合）。</summary>
+    public bool SelectedItemIsBelt =>
+        SelectedItem is not null
+        && SelectedItem.TypeKey == nameof(L1Primitive.Belt);
+
     /// <summary>当前选中的是否为布尔运算结果（BooleanPath）。
     /// 布尔结果为"多环骨架快照"，骨架点直连闭合环，与闭合 Polyline 同一编辑管道：
     /// 骨架模式拖顶点（段端点，弧保留）→ 轮廓模式逐点设圆角。

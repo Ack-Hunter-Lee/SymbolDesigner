@@ -117,8 +117,9 @@ public partial class SymbolDesignerViewModel
         UpdateDraftPathData();
 
         // Line 模式只需要两个点：第二次点击直接提交并退出绘制。
+        // Belt（传送带）同理：两次点击 = 两个自由端点。
         // Polyline/BandPolyline 走 Enter 手动结束。
-        if (DrawMode == DrawMode.Line && DraftPoints.Count >= 2)
+        if ((DrawMode is DrawMode.Line or DrawMode.Belt) && DraftPoints.Count >= 2)
         {
             EndDraw();
         }
@@ -375,6 +376,35 @@ public partial class SymbolDesignerViewModel
             ResetDraftSnapVisuals();
             DrawMode = DrawMode.None;
             ActiveToolKey = null; // 形状提交 → 退出工具栏工具激活态（高亮复位）
+            return;
+        }
+
+        // —— 传送带（Belt）：两次点击 = 两个自由端点 A/B。几何不直接写 PathData ——
+        // 提交后交给 SolveBelt 自动收录"挡路的圆"并求解（自动生成切线 + 绕行弧），
+        // X/Y/Width/Height 由求解结果的包围盒回写。
+        if (DrawMode == DrawMode.Belt && DraftPoints.Count >= 2)
+        {
+            var belt = PrimitiveItem.Create(L1Primitive.Belt, 0, 0, 1, 1);
+            belt.BeltStartX = DraftPoints[0].X;
+            belt.BeltStartY = DraftPoints[0].Y;
+            belt.BeltEndX = DraftPoints[1].X;
+            belt.BeltEndY = DraftPoints[1].Y;
+            belt.BandWidth = 0;               // 单线语义：无带宽
+            belt.PathData = string.Empty;     // 皮带几何走 BeltPathData，不复用折线 PathData
+            belt.ZIndex = Primitives.Count;
+            Primitives.Add(belt);
+            ItemCount = Primitives.Count;
+            SelectedItem = belt;
+            SolveBelt(belt, autoEngage: true);
+
+            DraftPoints.Clear();
+            DraftPathData = string.Empty;
+            DraftPreviewPoint = new System.Windows.Point(double.NaN, double.NaN);
+            DraftShapeData = string.Empty;
+            IsShapePreviewVisible = false;
+            ResetDraftSnapVisuals();
+            DrawMode = DrawMode.None;
+            ActiveToolKey = null;
             return;
         }
 

@@ -15,7 +15,6 @@ namespace SymbolDesigner.Cli;
 /// 画布无背景色时用的兜底深色是 CLI 预览默认，与 GUI 深色画布观感一致。</summary>
 internal static class Renderer
 {
-    private const double RingStrokeHalfThickness = 0.4; // 与 PrimitiveItem.RingStrokeHalfThickness 对齐
     private static readonly Brush DefaultCanvasBg = new SolidColorBrush(ParseColor("#FF1B1B1B"));
 
     /// <summary>渲染到 PNG。outW/outH 为目标像素尺寸（纵横比不符时按 fit 等比缩放 + 留边，不变形）。</summary>
@@ -58,8 +57,9 @@ internal static class Renderer
             ctx.PushTransform(new TranslateTransform(offX, offY));
             ctx.PushTransform(new ScaleTransform(scale, scale));
 
-            foreach (var dto in proj.Primitives.OrderBy(p => p.ZIndex))
-                DrawPrimitive(ctx, dto);
+            var all = proj.Primitives;
+            foreach (var dto in all.OrderBy(p => p.ZIndex))
+                DrawPrimitive(ctx, dto, all);
 
             ctx.Pop();
             ctx.Pop();
@@ -74,11 +74,11 @@ internal static class Renderer
         enc.Save(fs);
     }
 
-    private static void DrawPrimitive(DrawingContext ctx, PrimitiveItemDto dto)
+    private static void DrawPrimitive(DrawingContext ctx, PrimitiveItemDto dto, IReadOnlyList<PrimitiveItemDto> all)
     {
         if (!dto.IsVisible) return;
 
-        var local = BuildLocalGeometry(dto);
+        var local = BuildLocalGeometry(dto, all);
         if (local is null) return;
 
         var (fill, pen) = BuildPaints(dto);
@@ -90,8 +90,9 @@ internal static class Renderer
         ctx.Pop();
     }
 
-    /// <summary>构造图元局部几何（以 X/Y 为原点），语义与 PrimitiveItem 渲染管线对齐。</summary>
-    private static Geometry? BuildLocalGeometry(PrimitiveItemDto dto)
+    /// <summary>构造图元局部几何（以 X/Y 为原点），语义与 PrimitiveItem 渲染管线对齐。
+    /// Belt 需全部兄弟图元（滚轮）才能求解，故额外收 all。</summary>
+    private static Geometry? BuildLocalGeometry(PrimitiveItemDto dto, IReadOnlyList<PrimitiveItemDto> all)
     {
         double w = dto.Width, h = dto.Height;
         switch (dto.TypeKey)
@@ -109,6 +110,8 @@ internal static class Renderer
                 return BuildRing(w, h, dto.InnerRadius);
             case nameof(L1Primitive.Pie):
                 return BuildPie(w, h, dto.StartAngle, dto.SweepAngle);
+            case nameof(L1Primitive.Belt):
+                return BeltDtoGeometry.SolveGeometry(dto, all);
             case nameof(L1Primitive.Line):
             case nameof(L1Primitive.Polyline):
             case nameof(L1Primitive.BandPolyline):
@@ -135,7 +138,7 @@ internal static class Renderer
     {
         if (w <= 0 || h <= 0) return null;
         double cx = w / 2, cy = h / 2;
-        double outer = Math.Min(w, h) / 2 - RingStrokeHalfThickness;
+        double outer = Math.Min(w, h) / 2 - BeltDtoGeometry.RingStrokeHalfThickness;
         if (outer <= 0.01) return null;
         double inner = Math.Clamp(innerRadius > 0 ? innerRadius : Math.Min(w, h) / 4, 0.01, outer - 0.01);
 
@@ -196,6 +199,9 @@ internal static class Renderer
 
     private static Brush? BuildFill(PrimitiveItemDto dto)
     {
+        // 皮带单线语义：与 GUI 的 IsFillable=false 对齐，不参与填充/图案
+        if (dto.TypeKey == nameof(L1Primitive.Belt)) return null;
+
         double fb = dto.FillBrightness ?? 100;
         double fo = dto.FillOpacity ?? 100;
         switch (dto.FillStyle)

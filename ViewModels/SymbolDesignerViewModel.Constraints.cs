@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using SymbolDesigner.Converters;
 using SymbolDesigner.Models;
 using Point = System.Windows.Point;
 
@@ -247,6 +248,11 @@ public partial class SymbolDesignerViewModel
     /// </summary>
     public void OnItemGeometryChanged(PrimitiveItem moved)
     {
+        // 传送带：任何滚轮（圆/圆环）几何变化都要重算引用它的皮带（几何不落盘 → 必须重算）。
+        // 必须放在约束早退之前 —— 皮带与约束系统无关，无约束时也要刷新。
+        if (GeometryMath.IsCircleLike(moved))
+            SolveBeltsReferencing(moved.Id);
+
         const int maxIter = 10;
         var involved = new HashSet<Guid>();
         foreach (var c in Constraints)

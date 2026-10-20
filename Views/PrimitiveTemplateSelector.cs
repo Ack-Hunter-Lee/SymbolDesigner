@@ -21,6 +21,7 @@ public class PrimitiveTemplateSelector : DataTemplateSelector
     public DataTemplate? L1Ring { get; set; }
     public DataTemplate? L1Pie { get; set; }
     public DataTemplate? L1BooleanPath { get; set; }
+    public DataTemplate? L1Belt { get; set; }
 
     /// <summary>兜底模板：未知 TypeKey（历史/第三方新增类型）时的占位显示，避免图元静默不可见。</summary>
     public DataTemplate? L1Default { get; set; }
@@ -41,6 +42,7 @@ public class PrimitiveTemplateSelector : DataTemplateSelector
             "Ring" => L1Ring,
             "Pie" => L1Pie,
             "BooleanPath" => L1BooleanPath,
+            "Belt" => L1Belt,
             _ => L1Default,
         };
     }

@@ -84,6 +84,19 @@ public class DraggablePrimitive : ContentControl
         if (vm is not null && vm.TryMoveMultiSelection(item, e.HorizontalChange, e.VerticalChange))
             return;
 
+        // 传送带整体拖动 = 平移两个自由端点（X/Y 是求解结果的包围盒，不能直接加到 X/Y 上，
+        // 否则会被 SolveBelt 回写覆盖且绕行形状不变）。绕行形状由滚轮决定，端点平移即整体位移。
+        if (item.TypeKey == nameof(L1Primitive.Belt) && vm is not null)
+        {
+            item.BeltStartX += e.HorizontalChange;
+            item.BeltStartY += e.VerticalChange;
+            item.BeltEndX += e.HorizontalChange;
+            item.BeltEndY += e.VerticalChange;
+            vm.SolveBelt(item, autoEngage: false);   // 平移不改走向，无需重新收录滚轮
+            vm.RefreshScaleSelectionHandles();
+            return;
+        }
+
         // 直接改数据源（OneWay Binding 会自动把 Canvas.Left/Top 同步过来）
         item.X += e.HorizontalChange;
         item.Y += e.VerticalChange;
@@ -254,6 +267,15 @@ public class DraggablePrimitive : ContentControl
                         return true;
                 }
                 return false;
+            }
+
+            case nameof(L1Primitive.Belt):
+            {
+                // 皮带 = 单线描边路径（含真弧）：用几何描边命中（局部坐标，原点已在 X/Y）。
+                // 容差取"命中容差"与"实际线宽"较大者 —— 细线也要点得中。
+                if (item.BeltGeometry is not { } beltGeom) return false;
+                double beltTol = Math.Max(EntityHitTolerance, item.StrokeWidth);
+                return beltGeom.StrokeContains(new Pen(Brushes.Transparent, beltTol), p);
             }
 
             default:

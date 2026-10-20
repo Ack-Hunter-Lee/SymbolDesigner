@@ -4,12 +4,12 @@ using System.Text.RegularExpressions;
 namespace SymbolDesigner.Cli;
 
 /// <summary>形状分类，决定几何字段如何校验/映射。</summary>
-internal enum ShapeKind { FixedRect, Ellipse, Ring, Pie, Line, Polyline, BandPolyline, BooleanPath }
+internal enum ShapeKind { FixedRect, Ellipse, Ring, Pie, Line, Polyline, BandPolyline, Belt, BooleanPath }
 
 /// <summary>type 别名解析结果。</summary>
 internal readonly record struct TypeInfo(string TypeKey, ShapeKind Kind, string Alias)
 {
-    public bool IsPath => Kind is ShapeKind.Line or ShapeKind.Polyline or ShapeKind.BandPolyline;
+    public bool IsPath => Kind is ShapeKind.Line or ShapeKind.Polyline or ShapeKind.BandPolyline or ShapeKind.Belt;
 }
 
 /// <summary>校验结果。</summary>
@@ -45,6 +45,7 @@ internal static class Validate
             case "bandpolyline":
             case "thickpolyline":     return new TypeInfo("BandPolyline",    ShapeKind.BandPolyline,  alias!);
             case "pie":               return new TypeInfo("Pie",             ShapeKind.Pie,           alias!);
+            case "belt":              return new TypeInfo("Belt",            ShapeKind.Belt,          alias!);
             case "boolean":           return new TypeInfo("BooleanPath",     ShapeKind.BooleanPath,   alias!);
             default:                  return null;
         }
@@ -63,7 +64,7 @@ internal static class Validate
             var p = dsl.Primitives[i];
             string tag = $"[#{i} type={p.Type ?? "(null)"}]";
             var info = ResolveType(p.Type);
-            if (info is null) { r.Errors.Add($"{tag} type 无法识别，合法别名: rect/roundedRect/ellipse/ring/triangle/line/polyline/bandPolyline/pie"); continue; }
+            if (info is null) { r.Errors.Add($"{tag} type 无法识别，合法别名: rect/roundedRect/ellipse/ring/triangle/line/polyline/bandPolyline/pie/belt"); continue; }
             if (p.Type?.Equals("thickpolyline", StringComparison.OrdinalIgnoreCase) == true)
                 r.Warnings.Add($"{tag} 老别名 ThickPolyline 已自动映射为 bandPolyline");
             if (info.Value.Kind == ShapeKind.BooleanPath)
@@ -84,7 +85,7 @@ internal static class Validate
                 && p.X1 is not null && p.Y1 is not null && p.X2 is not null && p.Y2 is not null;
             bool hasPts = p.Points is { Count: >= 1 };
             if (!hasPts && !hasNamed)
-                r.Errors.Add($"{tag} 路径类缺少端点：polyline/bandPolyline 用 points，line 可用 points 或用具名 x1,y1,x2,y2");
+                r.Errors.Add($"{tag} 路径类缺少端点：polyline/bandPolyline/belt 用 points，line 可用 points 或用具名 x1,y1,x2,y2");
             if (hasPts)
             {
                 foreach (var pt in p.Points)
@@ -94,6 +95,8 @@ internal static class Validate
                 }
                 if (info.Kind == ShapeKind.Line && p.Points.Count != 2)
                     r.Errors.Add($"{tag} line 的 points 恰好需要 2 个端点");
+                if (info.Kind == ShapeKind.Belt && p.Points.Count != 2)
+                    r.Errors.Add($"{tag} belt 的 points 恰好需要 2 个端点（起点、终点）");
             }
         }
         else

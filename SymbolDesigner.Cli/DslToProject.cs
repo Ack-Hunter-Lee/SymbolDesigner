@@ -4,7 +4,8 @@ namespace SymbolDesigner.Cli;
 
 /// <summary>把友好 DSL 组装成 SymbolProject（等价于 .sym.json 内容）。
 /// 假定已通过 Validate 校验；对几何按"设计默认"(见 Draw.AddL1) 主动补齐，
-/// 而非依赖 DTO 的"兜底默认"。不触碰任何 WPF 类型。</summary>
+/// 而非依赖 DTO 的"兜底默认"。本类自身不触碰 WPF 类型；皮带（Belt）的拓扑/几何求解
+/// 委托给 BeltDtoGeometry（CLI 已引入 WPF 框架引用，仅 render 子命令需其运行时）。</summary>
 internal static class DslToProject
 {
     public static SymbolProject ToProject(DslProject dsl)
@@ -16,6 +17,7 @@ internal static class DslToProject
             CanvasBackgroundColor = dsl.CanvasBackgroundColor,
         };
         proj.Primitives.AddRange(BuildPrimitives(dsl.Primitives, 0));
+        BeltDtoGeometry.AutoEngageAll(proj.Primitives);
         return proj;
     }
 
@@ -66,6 +68,15 @@ internal static class DslToProject
             double[] a = { p.X1!.Value, p.Y1!.Value };
             double[] b = { p.X2!.Value, p.Y2!.Value };
             pts = new[] { a, b };
+        }
+
+        // Belt：只写两个自由端点 + 开闭；绕行拓扑与几何由 BeltDtoGeometry.AutoEngageAll 求解（几何不落盘）
+        if (kind == ShapeKind.Belt)
+        {
+            dto.BeltStartX = pts[0][0]; dto.BeltStartY = pts[0][1];
+            dto.BeltEndX = pts[^1][0]; dto.BeltEndY = pts[^1][1];
+            dto.IsClosed = p.Closed;
+            return;
         }
 
         // PathData 是相对 (X,Y) 的局部坐标：先求 bbox、平移后序列化

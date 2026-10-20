@@ -954,6 +954,71 @@ public partial class SymbolDesignerView : UserControl
         _draggingPie = null;
     }
 
+    // ───────────── 传送带端点手柄拖拽（拖端点 → 自动穿绕/脱开/吸合闭合） ─────────────
+
+    private BeltHandle? _draggingBelt;
+
+    /// <summary>传送带端点手柄按下：记录拖拽中的手柄 + 捕获鼠标。</summary>
+    private void OnBeltHandleMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (DataContext is not SymbolDesignerViewModel vm) return;
+        if (e.OriginalSource is not FrameworkElement fe || fe.DataContext is not BeltHandle h) return;
+
+        _draggingBelt = h;
+        vm.ClearBeltWrapMemory();   // 新手势：清掉上一次拖动期的绕行侧记忆（用户要改侧就得能改）
+        if (sender is UIElement ui) ui.CaptureMouse();
+        e.Handled = true;
+    }
+
+    /// <summary>传送带端点手柄移动：把鼠标位置传给 VM.UpdateBeltHandle → 重算整条皮带。
+    /// 闭合吸附：拖 End 手柄靠近 Start（< CloseSnapThreshold）→ 吸合成闭合环；
+    /// 已闭合时拖离超过阈值 → 解除闭合（与 Polyline 末端吸附闭合手感一致）。</summary>
+    private void OnBeltHandleMouseMove(object sender, MouseEventArgs e)
+    {
+        if (_draggingBelt is null) return;
+        if (e.LeftButton != MouseButtonState.Pressed)
+        {
+            _draggingBelt = null;
+            return;
+        }
+        if (DataContext is not SymbolDesignerViewModel vm) return;
+        if (vm.SelectedItem is not { TypeKey: nameof(L1Primitive.Belt) } belt) return;
+
+        var pos = e.GetPosition(CanvasHost);
+
+        // 闭合判定：只有拖 End 手柄时参与（拖 Start 时把 B 一起带走 = 整体平移，不触发闭合切换）
+        if (_draggingBelt.Kind == BeltHandleKind.End)
+        {
+            double dx = pos.X - belt.BeltStartX;
+            double dy = pos.Y - belt.BeltStartY;
+            double dist = System.Math.Sqrt(dx * dx + dy * dy);
+
+            if (!belt.IsClosed && dist < CloseSnapThreshold)
+            {
+                // 吸附到起点（A）并闭合：此后两端点合一，几何变为滚轮间的闭环
+                vm.UpdateBeltHandle(_draggingBelt.Kind, belt.BeltStartX, belt.BeltStartY);
+                vm.SetBeltClosed(true);
+                return;
+            }
+            if (belt.IsClosed && dist > CloseSnapThreshold)
+            {
+                // 闭合态下端点必然与 A 重合（dist ≈ 0），拖离即解除闭合，再按鼠标位置继续拖
+                vm.SetBeltClosed(false);
+            }
+        }
+
+        vm.UpdateBeltHandle(_draggingBelt.Kind, pos.X, pos.Y);
+    }
+
+    /// <summary>传送带端点手柄松开：释放捕获 + 清空拖拽状态 + 清空绕行侧记忆。</summary>
+    private void OnBeltHandleMouseUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_draggingBelt is null) return;
+        if (sender is UIElement ui && ui.IsMouseCaptured) ui.ReleaseMouseCapture();
+        _draggingBelt = null;
+        if (DataContext is SymbolDesignerViewModel vm) vm.ClearBeltWrapMemory();
+    }
+
     // ============== 轮廓编辑模式（OutlineEditMode） ==============
 // 阶段 2 改用 EditModeChoices + EnterModeCommand（RelayCommand），XAML ItemsControl 统一渲染三按钮。
 // 旧的 OnSetEditModeOutlineClick / OnSetEditModeSkeletonClick 已无 XAML 引用，移除以避免误用。

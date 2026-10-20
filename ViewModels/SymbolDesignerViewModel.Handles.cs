@@ -311,6 +311,80 @@ public partial class SymbolDesignerViewModel
         }
     }
 
+    // ============== 传送带（L1 Belt）端点拖拽手柄 ==============
+
+    /// <summary>传送带（Belt）选中后的自由端点手柄集合：Start（端点 A）+ End（端点 B）= 2 个。
+    /// 拖动它们即可改变皮带走向 —— 途中自动穿绕挡路的圆、脱离不再挡路的圆、两端靠近时吸合成闭合环。
+    /// 仅在选中 Belt 时填充，其它情况清空。</summary>
+    public ObservableCollection<BeltHandle> BeltHandles { get; } = new();
+
+    /// <summary>刷新 BeltHandles：SelectedItem 为 Belt 时按当前两端点（画布坐标）填充 2 个手柄。
+    /// 已闭合（IsClosed）时两端点重合，两个手柄叠在同一位置（仍可拖开解除闭合）。
+    /// 调用时机：SelectedItem 变化 / 皮带几何重算后 / 加载完成。</summary>
+    private void RefreshBeltHandles()
+    {
+        BeltHandles.Clear();
+        if (SelectedItem is not { } item) return;
+        if (item.IsLocked) return;   // 锁定图元不渲染端点手柄
+        if (item.TypeKey != nameof(L1Primitive.Belt)) return;
+
+        BeltHandles.Add(new BeltHandle(BeltHandleKind.Start, item.BeltStartX, item.BeltStartY));
+        BeltHandles.Add(new BeltHandle(BeltHandleKind.End, item.BeltEndX, item.BeltEndY));
+    }
+
+    /// <summary>传送带端点手柄拖拽：把鼠标所在的画布坐标写回对应自由端点，然后重算整条皮带
+    /// （autoEngage = true —— 拖动期正是"用户通过拖动决定路径走向"的时机，需要自动收录/剔除滚轮）。
+    /// 闭合判定不在本方法内做：由 View 端在拖动过程中检测"端点 B 靠近端点 A"再切换 IsClosed，
+    /// 这样吸合手感（阈值 + 落点吸附）与 Polyline 末端闭合保持一致。</summary>
+    public void UpdateBeltHandle(BeltHandleKind kind, double mouseX, double mouseY)
+    {
+        if (SelectedItem is not { } item) return;
+        if (item.IsLocked) return;   // 锁定图元禁止端点拖拽
+        if (item.TypeKey != nameof(L1Primitive.Belt)) return;
+
+        if (kind == BeltHandleKind.Start)
+        {
+            item.BeltStartX = mouseX;
+            item.BeltStartY = mouseY;
+            if (item.IsClosed) { item.BeltEndX = mouseX; item.BeltEndY = mouseY; }  // 闭合态：两端同步移动 = 整体平移
+        }
+        else
+        {
+            item.BeltEndX = mouseX;
+            item.BeltEndY = mouseY;
+            if (item.IsClosed) { item.BeltStartX = mouseX; item.BeltStartY = mouseY; }
+        }
+
+        SolveBelt(item, autoEngage: true);
+
+        // 集合不重建（保持手柄引用稳定，避免ItemsControl闪烁）：直接同步两个手柄的位置
+        foreach (var h in BeltHandles)
+        {
+            if (h.Kind == BeltHandleKind.Start) { h.X = item.BeltStartX; h.Y = item.BeltStartY; }
+            else { h.X = item.BeltEndX; h.Y = item.BeltEndY; }
+        }
+    }
+
+    /// <summary>切换传送带闭合状态（View 端吸附判定后调用）。闭合 = 两端点重合为一个环；
+    /// 解除闭合 = 保持当前端点位置、回到开放绳（用户继续拖端点即可）。</summary>
+    public void SetBeltClosed(bool closed)
+    {
+        if (SelectedItem is not { } item) return;
+        if (item.IsLocked) return;
+        if (item.TypeKey != nameof(L1Primitive.Belt)) return;
+        if (item.IsClosed == closed) return;
+
+        item.IsClosed = closed;
+        if (closed)
+        {
+            // 闭合：把 B 吸到 A 的位置（两端点合一）
+            item.BeltEndX = item.BeltStartX;
+            item.BeltEndY = item.BeltStartY;
+        }
+        SolveBelt(item, autoEngage: true);
+        RefreshBeltHandles();
+    }
+
     // ============== 扇形（L1 Pie）拖拽手柄 ==============
 
     /// <summary>扇形的选中拖拽手柄集合：中心 1 + 半径 1（对称中轴鼻尖）+ 起始/终止弧端点 2 = 4 个。

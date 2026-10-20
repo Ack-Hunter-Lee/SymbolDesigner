@@ -139,6 +139,20 @@ public class PrimitiveItemDto
     /// 老文件没有此字段（老版只存源 Id 引用）→ 加载时快照为空 → 老结果的"调整源"禁用。</summary>
     public List<PrimitiveItemDto>? BooleanSources { get; set; }
 
+    // ===== 传送带（Belt）专属字段（仅 TypeKey="Belt" 时生效；老工程全缺省 → 非皮带图元不受影响） =====
+    /// <summary>皮带绕行拓扑（有序）：CircleId = 被绕行圆图元的 Id，Wrap = ±1 绕行方向（+1 = 顺时针侧）。
+    /// 顺序 = 从自由端点 A 到 B 依次穿行。**皮带几何不落盘**（由拓扑 + 端点 + 滚轮实时重算），
+    /// 因此这里只存拓扑；加载后由 VM 调 BeltSolver 重建几何。</summary>
+    public List<BeltAnchorDto>? BeltAnchors { get; set; }
+    /// <summary>皮带自由端点 A（画布坐标）。</summary>
+    public double BeltStartX { get; set; }
+    /// <summary>皮带自由端点 A 的 Y（画布坐标）。</summary>
+    public double BeltStartY { get; set; }
+    /// <summary>皮带自由端点 B（画布坐标）。IsClosed=true 时与 A 重合。</summary>
+    public double BeltEndX { get; set; }
+    /// <summary>皮带自由端点 B 的 Y（画布坐标）。</summary>
+    public double BeltEndY { get; set; }
+
     // ===== 外观（线条/填充，任意图元通用；老文件缺省 = 各类型的默认观感） =====
     /// <summary>线条颜色 hex（缺省 null → 默认 #FFFFFF）。</summary>
     public string? StrokeColor { get; set; }
@@ -277,6 +291,15 @@ public class VertexThicknessDto
     public double LeftCornerRadius { get; set; }
     /// <summary>右侧普通轮廓点圆角半径（0 = 无）。</summary>
     public double RightCornerRadius { get; set; }
+}
+
+/// <summary>传送带绕行拓扑的一项（持久化形态）：被绕行的圆图元 Id + 绕行方向。</summary>
+public class BeltAnchorDto
+{
+    /// <summary>被绕行的圆类图元（Ellipse / Ring）的 Id。解析失败 / 图元已被删除 → 该项被跳过（自愈）。</summary>
+    public string? CircleId { get; set; }
+    /// <summary>绕行方向：+1 = 顺时针侧（角度递增方向绕），-1 = 逆时针侧。0 视为 +1。</summary>
+    public int Wrap { get; set; } = 1;
 }
 
 /// <summary>容器（.symz）内一个二进制资产的清单条目：逻辑键 + 包内相对路径 + 媒体类型。

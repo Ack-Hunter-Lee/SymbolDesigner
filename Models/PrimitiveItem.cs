@@ -359,6 +359,70 @@ public partial class PrimitiveItem : ObservableObject
             SyncVertexBandWidths(Converters.BandOutlineBuilder.ParsePathData(PathData).Count, 0);
     }
 
+    // ===== 传送带（Belt）=====
+
+    /// <summary>皮带绕行拓扑（有序）：每项 = 一个被绕行的圆滚轮 + 绕行方向。
+    /// 顺序 = 从自由端点 A 到 B 依次穿行的滚轮；Wrap 决定绕在哪一侧。
+    /// 几何不落盘——由 ViewModel 的 BeltSolver 依据"拓扑 + 端点 + 滚轮实时位置"重算，
+    /// 保证滚轮被编辑后皮带自动跟随、不会出现旧几何与新滚轮对不上的不一致。</summary>
+    public List<BeltAnchor> BeltAnchors { get; } = new();
+
+    /// <summary>自由端点 A（画布坐标）。皮带的"绳头"。</summary>
+    [ObservableProperty] private double _beltStartX;
+    /// <summary>自由端点 A 的 Y（画布坐标）。</summary>
+    [ObservableProperty] private double _beltStartY;
+    /// <summary>自由端点 B（画布坐标）。IsClosed = true 时与 A 重合（两端闭合成环）。</summary>
+    [ObservableProperty] private double _beltEndX;
+    /// <summary>自由端点 B 的 Y（画布坐标）。</summary>
+    [ObservableProperty] private double _beltEndY;
+
+    /// <summary>BeltSolver 解出的路径（局部坐标 mini-language：M / L / A / Z）。
+    /// 与 PathData 分离存放：PathData 只承载 M/L 折线语义（解析缓存/轮廓管道都只认直线），
+    /// 皮带含真圆弧，故独立字段 + 独立几何缓存。</summary>
+    [ObservableProperty] private string _beltPathData = string.Empty;
+
+    private System.Windows.Media.Geometry? _beltGeometryCache;
+    private string? _cachedBeltPath;
+
+    /// <summary>皮带几何（局部坐标，以元素 X/Y 为原点，由模板 Canvas.Left/Top 定位）。
+    /// 模板（L1BeltNode）/ 选中装饰 / XAML 导出都读它；按 BeltPathData 内容缓存。
+    /// 数据异常（Parse 失败）→ 返回 null 而非向 UI 抛异常。</summary>
+    public System.Windows.Media.Geometry? BeltGeometry
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(BeltPathData))
+            {
+                _beltGeometryCache = null;
+                _cachedBeltPath = null;
+                return null;
+            }
+            if (_beltGeometryCache is not null && _cachedBeltPath == BeltPathData)
+                return _beltGeometryCache;
+
+            System.Windows.Media.Geometry? g = null;
+            try
+            {
+                g = System.Windows.Media.Geometry.Parse(BeltPathData);
+                g.Freeze();
+            }
+            catch (System.FormatException)
+            {
+                g = null; // 数据损坏 → 不可见，不抛给 UI
+            }
+            _beltGeometryCache = g;
+            _cachedBeltPath = BeltPathData;
+            return g;
+        }
+    }
+
+    /// <summary>皮带路径变化 → 刷新几何缓存通知与选中装饰（贴形）。</summary>
+    partial void OnBeltPathDataChanged(string value)
+    {
+        OnPropertyChanged(nameof(BeltGeometry));
+        OnPropertyChanged(nameof(SelectionGeometry));
+    }
+
     /// <summary>BandPolyline 的每顶点带宽集合（顶点数 = 段数 + 1）。
     /// 带宽绑定到顶点（连接点），符合"承上启下"语义：
     ///   - 首顶点：只有 OutgoingBandWidth（启下=段 0 首端）
@@ -749,13 +813,15 @@ public partial class PrimitiveItem : ObservableObject
     /// <summary>图元是否可填充。属性面板"图案填充"分支只对可填充图元启用：
     ///   - Line（无填充区域）
     ///   - BandPolyline（带宽轮廓开放形体：fill 为 null，图案平铺无意义）
+    ///   - Belt（传送带是"单线"语义：一条描边路径，不做填充/图案）
     /// 其余类型（Rectangle/Ellipse/RoundedRectangle/Triangle/Ring/BooleanPath/Polyline）都允许。
     /// Polyline 开放时虽然 CanvasFillGeometry 返回 null，但图案分支仍可用——用户切到"图案"后
     /// 再勾选"闭合"即可看到效果；这样避免 UI 因 IsClosed 抖动。
     /// 公开属性而非内部标志：UI 绑定 + 序列化层不依赖，但属性面板靠它决定图案分支是否启用。</summary>
     [System.Text.Json.Serialization.JsonIgnore]
     public bool IsFillable => TypeKey is not nameof(L1Primitive.Line)
-        and not nameof(L1Primitive.BandPolyline);
+        and not nameof(L1Primitive.BandPolyline)
+        and not nameof(L1Primitive.Belt);
 
     partial void OnTypeKeyChanged(string value) => OnPropertyChanged(nameof(IsFillable));
 
@@ -818,6 +884,7 @@ public partial class PrimitiveItem : ObservableObject
                 nameof(L1Primitive.Polyline) when IsClosed => OutlineGeometry,
                 nameof(L1Primitive.BandPolyline) => OutlineGeometry,
                 nameof(L1Primitive.BooleanPath) => OutlineGeometry,  // 布尔结果 = 多环闭合骨架，走 OutlineGeometry 管道
+                nameof(L1Primitive.Belt) when IsClosed => BeltGeometry,  // 闭合皮带才有面积；开放皮带是单线，无面积
                 _ => null,
             };
             if (local is null) return null;
@@ -920,6 +987,7 @@ public partial class PrimitiveItem : ObservableObject
         nameof(L1Primitive.Polyline) => PolylineGeometry,
         nameof(L1Primitive.BandPolyline) => OutlineGeometry,
         nameof(L1Primitive.BooleanPath) => OutlineGeometry,
+        nameof(L1Primitive.Belt) => BeltGeometry,
         _ => null,
     };
 

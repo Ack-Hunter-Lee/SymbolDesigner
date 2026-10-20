@@ -47,6 +47,13 @@ public enum L1Primitive
     /// Width/Height = 外圆包围盒（直径），StartAngle/SweepAngle 定义扇面方向与幅度。
     /// 渲染用单 Path（Data = PieGeometry：M 弧起点 A 弧终点 L 圆心 Z），可填充、可参与布尔。</summary>
     Pie,
+
+    /// <summary>传送带（Belt）：一条皮带绕若干"圆滚轮"（Ellipse / Ring）穿行的单条路径。
+    /// 几何 = 两圆公切线（直线段）+ 绕圆包络弧（真圆弧）拼接，由 BeltSolver 依"绕行拓扑 +
+    /// 两个自由端点 + 滚轮实时位置"重算（不落盘）。
+    /// 渲染为单线描边 Path（无填充），导出为 &lt;Path Data="..." Stretch="None"&gt;，
+    /// 下游可直接对 StrokeDashOffset 做动画实现"皮带在运行"。</summary>
+    Belt,
 }
 
 /// <summary>直线轴对齐模式（仅 L1 Line 生效）。</summary>
@@ -84,4 +91,7 @@ public enum DrawMode
     Triangle,
     /// <summary>扇形（Pie）模式。两次点击：中心点 + 半径点（周长点，正圆），提交后默认扫掠角 = 60°。</summary>
     Pie,
+    /// <summary>传送带（Belt）模式。两次点击：自由端点 A + 自由端点 B，提交时自动收录挡路的圆
+    /// （与 Tool 项的 "L1_Belt" 对应）。之后拖端点手柄可继续穿绕/脱开/两两靠近闭合。</summary>
+    Belt,
 }

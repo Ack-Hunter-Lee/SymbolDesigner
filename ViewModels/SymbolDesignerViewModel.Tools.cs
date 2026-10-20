@@ -24,6 +24,7 @@ public partial class SymbolDesignerViewModel
         new ToolboxEntry("L1_Line",       "直线",   "／"),
         new ToolboxEntry("L1_Polyline",   "折线",   "〰"),
         new ToolboxEntry("L1_BandPolyline", "带宽折线", "▰"),
+        new ToolboxEntry("L1_Belt",       "传送带", "⛓"),
     };
 
     /// <summary>工具栏当前激活的图元 Key（点击进入模式后置位，再点同一项取消）。
@@ -61,6 +62,7 @@ public partial class SymbolDesignerViewModel
             "L1_Ring"              => DrawMode.Ring,
             "L1_Triangle"          => DrawMode.Triangle,
             "L1_Pie"               => DrawMode.Pie,
+            "L1_Belt"              => DrawMode.Belt,
             _                      => DrawMode.None,
         };
     }

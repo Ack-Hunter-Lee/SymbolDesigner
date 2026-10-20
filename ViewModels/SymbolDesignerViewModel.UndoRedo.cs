@@ -105,6 +105,8 @@ public partial class SymbolDesignerViewModel
             VertexHandles.Clear();
             SegmentHandles.Clear();
             OutlineCornerHandles.Clear();
+            // 传送带几何不落盘：撤销/重做恢复图元后统一重算（否则皮带无几何 → 不可见）
+            SolveAllBelts();
             IsDirty = true;
         }
         finally

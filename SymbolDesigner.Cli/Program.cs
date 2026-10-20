@@ -95,6 +95,7 @@ internal static class Program
         var proj = doc.Project;
         var added = DslToProject.BuildPrimitives(ReadDslChecked(r).Primitives, proj.Primitives.Count);
         proj.Primitives.AddRange(added);
+        BeltDtoGeometry.AutoEngageAll(proj.Primitives);
 
         string outPath = r.Get("output") ?? target;
         WriteProject(outPath, proj, doc.Assets);
@@ -281,6 +282,7 @@ internal static class Program
         if (dsl.CanvasHeight is double h) proj.CanvasHeight = h;
         if (dsl.CanvasBackgroundColor is string c) proj.CanvasBackgroundColor = c;
         proj.Primitives.AddRange(DslToProject.BuildPrimitives(dsl.Primitives, proj.Primitives.Count));
+        BeltDtoGeometry.AutoEngageAll(proj.Primitives);
     }
 
     private static void ApplyCanvasOverride(SymbolProject proj, string? canvas)
@@ -341,9 +343,11 @@ DSL JSON 示例:
       {"type":"polyline","points":[[0,0],[30,20],[60,0]],"closed":false},
       {"type":"bandPolyline","points":[[0,0],[40,0],[40,60]],"thickness":4},
       {"type":"ring","centerX":600,"centerY":200,"radius":40,"innerRadius":20},
-      {"type":"pie","centerX":500,"centerY":400,"radius":30,"startAngle":0,"sweepAngle":120}
+      {"type":"pie","centerX":500,"centerY":400,"radius":30,"startAngle":0,"sweepAngle":120},
+      {"type":"belt","points":[[0,0],[200,0]],"closed":false}
     ]}
-type 别名: rect/roundedRect/ellipse/ring/triangle/line/polyline/bandPolyline/pie
+type 别名: rect/roundedRect/ellipse/ring/triangle/line/polyline/bandPolyline/pie/belt
+belt(传送带): points 恰为 2 个自由端点，自动与画布上圆类图元(Ellipse/Ring)相切穿绕并解出单条路径
 """);
     }
 }

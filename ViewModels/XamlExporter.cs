@@ -131,6 +131,9 @@ public static class XamlExporter
             "BooleanPath"
                 => BooleanPathElement(p, left, top, z, ctx),
 
+            "Belt"
+                => BeltElement(p, left, top, z, ctx),
+
             _ => Comment($"未知的图元类型: {p.TypeKey}"),
         };
     }
@@ -325,6 +328,25 @@ public static class XamlExporter
     }
 
     // ---------- 各类型元素的 XML 生成 ----------
+
+    /// <summary>传送带（Belt）导出：单线描边 Path，Data = BeltGeometry（M / L / A / Z，含真圆弧）。
+    /// Stretch=None → 坐标即局部坐标（原点 = 求解结果包围盒左上角），Canvas.Left/Top 负责定位；
+    /// 下游可直接对 Data 这条路径做 StrokeDashArray + 循环 StrokeDashOffset 动画，表现为"皮带在运行"。
+    /// 单线语义：不出 Fill（不可填充），也不预设虚线（动画由使用方按需施加）。</summary>
+    private static string BeltElement(PrimitiveItem p, string left, string top, string z,
+        ExportContext ctx)
+    {
+        var geom = p.BeltGeometry;
+        if (geom is null) return Comment("Belt 未求解出几何，无法导出");
+
+        string dataStr = System.Security.SecurityElement.Escape(geom.ToString(CultureInfo.InvariantCulture));
+        return $"<Path Canvas.Left=\"{left}\" Canvas.Top=\"{top}\"" +
+               $" Data=\"{dataStr}\"" +
+               $" Panel.ZIndex=\"{z}\"" +
+               $" Stroke=\"{ctx.StrokeExpression}\" StrokeThickness=\"{ctx.StrokeWidthExpression}\"" +
+               $" StrokeStartLineCap=\"Round\" StrokeEndLineCap=\"Round\" StrokeLineJoin=\"Round\"" +
+               $" Stretch=\"None\" />";
+    }
 
     private static string RectangleElement(string left, string top, string w, string h, string z,
         double cornerRadius, ExportContext ctx)

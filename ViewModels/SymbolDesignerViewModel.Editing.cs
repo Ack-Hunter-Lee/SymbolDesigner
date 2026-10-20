@@ -107,6 +107,7 @@ public partial class SymbolDesignerViewModel
         OnPropertyChanged(nameof(SelectedItemIsBandPolyline));
         OnPropertyChanged(nameof(SelectedItemIsPolyline));
         OnPropertyChanged(nameof(SelectedItemIsRing));
+        OnPropertyChanged(nameof(SelectedItemIsBelt));
         OnPropertyChanged(nameof(SelectedItemIsBooleanPath));
         OnPropertyChanged(nameof(SelectedItemIsPie));
         OnPropertyChanged(nameof(SelectedBooleanSkeletonInfo));
@@ -164,6 +165,7 @@ public partial class SymbolDesignerViewModel
             // 必须显式刷新（Clear + SelectedItem==null return）才能让画布 ItemsControl 真正清空
             RefreshBandWidthHandles();
             RefreshRingHandles();
+            RefreshBeltHandles();
             if (OutlineEditMode == OutlineEditMode.Outline)
                 RefreshOutlineCornerHandles();
         }
@@ -189,6 +191,7 @@ public partial class SymbolDesignerViewModel
         RefreshSegmentHandles();
         RefreshRingHandles();
         RefreshPieHandles();
+        RefreshBeltHandles();
         // SelectedItem 改变时，若当前是轮廓模式也刷新接缝手柄
         if (OutlineEditMode == OutlineEditMode.Outline)
             RefreshOutlineCornerHandles();
@@ -259,6 +262,16 @@ public partial class SymbolDesignerViewModel
             // 圆环：拖圆心手柄 → X/Y 变 → 刷新圆心/外圆/内圆手柄位置
             RefreshRingHandles();
             RefreshPieHandles();
+            // 传送带：X/Y 由求解结果的包围盒回写 → 端点手柄位置保持不变，无需刷新（见 UpdateBeltHandle）
+        }
+        else if (e.PropertyName == nameof(PrimitiveItem.BeltStartX) ||
+                 e.PropertyName == nameof(PrimitiveItem.BeltStartY) ||
+                 e.PropertyName == nameof(PrimitiveItem.BeltEndX) ||
+                 e.PropertyName == nameof(PrimitiveItem.BeltEndY))
+        {
+            // 传送带端点（属性/拖动/撤销恢复）变化 → 端点手柄位置同步。
+            // UpdateBeltHandle 已就地同步过手柄（拖动热路径，避免重建集合），此分支覆盖非拖动路径。
+            RefreshBeltHandles();
         }
         else if (e.PropertyName == nameof(PrimitiveItem.InnerRadius))
         {

@@ -225,6 +225,20 @@ public partial class SymbolDesignerViewModel
         };
         if (p.BooleanSourceSnapshot.Count > 0)
             dto.BooleanSources = p.BooleanSourceSnapshot.ToList();
+        // 传送带：只落盘"绕行拓扑 + 两个自由端点"（几何由 BeltSolver 重算，不序列化）
+        if (p.TypeKey == nameof(L1Primitive.Belt))
+        {
+            dto.BeltStartX = p.BeltStartX;
+            dto.BeltStartY = p.BeltStartY;
+            dto.BeltEndX = p.BeltEndX;
+            dto.BeltEndY = p.BeltEndY;
+            if (p.BeltAnchors.Count > 0)
+            {
+                dto.BeltAnchors = new List<BeltAnchorDto>(p.BeltAnchors.Count);
+                foreach (var a in p.BeltAnchors)
+                    dto.BeltAnchors.Add(new BeltAnchorDto { CircleId = a.CircleId.ToString(), Wrap = a.Wrap });
+            }
+        }
         foreach (var v in p.VertexBandWidths)
             dto.VertexThicknesses.Add(new VertexThicknessDto
             {
@@ -353,6 +367,8 @@ public partial class SymbolDesignerViewModel
         VertexHandles.Clear();
         SegmentHandles.Clear();
         OutlineCornerHandles.Clear();
+        // 传送带几何不落盘：图元 + 滚轮全部就位后统一重算一次
+        SolveAllBelts();
     }
 
     /// <summary>序列化单条几何约束为 DTO（工程保存与撤销快照共用；与 ConstraintFromDto 对称）。
@@ -510,6 +526,23 @@ public partial class SymbolDesignerViewModel
         item.IsVisible = dto.IsVisible;
         // 恢复元素锁定：老工程文件没这字段 → 默认 false（未锁定,行为不变）
         item.IsLocked = dto.IsLocked;
+        // 恢复传送带"绕行拓扑 + 自由端点"（几何不落盘 → 由加载后的 SolveAllBelts 重算）
+        if (item.TypeKey == nameof(L1Primitive.Belt))
+        {
+            item.BeltStartX = dto.BeltStartX;
+            item.BeltStartY = dto.BeltStartY;
+            item.BeltEndX = dto.BeltEndX;
+            item.BeltEndY = dto.BeltEndY;
+            if (dto.BeltAnchors != null)
+            {
+                foreach (var a in dto.BeltAnchors)
+                {
+                    // 容错：Id 缺失/非法 或 该项承载的圆已被删除 → 跳过（皮带自愈，不崩溃）
+                    if (Guid.TryParse(a.CircleId, out var circleId))
+                        item.BeltAnchors.Add(new BeltAnchor(circleId, a.Wrap >= 0 ? 1 : -1));
+                }
+            }
+        }
         return item;
     }
 

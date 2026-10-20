@@ -231,6 +231,37 @@
                 StrokeStartLineCap="Round"
                 StrokeThickness="1.2" />
         </DataTemplate>
+        <DataTemplate x:Key="L1BeltPreview">
+            <!--
+                传送带预览：两个小圆（滚轮）+ 绕行皮带（圆间切线 + 绕圆包络弧），示意"皮带绕轮穿行"。
+                颜色统一走 Brush.Tool.Icon，与其它工具图标一致。
+            -->
+            <Canvas Width="16" Height="14">
+                <Path
+                    Data="M 2,7 A 2.5,2.5 0 0 1 4.5,4.5 L 11.5,4.5 A 2.5,2.5 0 0 1 14,7 A 2.5,2.5 0 0 1 11.5,9.5 L 4.5,9.5 A 2.5,2.5 0 0 1 2,7 Z"
+                    Stroke="{StaticResource Brush.Tool.Icon}"
+                    StrokeEndLineCap="Round"
+                    StrokeLineJoin="Round"
+                    StrokeStartLineCap="Round"
+                    StrokeThickness="0.8" />
+                <Ellipse
+                    Canvas.Left="2"
+                    Canvas.Top="4.5"
+                    Width="5"
+                    Height="5"
+                    Fill="{StaticResource Brush.Bg.Transparent}"
+                    Stroke="{StaticResource Brush.Tool.Icon}"
+                    StrokeThickness="0.6" />
+                <Ellipse
+                    Canvas.Left="9"
+                    Canvas.Top="4.5"
+                    Width="5"
+                    Height="5"
+                    Fill="{StaticResource Brush.Bg.Transparent}"
+                    Stroke="{StaticResource Brush.Tool.Icon}"
+                    StrokeThickness="0.6" />
+            </Canvas>
+        </DataTemplate>
         <DataTemplate x:Key="L1RoundedPreview">
             <Border
                 Width="16"
@@ -674,6 +705,26 @@
                     StrokeThickness="{Binding StrokeWidth}" />
             </views:DraggablePrimitive>
         </DataTemplate>
+        <!--
+            传送带（Belt）：单线描边 Path，Data = BeltGeometry（BeltSolver 解出的 M/L/A/Z，
+            圆间外公切线 + 绕圆包络真圆弧）。Stretch=None → 几何即局部坐标（原点 = 包围盒左上角），
+            Canvas 定位由 ItemContainerStyle 负责。
+            单线语义：不绑 Fill（不可填充/不可图案，见 PrimitiveItem.IsFillable）。
+            下游动画：导出后对该 Path 施加 StrokeDashArray + 循环 StrokeDashOffset 即呈"皮带在运行"。
+        -->
+        <DataTemplate x:Key="L1BeltNode" DataType="{x:Type models:PrimitiveItem}">
+            <views:DraggablePrimitive Opacity="{Binding Opacity}">
+                <Path
+                    Data="{Binding BeltGeometry}"
+                    Stretch="None"
+                    Stroke="{Binding StrokeBrush}"
+                    StrokeDashArray="{Binding StrokeDashArray}"
+                    StrokeEndLineCap="Round"
+                    StrokeLineJoin="Round"
+                    StrokeStartLineCap="Round"
+                    StrokeThickness="{Binding StrokeWidth}" />
+            </views:DraggablePrimitive>
+        </DataTemplate>
         <!--  兜底模板：未知 TypeKey 图元（历史/第三方新增类型）显示占位框 + 类型名，避免静默不可见。  -->
         <DataTemplate x:Key="L1DefaultNode" DataType="{x:Type models:PrimitiveItem}">
             <views:DraggablePrimitive
@@ -712,6 +763,7 @@
             L1RoundedRectangle="{StaticResource L1RoundedNode}"
             L1BandPolyline="{StaticResource L1BandPolylineNode}"
             L1Triangle="{StaticResource L1TriangleNode}"
+            L1Belt="{StaticResource L1BeltNode}"
             L1Default="{StaticResource L1DefaultNode}" />
     </UserControl.Resources>
 
@@ -828,6 +880,9 @@
                                                 </DataTrigger>
                                                 <DataTrigger Binding="{Binding Key}" Value="L1_BandPolyline">
                                                     <Setter Property="ContentTemplate" Value="{StaticResource L1BandPolylinePreview}" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Key}" Value="L1_Belt">
+                                                    <Setter Property="ContentTemplate" Value="{StaticResource L1BeltPreview}" />
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
@@ -2123,6 +2178,63 @@
                                                         </DataTrigger>
                                                         <DataTrigger Binding="{Binding Kind}" Value="{x:Static viewmodels:RingHandleKind.Inner}">
                                                             <Setter Property="Fill" Value="{StaticResource Brush.Port.Mid}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Rectangle.Style>
+                                        </Rectangle>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!--
+                                传送带端点手柄：仅选中 L1 Belt 时显示（自由端点 A / B = 2 个）。
+                                拖动端点 = 改变皮带走向：自动穿绕挡路的圆、脱离不再挡路的圆，
+                                两端靠近（< 吸附阈值）自动吸合成闭合环，已闭合时拖开即解除。
+                            -->
+                            <ItemsControl
+                                IsHitTestVisible="True"
+                                ItemsSource="{Binding BeltHandles}"
+                                PreviewMouseLeftButtonDown="OnBeltHandleMouseDown"
+                                PreviewMouseLeftButtonUp="OnBeltHandleMouseUp"
+                                PreviewMouseMove="OnBeltHandleMouseMove"
+                                Visibility="{Binding SelectedItemIsBelt, Converter={StaticResource BoolToVis}}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <Canvas />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemContainerStyle>
+                                    <Style TargetType="ContentPresenter">
+                                        <Setter Property="Canvas.Left" Value="{Binding X}" />
+                                        <Setter Property="Canvas.Top" Value="{Binding Y}" />
+                                        <Setter Property="Panel.ZIndex" Value="9996" />
+                                        <Setter Property="Width" Value="3.5" />
+                                        <Setter Property="Height" Value="3.5" />
+                                        <Setter Property="Margin" Value="-1.75,-1.75,0,0" />
+                                    </Style>
+                                </ItemsControl.ItemContainerStyle>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <!--  端点 A：蓝色方块；端点 B：橙色圆点。反向缩放：屏幕尺寸恒定。  -->
+                                        <Rectangle
+                                            Cursor="SizeAll"
+                                            RenderTransformOrigin="0.5,0.5"
+                                            Stroke="{StaticResource Brush.Brand.Stroke}"
+                                            StrokeThickness="0.1">
+                                            <Rectangle.RenderTransform>
+                                                <ScaleTransform
+                                                    ScaleX="{Binding InverseScale}"
+                                                    ScaleY="{Binding InverseScale}" />
+                                            </Rectangle.RenderTransform>
+                                            <Rectangle.Style>
+                                                <Style TargetType="Rectangle">
+                                                    <Setter Property="Fill" Value="{StaticResource Brush.Port.Input2}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Kind}" Value="{x:Static viewmodels:BeltHandleKind.End}">
+                                                            <Setter Property="Fill" Value="{StaticResource Brush.Port.OutputDeep}" />
+                                                            <Setter Property="RadiusX" Value="1.75" />
+                                                            <Setter Property="RadiusY" Value="1.75" />
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
