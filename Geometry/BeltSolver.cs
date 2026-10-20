@@ -41,6 +41,12 @@ public static class BeltSolver
 
     private const double Eps = 1e-9;
 
+    /// <summary>"挡路"的最小侵入深度（px）。装配正确时，滚轮弧端点→相邻轮切点的线段本就与相邻轮**相切**，
+    /// 圆心到线段距离 == r（严格数学值），浮点误差会留下 ~0.06px 的假侵入；阈值必须盖掉它，
+    /// 否则每次迭代都会把已收录的轮再插一遍（造出相邻重复项 / 混乱绕向 → 自交）。
+    /// 物理含义：皮带只是"擦过"某轮不算挡路，要真的切进去才算。</summary>
+    private const double MinBlockDepth = 0.5;
+
     // ============================ 公开入口 ============================
 
     /// <summary>按给定拓扑求解一条皮带的几何。</summary>
@@ -77,6 +83,14 @@ public static class BeltSolver
             foreach (var r in rollers.OrderBy(x => x.Center.X).ThenBy(x => x.Center.Y))
                 anchors.Add(new BeltAnchorSpec(r.Id, 1));
         }
+
+        // 闭合环：先定"整体绕向"。履带所有滚轮绕向一致（不该有交叉带），但"全 +1 / 全 -1"
+        // 哪个对取决于环的行进方向 —— 若与行进方向冲突，相邻两轮会走成内公切线（交叉带）。
+        // 故先整体择优（见 PickClosedSense，判据 = 不自交 > 更短），再进迭代：
+        // 否则迭代中会把交叉带当真几何（其包络弧异常偏大 → TryFlipOversized 逐个翻号 → 越搞越乱）。
+        // 仅闭合：开放绳的绕向受 A/B 端点约束，不能整体翻。
+        if (isClosed && anchors.Count > 1)
+            PickClosedSense(a, b, rollers, ref anchors);
 
         for (int iter = 0; iter < 32; iter++)
         {
@@ -118,7 +132,94 @@ public static class BeltSolver
         return anchors;
     }
 
-    // ============================ 内部数据 ============================
+    /// <summary>闭合环的整体绕向择优：把全部滚轮绕向整体翻号，取"装配可行且不自交"的那个。
+    /// 履带所有滚轮绕向一致（不该有交叉带），但"全 +1 / 全 -1"哪个对取决于环的行进方向 ——
+    /// 与行进方向冲突时相邻两轮会走成内公切线（交叉带）。
+    /// 判据**不能只看总长**：交叉带可能只浅交一点点，总长反而略短（实测三点三角布局差 2.6，
+    /// 占比 0.17%），会选错。故先比"是否自交"，同级再比总长。</summary>
+    private static void PickClosedSense(Point a, Point b, IReadOnlyList<BeltRoller> rollers,
+        ref List<BeltAnchorSpec> anchors)
+    {
+        var inverted = anchors.Select(x => new BeltAnchorSpec(x.Id, -x.Wrap)).ToList();
+        var cur = EvalClosed(a, b, rollers, anchors);
+        var alt = EvalClosed(a, b, rollers, inverted);
+
+        if (!alt.Ok) return;                        // 翻号后反而不可行 → 不动
+        if (!cur.Ok) { anchors = inverted; return; } // 原绕向不可行 → 翻
+        if (cur.Crosses != alt.Crosses)             // 只有一边自交 → 取不自交的
+        {
+            if (cur.Crosses) anchors = inverted;
+            return;
+        }
+        if (alt.Len < cur.Len - Eps) anchors = inverted;   // 同质 → 取更短（都退化则都不动）
+    }
+
+    /// <summary>闭合装配的评估：可行 / 是否自交 / 总长。</summary>
+    private static (bool Ok, bool Crosses, double Len) EvalClosed(Point a, Point b,
+        IReadOnlyList<BeltRoller> rollers, IReadOnlyList<BeltAnchorSpec> anchors)
+    {
+        var asm = Build(a, b, true, ResolveNodes(anchors, rollers));
+        if (asm.Degenerate || asm.Ops.Count == 0) return (false, false, double.MaxValue);
+        return (true, HasSelfIntersection(asm.Ops), OpLengths(asm.Ops));
+    }
+
+    /// <summary>自交检测：每段离散成折线（弧按 ≤15° 采样），非相邻段两两求交。
+    /// 相邻段共享切点属正常（跳过）；闭合环的首尾段也算相邻。用严格符号判定，
+    /// 端点相接 / 共线贴合不算交叉（宁可漏判也不误报）。</summary>
+    private static bool HasSelfIntersection(List<Op> ops)
+    {
+        int n = ops.Count;
+        var polys = new List<List<Point>>(n);
+        foreach (var op in ops) polys.Add(SampleOp(op));
+
+        for (int i = 0; i < n; i++)
+            for (int j = i + 1; j < n; j++)
+            {
+                if (j == i + 1 || (i == 0 && j == n - 1)) continue;   // 相邻 → 正常共享端点
+                if (PolylinesCross(polys[i], polys[j])) return true;
+            }
+        return false;
+    }
+
+    /// <summary>单段离散成折线：Line → 两端点；Arc → 按绕向从起点角扫到终点角，步长 ≤15°。</summary>
+    private static List<Point> SampleOp(Op op)
+    {
+        if (op.Kind == OpKind.Line) return new List<Point> { op.Start, op.End };
+
+        double a0 = Math.Atan2(op.Start.Y - op.Center.Y, op.Start.X - op.Center.X);
+        // SweepFlag=1 → 屏幕角递增（视觉顺时针），与 Wrap>0 一致
+        double dir = op.SweepFlag == 1 ? 1 : -1;
+        int steps = Math.Max(2, (int)Math.Ceiling(op.SweepRad / (15.0 * Math.PI / 180.0)));
+        var pts = new List<Point>(steps + 1);
+        for (int k = 0; k <= steps; k++)
+        {
+            double ang = a0 + dir * op.SweepRad * k / steps;
+            pts.Add(new Point(op.Center.X + op.Radius * Math.Cos(ang),
+                              op.Center.Y + op.Radius * Math.Sin(ang)));
+        }
+        return pts;
+    }
+
+    private static bool PolylinesCross(List<Point> p, List<Point> q)
+    {
+        for (int i = 0; i + 1 < p.Count; i++)
+            for (int j = 0; j + 1 < q.Count; j++)
+                if (SegmentsCross(p[i], p[i + 1], q[j], q[j + 1])) return true;
+        return false;
+    }
+
+    /// <summary>两线段是否真正交叉（严格穿越，端点相接/共线贴合返回 false）。</summary>
+    private static bool SegmentsCross(Point a, Point b, Point c, Point d)
+    {
+        double d1 = Cross(c, d, a), d2 = Cross(c, d, b);
+        double d3 = Cross(a, b, c), d4 = Cross(a, b, d);
+        return ((d1 > Eps && d2 < -Eps) || (d1 < -Eps && d2 > Eps))
+            && ((d3 > Eps && d4 < -Eps) || (d3 < -Eps && d4 > Eps));
+    }
+
+    /// <summary>叉积 z 分量（ab × ac）。</summary>
+    private static double Cross(Point a, Point b, Point c)
+        => (b.X - a.X) * (c.Y - a.Y) - (b.Y - a.Y) * (c.X - a.X);
 
     private enum OpKind { Line, Arc }
 
@@ -428,7 +529,8 @@ public static class BeltSolver
         var engaged = new HashSet<Guid>(anchors.Select(x => x.Id));
         foreach (var n in asm.Nodes) engaged.Add(n.Id);
 
-        double bestDepth = 0;
+        // 从阈值起步：侵入深度不超过 MinBlockDepth 的一律不算挡路（见常量注释）
+        double bestDepth = MinBlockDepth;
         bool found = false;
         Blocker? best = null;
 
