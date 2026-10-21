@@ -51,9 +51,11 @@ public partial class SliderSpinBox : UserControl
         set => SetValue(StepProperty, value);
     }
 
-    /// <summary>键盘 PgUp/PgDn 的大步长。原生 Slider 用 LargeChange 区分大小步。</summary>
+    /// <summary>键盘 PgUp/PgDn 的大步长。原生 Slider 用 LargeChange 区分大小步。
+    /// 默认 10 与 WPF Slider 自身的 LargeChange 默认值一致：此前用 NaN 表示"未设置"，
+    /// 但 NaN 直接转发给 Slider.LargeChange 会被判为非法值，每个实例刷一条绑定错误。</summary>
     public static readonly DependencyProperty LargeChangeProperty =
-        DependencyProperty.Register(nameof(LargeChange), typeof(double), typeof(SliderSpinBox), new PropertyMetadata(double.NaN));
+        DependencyProperty.Register(nameof(LargeChange), typeof(double), typeof(SliderSpinBox), new PropertyMetadata(10.0));
     public double LargeChange
     {
         get => (double)GetValue(LargeChangeProperty);
@@ -87,10 +89,12 @@ public partial class SliderSpinBox : UserControl
         s.PART_Slider.IsEnabled = (bool)e.NewValue;
     }
 
-    /// <summary>数值显示格式（StringFormat）。例如 "{}{0:0}px" / "{}{0:0}%"。</summary>
+    /// <summary>数值显示格式（StringFormat）。例如 "{0:0}px" / "{0:0}%"。
+    /// 注意：XAML 里通常写成 StringFormat="{}{0:0.#}"（{} 用于防止被当成标记扩展），
+    /// 但实测该转义前缀会原样落到本属性上，UpdateDisplayText 里统一剥除。</summary>
     public static readonly DependencyProperty StringFormatProperty =
         DependencyProperty.Register(nameof(StringFormat), typeof(string), typeof(SliderSpinBox),
-            new PropertyMetadata("{}{0:0}", OnStringFormatChanged));
+            new PropertyMetadata("{0:0}", OnStringFormatChanged));
     public string StringFormat
     {
         get => (string)GetValue(StringFormatProperty);
@@ -124,8 +128,23 @@ public partial class SliderSpinBox : UserControl
 
     private void UpdateDisplayText()
     {
-        string fmt = string.IsNullOrEmpty(StringFormat) ? "{}{0:0}" : StringFormat;
-        SetCurrentValue(DisplayTextProperty, string.Format(fmt, Value));
+        // XAML 的 StringFormat="{}{0:0.#}" 中，{} 转义前缀在自定义 DP 上不会被剥掉，
+        // 直接喂给 string.Format 会在 offset 1 抛 FormatException —— 每个 SliderSpinBox
+        // 实例化时一次，表现为选中带状折线/切到带宽模式时弹出一连串异常框。
+        // 这里统一剥掉前缀，并对非法格式兜底，保证格式化异常永远不冒到布局阶段。
+        string fmt = string.IsNullOrEmpty(StringFormat) ? "{0:0}" : StringFormat;
+        if (fmt.StartsWith("{}", StringComparison.Ordinal))
+            fmt = fmt[2..];
+        string text;
+        try
+        {
+            text = string.Format(fmt, Value);
+        }
+        catch (FormatException)
+        {
+            text = Value.ToString("0.##", System.Globalization.CultureInfo.CurrentCulture);
+        }
+        SetCurrentValue(DisplayTextProperty, text);
     }
 
     private void OnIncrementClick(object sender, RoutedEventArgs e) => Adjust(+Step);

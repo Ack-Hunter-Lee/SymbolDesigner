@@ -520,7 +520,8 @@
                                     <MultiDataTrigger>
                                         <MultiDataTrigger.Conditions>
                                             <Condition Binding="{Binding IsSelected}" Value="True" />
-                                            <Condition Binding="{Binding IsOutlineEditMode}" Value="False" />
+                                            <!--  本模板 DataContext 是图元本身，编辑模式要取外层 ItemsControl 的 VM  -->
+                                            <Condition Binding="{Binding DataContext.IsOutlineEditMode, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Value="False" />
                                         </MultiDataTrigger.Conditions>
                                         <Setter Property="Visibility" Value="Visible" />
                                     </MultiDataTrigger>
