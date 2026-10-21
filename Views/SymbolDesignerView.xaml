@@ -1797,6 +1797,16 @@
                                             但 Canvas 显式定位不受影响，恢复可见后原位还原。
                                         -->
                                         <Setter Property="Visibility" Value="{Binding IsVisible, Converter={StaticResource BoolToVis}}" />
+                                        <!--
+                                            所有图元通用旋转：绕内容中心（与 ArrayRenderItems 的副本一致）。
+                                            DraggablePrimitive 里命中判定会把点击点反向旋转回未旋转的局部坐标系。
+                                        -->
+                                        <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
+                                        <Setter Property="RenderTransform">
+                                            <Setter.Value>
+                                                <RotateTransform Angle="{Binding Rotation}" />
+                                            </Setter.Value>
+                                        </Setter>
                                         <Style.Triggers>
                                             <!--
                                                 BandPolyline：扩充需超出原始 Path 包围盒，
@@ -3080,6 +3090,36 @@
                                 VerticalScrollBarVisibility="Auto"
                                 IsEnabled="{Binding SelectedItem.IsLocked, Converter={StaticResource InverseBool}}">
                                 <StackPanel>
+                                <!--
+                                    通用变换：旋转（所有图元通用，绕自身包围盒中心）。
+                                    与画布容器上的 RotateTransform、阵列副本的旋转共用同一个 Rotation 字段。
+                                -->
+                                <StackPanel
+                                    Margin="0,0,0,6"
+                                    Visibility="{Binding HasSelectedItem, Converter={StaticResource BoolToVis}}">
+                                    <Grid Margin="0,0,0,2">
+                                        <TextBlock
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Center"
+                                            FontSize="10"
+                                            Foreground="{StaticResource Brush.Text.Primary}"
+                                            Text="旋转" />
+                                        <TextBlock
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center"
+                                            FontSize="10"
+                                            Foreground="{StaticResource Brush.Text.Tertiary}"
+                                            Text="{Binding SelectedItem.Rotation, Mode=OneWay, StringFormat={}{0:0.#}°}" />
+                                    </Grid>
+                                    <controls:SliderSpinBox
+                                        IsSnapToTickEnabled="False"
+                                        LargeChange="15"
+                                        Maximum="180"
+                                        Minimum="-180"
+                                        Step="1"
+                                        StringFormat="{}{0:0.#}°"
+                                        Value="{Binding SelectedItem.Rotation, Mode=TwoWay}" />
+                                </StackPanel>
                                 <!--  扇形属性组（仅 Pie 时显示）：起始角（旋转）+ 扫掠角（夹角）。放最顶部，选中扇形时第一个出现。  -->
                                 <StackPanel
                                     Margin="0,0,0,6"

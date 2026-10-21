@@ -25,6 +25,11 @@ public class DraggablePrimitive : ContentControl
     /// （端点 / 圆心 / 圆弧 / 线段）。按下时记录，非纯点击则为最后一次拖动手势起点。</summary>
     private Point _clickCanvasPoint;
 
+    /// <summary>本次按下的局部点击坐标（未旋转的图元坐标系）。
+    /// 图元容器带 RotateTransform 时，Mouse.GetPosition 已反变换回未旋转坐标系，
+    /// 命中判定（HitEntity）直接用这个点，不需要再手工抵消旋转。</summary>
+    private Point _clickLocalPoint;
+
     public override void OnApplyTemplate()
     {
         base.OnApplyTemplate();
@@ -54,12 +59,13 @@ public class DraggablePrimitive : ContentControl
         else
             System.Diagnostics.Debug.WriteLine("[DraggablePrimitive] 未找到 VM,跳过 BeginEdit");
 
-        // 记录按下时的画布逻辑坐标（用于子对象识别）。局部坐标 + 自身 Canvas 定位 = 画布坐标。
-        var local = System.Windows.Input.Mouse.GetPosition(this);
-        _clickCanvasPoint = new Point(item.X + local.X, item.Y + local.Y);
+        // 记录按下时的坐标。局部坐标由 Mouse.GetPosition 给出（旋转容器已被 WPF 反变换，
+        // 因此是未旋转的图元坐标系）；画布坐标另按 Rotation 折算，供子对象识别使用。
+        _clickLocalPoint = System.Windows.Input.Mouse.GetPosition(this);
+        _clickCanvasPoint = ToCanvasPoint(item, _clickLocalPoint);
 
         // "空白彻底无反应"：按下起点不在实体几何上 → 取消整个拖动手势（既不拖动也不触发点击）。
-        if (!HitEntity(item, _clickCanvasPoint))
+        if (!HitEntity(item, _clickLocalPoint))
             _thumb?.CancelDrag();
     }
 
@@ -155,7 +161,7 @@ public class DraggablePrimitive : ContentControl
     {
         if (DataContext is not PrimitiveItem item) return;
         // 实体命中判定：点击空白处不入选中（也避免子对象识别/约束误触发）
-        if (!HitEntity(item, _clickCanvasPoint))
+        if (!HitEntity(item, _clickLocalPoint))
             return;
         // 向上找 SymbolDesignerView 拿 VM
         var view = FindAncestor<SymbolDesignerView>(this);
@@ -190,15 +196,15 @@ public class DraggablePrimitive : ContentControl
     /// <summary>圆环"圆心十字区"拾取半径：与 VM 子对象识别一致（视图中心区域用于拾取圆心）。</summary>
     private const double CenterPickRadius = 6.0;
 
-    /// <summary>判断点击的画布坐标是否落在该图元的实体几何上（而非包围盒空白处）。
+    /// <summary>判断按下的**图元局部坐标**是否落在实体几何上（而非包围盒空白处）。
+    /// 参数 local 是图元自身未旋转坐标系的点：图元容器的旋转由 RenderTransform 承担，
+    /// Mouse.GetPosition 已反变换回该坐标系，这里无需再处理 Rotation。
     /// 按模板实际渲染几何判定：矩形/圆角矩形=矩形域；椭圆=椭圆域；三角=三角形域；
     /// 圆环=环带（含圆心十字区，供约束拾取圆心）；直线/Polyline/BandPolyline=骨架折线 ± 容差。
     /// 未知类型默认命中（保守，不阻止选中）。</summary>
-    private static bool HitEntity(PrimitiveItem item, Point canvas)
+    private static bool HitEntity(PrimitiveItem item, Point local)
     {
-        double lx = canvas.X - item.X;
-        double ly = canvas.Y - item.Y;
-        var p = new Point(lx, ly);
+        var p = local;
 
         switch (item.TypeKey)
         {
@@ -245,15 +251,15 @@ public class DraggablePrimitive : ContentControl
             case nameof(L1Primitive.Polyline):
             case nameof(L1Primitive.BandPolyline):
             {
-                // 用画布坐标做点到折线段距离（端点解析进的是画布坐标）
+                // PathData 是图元局部坐标，直接与局部点击点比较
                 var pts = SymbolDesigner.Converters.BandOutlineBuilder.ParsePathData(item.PathData);
                 if (pts.Count < 2)
                 {
                     // 无 PathData（模板对角线回退 / 矩形线）：用包围盒对角线近似
                     pts = new List<Point>
                     {
-                        new Point(item.X, item.Y + item.Height),
-                        new Point(item.X + item.Width, item.Y),
+                        new Point(0, item.Height),
+                        new Point(item.Width, 0),
                     };
                 }
                 double tol = EntityHitTolerance;
@@ -261,9 +267,7 @@ public class DraggablePrimitive : ContentControl
                     tol = Math.Max(EntityHitTolerance, item.BandWidth / 2);
                 for (int i = 0; i + 1 < pts.Count; i++)
                 {
-                    if (DistToSegment(canvas,
-                        new Point(item.X + pts[i].X, item.Y + pts[i].Y),
-                        new Point(item.X + pts[i + 1].X, item.Y + pts[i + 1].Y)) <= tol)
+                    if (DistToSegment(p, pts[i], pts[i + 1]) <= tol)
                         return true;
                 }
                 return false;
@@ -281,6 +285,22 @@ public class DraggablePrimitive : ContentControl
             default:
                 return true; // 未知类型保守命中
         }
+    }
+
+    /// <summary>把图元局部坐标换算成画布逻辑坐标（计入 Rotation，绕内容中心旋转）。
+    /// 用于把点击点交给 VM 做子对象识别（端点/圆心/圆弧等识别按画布坐标计算）。</summary>
+    private Point ToCanvasPoint(PrimitiveItem item, Point local)
+    {
+        double cx = ActualWidth / 2;
+        double cy = ActualHeight / 2;
+        if (item.Rotation == 0)
+            return new Point(item.X + local.X, item.Y + local.Y);
+        double rad = item.Rotation * Math.PI / 180;
+        double cos = Math.Cos(rad), sin = Math.Sin(rad);
+        double dx = local.X - cx, dy = local.Y - cy;
+        return new Point(
+            item.X + cx + dx * cos - dy * sin,
+            item.Y + cy + dx * sin + dy * cos);
     }
 
     private static double Dist(Point a, Point b) => Math.Sqrt((a.X - b.X) * (a.X - b.X) + (a.Y - b.Y) * (a.Y - b.Y));
