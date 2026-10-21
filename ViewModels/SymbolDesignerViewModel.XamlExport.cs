@@ -20,6 +20,9 @@ public partial class SymbolDesignerViewModel
             IEnumerable<PrimitiveItem> items = IsSourceAdjustMode && _sourceAdjTemp.Count > 0
                 ? Primitives.Where(p => !_sourceAdjTemp.Contains(p.Id))
                 : (IEnumerable<PrimitiveItem>)Primitives;
+            // 阵列副本是渲染层的影子克隆（不进入 Primitives，源图元创建阵列时已被吸收移除），
+            // 不并入导出 → 导出的 XAML 里整个阵列缺失。编辑源模式下隐藏的源位壳同样要滤掉。
+            items = items.Concat(ArrayRenderItems.Where(p => p.IsVisible));
             return XamlExporter.ExportCanvas(items);
         }
     }

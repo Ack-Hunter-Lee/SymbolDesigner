@@ -105,7 +105,7 @@ public static class XamlExporter
         ctx.StrokeWidthExpression = Fmt(p.StrokeWidth);
 
         // 旧版 L2 / L1 分类分支已合并——所有图元都按 TypeKey 字符串分支处理（包括 FanBlade 已被整体移除）。
-        return p.TypeKey switch
+        string element = p.TypeKey switch
         {
             "Rectangle" or "RoundedRectangle"
                 => RectangleElement(left, top, w, h, z, p.CornerRadius, ctx),
@@ -136,6 +136,29 @@ public static class XamlExporter
 
             _ => Comment($"未知的图元类型: {p.TypeKey}"),
         };
+        // 旋转此前完全没导出（旋转过的图形导出后变回轴对齐）。阵列副本的旋转也依赖这里。
+        return p.Rotation == 0 ? element : ApplyRotation(element, p.Rotation);
+    }
+
+    /// <summary>把旋转注入元素标签：RenderTransformOrigin=0.5,0.5 让旋转绕**自身中心**
+    /// （与画布渲染的 ContentPresenter RenderTransformOrigin 一致）。
+    /// 用 {RotateTransform Angle=..} 标记扩展 —— WPF 的 TransformConverter **不接受**
+    /// WinRT 风格的 rotate(angle) 简写（实测抛"无法从文本创建 RenderTransform"）。</summary>
+    private static string ApplyRotation(string element, double angleDeg)
+    {
+        string trimmed = element.TrimStart();
+        // 注释 / 非元素输出不注入
+        if (!trimmed.StartsWith("<", System.StringComparison.Ordinal)
+            || trimmed.StartsWith("<!--", System.StringComparison.Ordinal))
+            return element;
+
+        string attr = $" RenderTransformOrigin=\"0.5,0.5\" RenderTransform=\"{{RotateTransform Angle={Fmt(angleDeg)}}}\"";
+        int selfClose = element.LastIndexOf("/>", System.StringComparison.Ordinal);
+        if (selfClose >= 0)
+            return element[..selfClose].TrimEnd() + attr + " />";
+
+        int tagEnd = element.LastIndexOf('>');
+        return tagEnd >= 0 ? element[..tagEnd].TrimEnd() + attr + ">" : element;
     }
 
     // ========================== 颜色/画刷表达式生成 ==========================
