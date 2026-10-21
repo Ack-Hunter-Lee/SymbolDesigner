@@ -493,6 +493,9 @@ public partial class SymbolDesignerViewModel
     private List<PrimitiveItem> BuildArrayClones(ArrayInstance arr, int globalZStart)
     {
         var anchors = new List<PlacementP>(64);
+        // 路径阵列：源位处的路径切线角。副本旋转按"相对源位的切线增量"施加，
+        // 才能保住源图形相对路径的朝向（例如"垂直于履带的小方块"阵列后仍处处垂直）。
+        double pathBaseAngle = 0;
         switch (arr.Type)
         {
             case Models.ArrayType.Rectangular:
@@ -502,7 +505,7 @@ public partial class SymbolDesignerViewModel
                 BuildPolarPlacements(arr, anchors);
                 break;
             default:
-                BuildPathPlacements(arr, anchors);
+                pathBaseAngle = BuildPathPlacements(arr, anchors);
                 break;
         }
         // 锚 = 源包围盒中心（局部坐标）：渲染端 ContentPresenter RenderTransformOrigin=0.5,0.5，
@@ -534,11 +537,19 @@ public partial class SymbolDesignerViewModel
                     clone.X += -System.Math.Sin(rad) * arr.PathOffset;
                     clone.Y += System.Math.Cos(rad) * arr.PathOffset;
                 }
-                if (arr.PathAlign) clone.Rotation = p.AngleDeg;
+                if (arr.PathAlign)
+                {
+                    // 旋转 = 源自身旋转 + 切线相对源位的增量。
+                    // 旧实现直接赋成切线角（绝对），丢掉了源相对路径的朝向：垂直于履带的
+                    // 小方块阵列后变成沿履带方向。
+                    clone.Rotation = arr.Source.Rotation + NormalizeAngleDelta(p.AngleDeg - pathBaseAngle);
+                }
             }
             else
             {
-                clone.Rotation = p.AngleDeg;
+                // 矩形恒为 0、环形为相对起始方位的角度差（见 BuildPolarPlacements）：
+                // 统一叠加在源自身旋转上，保住源朝向。
+                clone.Rotation = arr.Source.Rotation + p.AngleDeg;
             }
             clone.ZIndex = z;
             clone.IsSelected = false;  // 阵列副本不可作为普通图元被选中（选中走 SelectArray 整体高亮）
@@ -651,7 +662,7 @@ public partial class SymbolDesignerViewModel
             double rad = angleDeg * System.Math.PI / 180.0;
             double px = arr.CenterX + radius * System.Math.Cos(rad);
             double py = arr.CenterY + radius * System.Math.Sin(rad);
-            double rot = arr.RotateItems ? angleDeg + 90 : 0; // 径向 +90° = 圆周切向
+            double rot = arr.RotateItems ? angleDeg - startAngle : 0; // 相对源起始方位的角度差（切向）
             anchors.Add(new PlacementP(px, py, rot));
         }
     }
@@ -659,11 +670,12 @@ public partial class SymbolDesignerViewModel
     /// <summary>路径阵列布局：以"源中心在路径上的投影点"为起点（即"从源当前位置开始"），
     /// 沿路径等弧长推进，副本中心在 BuildArrayClones 里再沿法线偏移 PathOffset。
     /// 路径走"几何 → 最长轮廓 → 摊平直线段"通用入口，故圆轮廓 / 履带 / 布尔结果都能当路径。
-    /// 注意：这里给的是**路径落点**（未含 PathOffset），PathOffset 在装配克隆时统一施加。</summary>
-    private static void BuildPathPlacements(ArrayInstance arr, List<PlacementP> anchors)
+    /// 注意：这里给的是**路径落点**（未含 PathOffset），PathOffset 在装配克隆时统一施加。
+    /// 返回**源位处的路径切线角**，供副本按"相对增量"旋转。</summary>
+    private static double BuildPathPlacements(ArrayInstance arr, List<PlacementP> anchors)
     {
         var segments = Converters.PolylineToSegments.Convert(ParsePathData(arr.PathData));
-        if (segments.Count == 0) return;
+        if (segments.Count == 0) return 0;
 
         // 起始弧长：源中心到路径的最近投影点（= 源当前位置在路径上的落点）
         var proj = Converters.PathDistributor.ProjectOntoPath(
@@ -671,12 +683,23 @@ public partial class SymbolDesignerViewModel
                 arr.Source.X + arr.Source.Width / 2,
                 arr.Source.Y + arr.Source.Height / 2));
         double startArc = proj?.ArcLength ?? 0;
+        double baseAngle = proj?.AngleDeg ?? 0;
 
         // 闭合路径（末点回到首点）→ 整圈等分并回绕；开放路径 → 从起点排到终点
         bool closed = IsClosedContour(segments);
         foreach (var p in Converters.PathDistributor.DistributeAlongPath(
                      segments, System.Math.Clamp(arr.Count, 1, 100), startArc, closed))
             anchors.Add(new PlacementP(p.X, p.Y, p.AngleDeg));
+        return baseAngle;
+    }
+
+    /// <summary>角度差归一到 (-180, 180]，避免 ±360 跳变（如 179° 与 -175° 的差应取 +4°）。</summary>
+    private static double NormalizeAngleDelta(double delta)
+    {
+        delta %= 360;
+        if (delta > 180) delta -= 360;
+        else if (delta <= -180) delta += 360;
+        return delta;
     }
 
     /// <summary>段序列是否闭合（末段终点 ≈ 首段起点；PolylineToSegments 对闭合轮廓补了收尾边）。</summary>
