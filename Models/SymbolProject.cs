@@ -225,8 +225,12 @@ public class ArrayInstanceDto
     /// <summary>副本总数（含源或不含源，1 ≤ Count ≤ 100）。</summary>
     public int Count { get; set; } = 5;
 
-    /// <summary>true = 含源（第一份与源重合）；false = 内部均匀分布。</summary>
-    public bool IncludeSource { get; set; } = true;
+    /// <summary>副本中心与参考路径的垂直偏移距离（= 创建时源中心到路径的最近距离）。
+    /// 缺省 0 = 副本中心落在路径上（旧行为）。</summary>
+    public double PathOffset { get; set; }
+
+    /// <summary>副本是否随路径切线旋转（缺省 true = 切向站立，对齐 AutoCAD "Align items"）。</summary>
+    public bool PathAlign { get; set; } = true;
     #endregion
 
     #region Rectangular 参数

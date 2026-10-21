@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using SymbolDesigner.Converters;
 
 namespace SymbolDesigner.Models;
@@ -34,10 +33,12 @@ public enum ArrayType
 ///   3. 副本数 = 1 元数据（N 处都要存，浪费）
 ///   4. 导出 XAML 时直接展开（XamlExporter 阶段处理，与运行期解耦）
 ///
-/// POC 阶段约束：
-///   - 路径只支持 BandPolyline（M/L 直线段），不做圆弧
-///   - 路径方向 = 起点→终点的方向；不处理闭合路径的"环"语义
-///   - 旋转：副本绕自身中心旋转切线方向（WPF Path.RenderTransform）
+/// 几何约定：
+///   - 路径走"通用几何入口"：任意能产出几何的图元都能当路径（圆/矩形/履带/布尔结果…），
+///     曲线由 WPF GetFlattenedPathGeometry 摊平为直线段，只取最长轮廓
+///   - 路径阵列的基准点 = **源中心**（包围盒中心）：阵列从源当前位置起步，
+///     副本中心沿路径法向偏移 PathOffset（保持与路径恒定距离）
+///   - 旋转：副本绕自身中心旋转路径切线方向（WPF Path.RenderTransform，旋转不移动中心）
 ///   - 矩形/环形：旋转 = 0（矩形）或环形切向（RotateItems 开启时）
 /// </summary>
 public class ArrayInstance
@@ -58,12 +59,19 @@ public class ArrayInstance
     /// 第一阶段只支持直线段；后续阶段扩展 ArcSegment 时此处替换为结构化 PathSegment[]。</summary>
     public string PathData { get; set; } = string.Empty;
 
-    /// <summary>副本总数（含源或不含源）。POC 约束：1 ≤ Count ≤ 100。</summary>
+    /// <summary>副本总数（1 ≤ Count ≤ 100）。</summary>
     public int Count { get; set; } = 5;
 
-    /// <summary>true = 副本 1 在路径起点（与源重合），副本 N 在终点；
-    /// false = 副本均匀填在路径内部（不含端点）。</summary>
-    public bool IncludeSource { get; set; } = true;
+    /// <summary>路径阵列"偏移距离"：副本中心与参考路径的垂直距离（= 创建时源中心到路径的最近距离）。
+    /// AutoCAD 路径阵列"基点"语义 —— 基点沿路径走，对象相对基点保持固定偏移，
+    /// 故副本中心到路径的最近距离恒为 |PathOffset|，与曲线区间无关。
+    /// 0 = 副本中心落在路径上；正负 = 路径切向的左右侧（y-down 坐标系下正 = 切向左侧 = 视觉上方）。
+    /// 圆路径 → 副本中心落在同心的 ± 偏移圆上（半径 = 路径半径 ± 偏移）。</summary>
+    public double PathOffset { get; set; }
+
+    /// <summary>路径阵列：副本是否随路径切线旋转（true = 切向站立，对齐 AutoCAD "Align items"）。
+    /// 环形/矩形阵列不受此字段影响（环形由 RotateItems 控制）。</summary>
+    public bool PathAlign { get; set; } = true;
 
     // ── 矩形阵列参数（Type == Rectangular）──
 

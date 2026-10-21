@@ -148,7 +148,7 @@ public static class PathDistributor
     ///   - SweepDirection.Counterclockwise (sweep=0)：弧向在 atan2 中是角度递减方向
     /// POC 限定圆弧 ≤ 180°（rawDiff 已在 (-π, π] 内）。
     /// 例：起 -90° 终 0°，CW (sweepClockwise=true) ⇒ 返回 +π/2（cur 递增）。</summary>
-        private static double NormalizeAngle(double rawDiff, bool sweepClockwise)
+        internal static double NormalizeAngle(double rawDiff, bool sweepClockwise)
         {
             // 取绝对值 + 符号：CW = +, CCW = -
             double diff = Math.Abs(rawDiff);
@@ -160,10 +160,12 @@ public static class PathDistributor
     /// <summary>沿路径等弧长采样 N 个 Placement。
     /// <param name="segments">路径段列表（顺序连接，segments[i].End == segments[i+1].Start）</param>
     /// <param name="count">副本总数</param>
-    /// <param name="includeSource">true = 第一份在 t=0（路径起点），false = 第一份在 t = (弧长 / (count)) 处</param>
+    /// <param name="startArc">第一个副本的累计弧长（创建时 = 源中心在路径上的投影弧长，即"从当前位置开始"）</param>
+    /// <param name="wrap">true = 闭合路径：按 totalLen/count 等分并首尾回绕（整圈均分，与起点无关）；
+    /// false = 开放路径：在 [startArc, totalLen] 区间内 count 等分（最后一份落在终点）</param>
     /// </summary>
     public static IList<Placement> DistributeAlongPath(
-        IReadOnlyList<PathSegment> segments, int count, bool includeSource)
+        IReadOnlyList<PathSegment> segments, int count, double startArc, bool wrap)
     {
         var result = new List<Placement>(count);
         if (segments is null || segments.Count == 0 || count <= 0)
@@ -179,45 +181,156 @@ public static class PathDistributor
         }
         if (totalLen <= 0) return result;
 
-        // 等弧长步进
-        // includeSource=true:  t_i = i * (totalLen / (count - 1))         for i=0..count-1
-        //                       第一个 t=0（路径起点），最后一个 t=totalLen（终点）
-        // includeSource=false: t_i = (i + 1) * (totalLen / (count + 1))    for i=0..count-1
-        //                       第一个 t>0，最后一个 t<totalLen
-        double step = includeSource
-            ? totalLen / Math.Max(1, count - 1)
-            : totalLen / (count + 1);
+        // 起点夹到路径范围内（投影点理论上已在范围内，防御浮点误差）
+        startArc = Math.Clamp(startArc, 0, totalLen);
+
+        // 闭合路径：整圈等分（step = L/N），起点只决定相位 → N 份绕成一圈，仍有一份落在源当前位置。
+        // 开放路径：从起点排到终点（step = 剩余长度/(N-1)）；N=1 时只有一份。
+        double step = wrap
+            ? totalLen / count
+            : (count <= 1 ? 0 : (totalLen - startArc) / (count - 1));
 
         for (int i = 0; i < count; i++)
         {
-            double target = includeSource
-                ? i * step
-                : (i + 1) * step;
-
-            // clamp 到 [0, totalLen]
-            if (target < 0) target = 0;
-            if (target > totalLen) target = totalLen;
-
-            // 找 target 落在哪一段
-            double acc = 0;
-            for (int s = 0; s < segments.Count; s++)
+            double target = startArc + i * step;
+            if (wrap)
             {
-                double segLen = segLengths[s];
-                if (target <= acc + segLen || s == segments.Count - 1)
-                {
-                    // 夹到 [0, segLen] 再采样：target 恰落在段末时，(target - acc) 可能比 segLen
-                    // 大 1ulp（浮点 (a+b)-a ≠ b），直接喂给 SampleAt 会撞上它的越界断言 →
-                    // ArgumentOutOfRangeException。误差量级 1e-13，几何上就是"段末端点"。
-                    // 多段路径（椭圆 / 折线 / 履带）必然踩到，单段直线恰好相等才躲过。
-                    double arcInSeg = Math.Clamp(target - acc, 0, segLen);
-                    var (pos, ang) = segments[s].SampleAt(arcInSeg);
-                    result.Add(new Placement(pos.X, pos.Y, ang, target));
-                    break;
-                }
-                acc += segLen;
+                // 首尾回绕：target ∈ [startArc, startArc + L)，最多越过终点一次
+                if (target >= totalLen) target -= totalLen;
             }
+            else if (target > totalLen) target = totalLen;
+
+            var (pos, ang) = SampleAtArc(segments, segLengths, target);
+            result.Add(new Placement(pos.X, pos.Y, ang, target));
         }
 
         return result;
+    }
+
+    /// <summary>按累计弧长在段列表上采样（位置 + 切线角）。target 须已夹到 [0, totalLen]。</summary>
+    private static (Point pos, double angleDeg) SampleAtArc(
+        IReadOnlyList<PathSegment> segments, double[] segLengths, double target)
+    {
+        double acc = 0;
+        for (int s = 0; s < segments.Count; s++)
+        {
+            double segLen = segLengths[s];
+            if (target <= acc + segLen || s == segments.Count - 1)
+            {
+                // 夹到 [0, segLen] 再采样：target 恰落在段末时，(target - acc) 可能比 segLen
+                // 大 1ulp（浮点 (a+b)-a ≠ b），直接喂给 SampleAt 会撞上它的越界断言 →
+                // ArgumentOutOfRangeException。误差量级 1e-13，几何上就是"段末端点"。
+                // 多段路径（椭圆 / 折线 / 履带）必然踩到，单段直线恰好相等才躲过。
+                double arcInSeg = Math.Clamp(target - acc, 0, segLen);
+                return segments[s].SampleAt(arcInSeg);
+            }
+            acc += segLen;
+        }
+        // 理论不可达（target ≤ totalLen 且已被夹），兜底取末点避免调用方抛异常
+        return segments[segments.Count - 1].SampleAt(segLengths[segLengths.Length - 1]);
+    }
+
+    /// <summary>点到路径的投影结果：路径上的最近点、该点的累计弧长、切线角，
+    /// 以及点到路径的**有符号**垂直距离（正 = 切线左侧 / y-down 视觉上方）。</summary>
+    public readonly struct PathProjection
+    {
+        /// <summary>路径上的最近点 X。</summary>
+        public double X { get; }
+        /// <summary>路径上的最近点 Y。</summary>
+        public double Y { get; }
+        /// <summary>最近点距路径起点的累计弧长（= 路径阵列的起始弧长）。</summary>
+        public double ArcLength { get; }
+        /// <summary>最近点的路径切线方向（度）。</summary>
+        public double AngleDeg { get; }
+        /// <summary>点到路径的有符号垂直距离（沿法线 (-sinθ, cosθ) 的投影）。
+        /// 应用：副本中心 = 路径点 + 法线 × SignedOffset，故该距离在原位置保持不变。</summary>
+        public double SignedOffset { get; }
+
+        public PathProjection(double x, double y, double arcLength, double angleDeg, double signedOffset)
+        {
+            X = x;
+            Y = y;
+            ArcLength = arcLength;
+            AngleDeg = angleDeg;
+            SignedOffset = signedOffset;
+        }
+    }
+
+    /// <summary>把画布上一点投影到路径上（取所有段中最近的投影点）。
+    /// 用途：路径阵列创建时求"源中心到路径的当前距离"（作为默认偏移量）
+    /// 与"源中心在路径上的投影弧长"（作为阵列起始点）。
+    /// 路径为空 / 总长为 0 → null。</summary>
+    public static PathProjection? ProjectOntoPath(IReadOnlyList<PathSegment> segments, Point point)
+    {
+        if (segments is null || segments.Count == 0) return null;
+
+        PathProjection? best = null;
+        double bestDist = double.MaxValue;
+        double acc = 0;
+        for (int i = 0; i < segments.Count; i++)
+        {
+            var seg = segments[i];
+            var (q, angle, localArc) = ProjectOntoSegment(seg, point);
+            double dx = point.X - q.X;
+            double dy = point.Y - q.Y;
+            double dist = Math.Sqrt(dx * dx + dy * dy);
+            if (dist < bestDist - 1e-9)
+            {
+                bestDist = dist;
+                // 法线 = 切线旋转 +90°（y-down）：n = (-sinθ, cosθ)
+                double rad = angle * Math.PI / 180.0;
+                double signed = dx * -Math.Sin(rad) + dy * Math.Cos(rad);
+                best = new PathProjection(q.X, q.Y, acc + localArc, angle, signed);
+            }
+            acc += seg.Length();
+        }
+        return best;
+    }
+
+    /// <summary>单段上的最近投影点（返回点、该点切线角、段内弧长）。</summary>
+    private static (Point q, double angleDeg, double arc) ProjectOntoSegment(PathSegment seg, Point p)
+    {
+        if (seg.ArcCenter is not { } center)
+        {
+            double dx = seg.End.X - seg.Start.X;
+            double dy = seg.End.Y - seg.Start.Y;
+            double len2 = dx * dx + dy * dy;
+            double t = len2 > 0
+                ? Math.Clamp(((p.X - seg.Start.X) * dx + (p.Y - seg.Start.Y) * dy) / len2, 0, 1)
+                : 0;
+            var q = new Point(seg.Start.X + dx * t, seg.Start.Y + dy * t);
+            double angle = Math.Atan2(dy, dx) * 180.0 / Math.PI;
+            return (q, angle, seg.Length() * t);
+        }
+
+        double r = Math.Sqrt((seg.Start.X - center.X) * (seg.Start.X - center.X)
+                           + (seg.Start.Y - center.Y) * (seg.Start.Y - center.Y));
+        if (r <= 0) return (seg.Start, 0, 0);
+        double a1 = Math.Atan2(seg.Start.Y - center.Y, seg.Start.X - center.X);
+        double a2 = Math.Atan2(seg.End.Y - center.Y, seg.End.X - center.X);
+        double sweep = PathSegment.NormalizeAngle(a2 - a1, seg.SweepClockwise);
+        double ap = Math.Atan2(p.Y - center.Y, p.X - center.X);
+        // 投影角相对起点的有符号角差，方向与 sweep 一致
+        double delta = sweep >= 0
+            ? NormalizeTo2Pi(ap - a1)
+            : -NormalizeTo2Pi(a1 - ap);
+        if (sweep >= 0 && delta > sweep) delta = (delta - sweep < 2 * Math.PI - delta) ? sweep : 0;
+        else if (sweep < 0 && delta < sweep) delta = (sweep - delta < 2 * Math.PI + delta) ? sweep : 0;
+
+        double cur = a1 + delta;
+        var qa = new Point(center.X + r * Math.Cos(cur), center.Y + r * Math.Sin(cur));
+        double tx = sweep > 0 ? -Math.Sin(cur) : Math.Sin(cur);
+        double ty = sweep > 0 ? Math.Cos(cur) : -Math.Cos(cur);
+        double tAngle = Math.Atan2(ty, tx) * 180.0 / Math.PI;
+        return (qa, tAngle, Math.Abs(delta) * r);
+    }
+
+    /// <summary>角度归一到 [0, 2π)。</summary>
+    private static double NormalizeTo2Pi(double angle)
+    {
+        const double TwoPi = Math.PI * 2;
+        double a = angle % TwoPi;
+        if (a < 0) a += TwoPi;
+        return a;
     }
 }

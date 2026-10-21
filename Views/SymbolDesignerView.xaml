@@ -2571,6 +2571,38 @@
                                         ItemsSource="{Binding PathOptions}"
                                         SelectedItem="{Binding SelectedPathOption, Mode=TwoWay}" />
                                 </StackPanel>
+                                <!--  偏移距离：副本中心到路径的垂直距离（AutoCAD 基点语义，保持恒定距离）  -->
+                                <StackPanel Margin="0,0,0,4" Orientation="Horizontal">
+                                    <TextBlock
+                                        Width="56"
+                                        VerticalAlignment="Center"
+                                        FontSize="11"
+                                        Foreground="{StaticResource Brush.Text.Primary}"
+                                        Text="偏移：" />
+                                    <TextBox
+                                        Width="64"
+                                        Padding="2,1"
+                                        VerticalAlignment="Center"
+                                        Background="{StaticResource Brush.Bg.Input}"
+                                        BorderBrush="{StaticResource Brush.Border.Subtle}"
+                                        BorderThickness="1"
+                                        FontSize="11"
+                                        Foreground="{StaticResource Brush.Text.Primary}"
+                                        Text="{Binding PathArrayOffsetDistance, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <CheckBox
+                                        Margin="6,0,0,0"
+                                        VerticalAlignment="Center"
+                                        Content="自动保持当前值"
+                                        FontSize="11"
+                                        Foreground="{StaticResource Brush.Text.Primary}"
+                                        IsChecked="{Binding PathArrayOffsetAuto, Mode=TwoWay}" />
+                                </StackPanel>
+                                <CheckBox
+                                    Margin="0,0,0,4"
+                                    Content="副本随路径旋转（切向）"
+                                    FontSize="11"
+                                    Foreground="{StaticResource Brush.Text.Primary}"
+                                    IsChecked="{Binding PathArrayAlign, Mode=TwoWay}" />
                                 <StackPanel Margin="0,0,0,4" Orientation="Horizontal">
                                     <TextBlock
                                         Width="56"
@@ -2595,12 +2627,6 @@
                                         Foreground="{StaticResource Brush.Text.Tertiary}"
                                         Text="(1~100)" />
                                 </StackPanel>
-                                <CheckBox
-                                    Margin="0,0,0,8"
-                                    Content="第一份与源重合"
-                                    FontSize="11"
-                                    Foreground="{StaticResource Brush.Text.Primary}"
-                                    IsChecked="{Binding PathArrayIncludeSource, Mode=TwoWay}" />
                             </StackPanel>
 
                             <!--  ── 矩形阵列参数区（Type == Rectangular）──  -->

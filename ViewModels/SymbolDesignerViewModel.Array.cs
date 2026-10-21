@@ -183,7 +183,15 @@ public partial class SymbolDesignerViewModel
                 break;
             default:
                 PathArrayCount = Math.Clamp(arr.Count, 1, 100);
-                PathArrayIncludeSource = arr.IncludeSource;
+                // 编辑已有阵列：显示其已存偏移并退出"自动保持"（否则会被当前距离冲掉）。
+                // 回填期间挂起重入守卫，避免距离/符号互相触发重建覆盖未加载的字段。
+                _syncingArrayOffset = true;
+                PathArrayOffsetAuto = false;
+                PathArrayOffset = arr.PathOffset;
+                _pathArrayOffsetSign = arr.PathOffset < 0 ? -1 : 1;
+                PathArrayOffsetDistance = System.Math.Abs(arr.PathOffset);
+                PathArrayAlign = arr.PathAlign;
+                _syncingArrayOffset = false;
                 break;
         }
         ArrayPreviewType = arr.Type; // 触发 handler（此时浮层未开，只刷可见性）
@@ -212,9 +220,10 @@ public partial class SymbolDesignerViewModel
                 arr.RotateItems = ArrayPreviewRotateItems;
                 break;
             default:
-                // 路径阵列的折线不改（浮层只调数量/是否含源）
+                // 路径阵列的折线不改（浮层只调数量 / 偏移距离 / 是否切向旋转）
                 arr.Count = Math.Clamp(PathArrayCount, 1, 100);
-                arr.IncludeSource = PathArrayIncludeSource;
+                arr.PathOffset = PathArrayOffset;
+                arr.PathAlign = PathArrayAlign;
                 break;
         }
         IsDirty = true;

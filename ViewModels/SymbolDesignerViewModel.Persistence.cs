@@ -559,7 +559,8 @@ public partial class SymbolDesignerViewModel
             // Path
             PathData = a.PathData,
             Count = a.Count,
-            IncludeSource = a.IncludeSource,
+            PathOffset = a.PathOffset,
+            PathAlign = a.PathAlign,
             // Rectangular
             Columns = a.Columns,
             Rows = a.Rows,
@@ -600,7 +601,8 @@ public partial class SymbolDesignerViewModel
             // Path
             PathData = dto.PathData ?? string.Empty,
             Count = Math.Clamp(dto.Count, 1, 100),
-            IncludeSource = dto.IncludeSource,
+            PathOffset = dto.PathOffset,
+            PathAlign = dto.PathAlign,
             // Rectangular
             Columns = Math.Clamp(dto.Columns, 1, 100),
             Rows = Math.Clamp(dto.Rows, 1, 100),

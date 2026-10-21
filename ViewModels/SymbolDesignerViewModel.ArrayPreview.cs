@@ -22,8 +22,28 @@ public partial class SymbolDesignerViewModel
     /// <summary>预览式创建：数量（Path / Polar 用，1..100）。改动即 RebuildArrayPreview 重建预览。</summary>
     [ObservableProperty] private int _pathArrayCount = 5;
 
-    /// <summary>预览式创建：是否包含源（Path 用，第一份与源重合）。改动即 RebuildArrayPreview 重建预览。</summary>
-    [ObservableProperty] private bool _pathArrayIncludeSource = true;
+    /// <summary>预览式创建：路径阵列"偏移距离"（副本中心与参考路径的垂直距离，
+    /// 默认自动取"源中心到路径的当前最近距离"）。手动改数值会自动退出"自动保持"模式。
+    /// 改动即 RebuildArrayPreview 重建预览。</summary>
+    [ObservableProperty] private double _pathArrayOffset;
+
+    /// <summary>预览式创建：偏移距离是否自动保持当前值（默认 true）。
+    /// 打开 = 路径 / 源变化时重算"源中心到路径的最近距离"并回写；关闭 = 只用手动输入的偏移。</summary>
+    [ObservableProperty] private bool _pathArrayOffsetAuto = true;
+
+    /// <summary>界面显示的偏移距离（**绝对值**，恒 ≥ 0）。
+    /// 内部 PathArrayOffset 有符号（正负区分路径左右侧），用户不该被符号困扰：
+    /// 输入 10 = 保持源所在那一侧、距离 10。手动改本属性 → 退出自动模式。</summary>
+    [ObservableProperty] private double _pathArrayOffsetDistance;
+
+    /// <summary>偏移方向（+1 / -1）：源位于路径切向的哪一侧。自动模式重算时刷新，手改距离时沿用。</summary>
+    private int _pathArrayOffsetSign = 1;
+
+    /// <summary>预览式创建：副本是否随路径切线旋转（默认 true = 切向站立，对齐 AutoCAD "Align items"）。</summary>
+    [ObservableProperty] private bool _pathArrayAlign = true;
+
+    /// <summary>重入守卫：内部回写 PathArrayOffset / PathArrayOffsetDistance 时勿再互相触发。</summary>
+    private bool _syncingArrayOffset;
 
     // ── Rectangular 预览参数 ──
     /// <summary>列数（横向，沿 +X）。</summary>
@@ -129,7 +149,35 @@ public partial class SymbolDesignerViewModel
 
     partial void OnPathArrayCountChanged(int value) => OnArrayParamsChanged();
 
-    partial void OnPathArrayIncludeSourceChanged(bool value) => OnArrayParamsChanged();
+    /// <summary>用户手动输入偏移距离（绝对值）：保持源所在那一侧（符号沿用），退出自动模式。</summary>
+    partial void OnPathArrayOffsetDistanceChanged(double value)
+    {
+        if (_syncingArrayOffset) return;
+        // 负号 = 切到路径另一侧（对称），数值仍归一到正
+        if (value < 0)
+        {
+            _pathArrayOffsetSign = -_pathArrayOffsetSign;
+            value = -value;
+        }
+        // 手动改数值 = 用户接管偏移量 → 退出自动模式（否则下次路径 / 源变化会把手改值冲掉）
+        if (PathArrayOffsetAuto) PathArrayOffsetAuto = false;
+        _syncingArrayOffset = true;
+        PathArrayOffset = _pathArrayOffsetSign * value;
+        if (System.Math.Abs(PathArrayOffsetDistance - value) > 1e-12)
+            PathArrayOffsetDistance = value; // 负输入归一成正
+        _syncingArrayOffset = false;
+        OnArrayParamsChanged();
+    }
+
+    partial void OnPathArrayOffsetAutoChanged(bool value)
+    {
+        if (!value) return;
+        // 切回自动：立即按当前源与路径重算并重建（自动值变了 → 预览要跟着动）
+        SyncAutoPathOffset();
+        OnArrayParamsChanged();
+    }
+
+    partial void OnPathArrayAlignChanged(bool value) => OnArrayParamsChanged();
 
     partial void OnArrayPreviewColumnsChanged(int value) => OnArrayParamsChanged();
 
@@ -176,6 +224,10 @@ public partial class SymbolDesignerViewModel
         }
         // 同步类型下拉初始选中项（首次打开时 SelectedArrayTypeOption 仍为 null）
         SelectedArrayTypeOption = ArrayTypeOptions.FirstOrDefault(o => o.Value == ArrayPreviewType);
+        // 新一次创建从"自动保持当前偏移"起步（上次手动输入的值不留到新阵列）
+        _syncingArrayOffset = true;
+        PathArrayOffsetAuto = true;
+        _syncingArrayOffset = false;
         IsPathArrayPreviewOpen = true;
         RebuildArrayPreview();
     }
@@ -189,7 +241,7 @@ public partial class SymbolDesignerViewModel
         foreach (var p in Primitives)
         {
             if (src is not null && ReferenceEquals(p, src)) continue;
-            if (CanvasPathData(p) is null) continue;
+            if (CanvasGeometry(p) is null) continue;
             string name = TypeDisplayName(p.TypeKey);
             counters.TryGetValue(name, out int n);
             counters[name] = ++n;
@@ -222,19 +274,69 @@ public partial class SymbolDesignerViewModel
     {
         PathArrayPreviewItems.Clear();
         if (_previewSource is null) return;
+        // 自动模式：按当前源 / 路径重算偏移距离（回写 PathArrayOffset）后再装配
+        if (ArrayPreviewType == Models.ArrayType.Path) SyncAutoPathOffset();
         var arr = ArrayInstanceFromPreview();
         if (arr is null) return;
         UpdatePolarGuide(arr);
-        // 路径阵列源不一定在折线起点，第 1 份是真实新增副本，不能跳过
-        bool skipSourceSlot = arr.Type != Models.ArrayType.Path;
+        // 一律跳过第 1 份：三种阵列布局的第一份都落在源当前位置（矩形/环形 = 源位本身；
+        // 路径 = 源中心在路径上的投影点 + 法向 PathOffset，等价于源当前位置）。
+        // 源本体已在画布上，重复绘制只会重叠；数量 N 表示"含源在内共 N 个"。
         int idx = 0;
         foreach (var c in BuildArrayClones(arr, Primitives.Count))
         {
-            if (skipSourceSlot && idx == 0) { idx++; continue; }
-            idx++;
+            if (idx++ == 0) continue;
             PathArrayPreviewItems.Add(c);
         }
     }
+
+    /// <summary>自动模式：重算"源中心到路径的最近距离"并回写内部有符号偏移 + 界面距离（不触发重建）。
+    /// 手动模式 / 无源 / 无路径 → 不动。</summary>
+    private void SyncAutoPathOffset()
+    {
+        if (!PathArrayOffsetAuto) return;
+        if (ComputeAutoPathOffset() is not { } v) return;
+        _syncingArrayOffset = true;
+        PathArrayOffset = v;
+        _pathArrayOffsetSign = v < 0 ? -1 : 1;
+        PathArrayOffsetDistance = System.Math.Abs(v);
+        _syncingArrayOffset = false;
+    }
+
+    /// <summary>源中心到参考路径的有符号最近距离（画布坐标；正 = 路径切向左侧）。
+    /// 路径走"几何 → 摊平直线段 → 最近点投影"通用入口。源 / 路径缺失 → null。</summary>
+    private double? ComputeAutoPathOffset()
+    {
+        // 创建预览：源 = 画布选中图元，路径 = 下拉选中的图元
+        if (_previewSource is { } src)
+        {
+            if (SelectedPathOption?.Item is not { } pathItem) return null;
+            if (CanvasGeometry(pathItem) is not { } pathGeo) return null;
+            return ProjectOffset(pathGeo, SourceCenter(src));
+        }
+        // 编辑已有阵列：没有预览源，用阵列自身的源快照 + 路径快照
+        if (_editingArray is { } arr)
+        {
+            if (ParsePathData(arr.PathData) is not { } pathGeo) return null;
+            return ProjectOffset(pathGeo, new System.Windows.Point(
+                arr.Source.X + arr.Source.Width / 2,
+                arr.Source.Y + arr.Source.Height / 2));
+        }
+        return null;
+    }
+
+    /// <summary>把画布坐标点投影到路径几何，返回有符号垂直距离；路径为空 → null。</summary>
+    private static double? ProjectOffset(System.Windows.Media.Geometry pathGeo, System.Windows.Point point)
+    {
+        var segments = Converters.PolylineToSegments.Convert(pathGeo);
+        if (segments.Count == 0) return null;
+        return Converters.PathDistributor.ProjectOntoPath(segments, point)?.SignedOffset;
+    }
+
+    /// <summary>源的画布中心（包围盒中心）：全工程统一约定"中心 = 包围盒中心"，
+    /// 也是阵列副本的旋转枢轴（ContentPresenter RenderTransformOrigin=0.5,0.5）。</summary>
+    private static System.Windows.Point SourceCenter(PrimitiveItem item)
+        => new(item.X + item.Width / 2, item.Y + item.Height / 2);
 
     /// <summary>把预览态参数装配成 ArrayInstance（Path 类型要求已有可用路径）。</summary>
     private ArrayInstance? ArrayInstanceFromPreview()
@@ -262,14 +364,17 @@ public partial class SymbolDesignerViewModel
                 arr.RotateItems = ArrayPreviewRotateItems;
                 break;
             default:
-                // 路径几何必须为**画布绝对坐标**：BuildArrayClones 把副本中心直接放到锚点上
-                // （clone.X = p.X - ox），不加任何偏移。故这里存通用入口产出的画布坐标路径，
-                // 而非路径图元自己的 PathData（那是局部坐标：折线/履带的几何都相对自身 X/Y）。
+                // 路径几何必须为**画布绝对坐标**：BuildArrayClones 把副本中心直接落到布局点上，
+                // 只再加阵列整体 Offset。故这里存通用入口产出的画布坐标路径，而非路径图元自己的
+                // PathData（那是局部坐标：折线 / 履带的几何都相对自身 X/Y）。
                 if (SelectedPathOption?.Item is not { } pathItem) return null;
-                if (CanvasPathData(pathItem) is not { } pathData) return null;
+                if (CanvasGeometry(pathItem) is not { } pathGeo) return null;
+                string pathData = pathGeo.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                if (string.IsNullOrWhiteSpace(pathData)) return null;
                 arr.PathData = pathData;
                 arr.Count = Math.Clamp(PathArrayCount, 1, 100);
-                arr.IncludeSource = PathArrayIncludeSource;
+                arr.PathOffset = PathArrayOffset;
+                arr.PathAlign = PathArrayAlign;
                 break;
         }
         return arr;
@@ -380,10 +485,10 @@ public partial class SymbolDesignerViewModel
         SyncArraySelectionHighlight();
     }
 
-    /// <summary>按 ArrayInstance 计算 N 份克隆：按类型分发布局计算，统一用"锚点=源包围盒中心"变换。
+    /// <summary>按 ArrayInstance 计算 N 份克隆：按类型分发布局计算，统一以"源包围盒中心"为锚。
     /// - Rectangular：行列网格（无参考路径）
     /// - Polar：绕圆心圆周分布（无参考路径）
-    /// - Path：沿折线均匀分布（原 POC 1）
+    /// - Path：沿路径分布，副本中心 = 路径点 + 法线 × PathOffset（保持与路径恒定距离）
     /// 预览式创建（RebuildArrayPreview）与正式渲染（RebuildArrayRenderItems）共用。</summary>
     private List<PrimitiveItem> BuildArrayClones(ArrayInstance arr, int globalZStart)
     {
@@ -400,7 +505,8 @@ public partial class SymbolDesignerViewModel
                 BuildPathPlacements(arr, anchors);
                 break;
         }
-        // 锚点 = 源包围盒中心（局部坐标，旋转枢轴）
+        // 锚 = 源包围盒中心（局部坐标）：渲染端 ContentPresenter RenderTransformOrigin=0.5,0.5，
+        // 副本绕自身中心旋转 → 旋转不移动中心，故中心对齐落点即得"锚点恒在落点上"。
         double ox = arr.Source.Width / 2;
         double oy = arr.Source.Height / 2;
         int z = globalZStart + arr.ZIndexOffset;
@@ -415,14 +521,25 @@ public partial class SymbolDesignerViewModel
             clone.IsArraySourceClone = i == 0;
             // 编辑源模式：源由画布上的编辑源图元顶替，隐藏源位克隆避免两体重叠
             if (i == 0 && _isArraySourceEditMode) clone.IsVisible = false;
-            // 源包围盒中心（局部坐标 = clone.Width/Height 的一半）。渲染端 ContentPresenter
-            // RenderTransformOrigin=0.5,0.5 → 副本绕自身中心旋转，旋转不移动中心。
-            // 因此只需把图形中心平移到落点 p（+ 阵列整体位移）即可让中心精确落在 p；
-            // 旧实现按"旋转中心=源左上角(0,0)"推导、对落点加 θ 相关补偿（ox·cosθ-oy·sinθ），
-            // 与 0.5,0.5 旋转原点矛盾 → RotateItems=true 时副本中心偏离 p（参考圆环与副本错位）。
             clone.X = p.X - ox + arr.OffsetX;
             clone.Y = p.Y - oy + arr.OffsetY;
-            clone.Rotation = p.AngleDeg;
+            if (arr.Type == Models.ArrayType.Path)
+            {
+                // 路径阵列：中心沿路径法线再偏移 PathOffset（AutoCAD 基点语义）。
+                // 法线 = 切线旋转 +90°（y-down）：n = (-sinθ, cosθ)，与 ProjectOntoPath 的
+                // 有符号距离同一约定 → 源所在的那一侧、那个距离，在全部副本上保持不变。
+                if (arr.PathOffset != 0)
+                {
+                    double rad = p.AngleDeg * System.Math.PI / 180.0;
+                    clone.X += -System.Math.Sin(rad) * arr.PathOffset;
+                    clone.Y += System.Math.Cos(rad) * arr.PathOffset;
+                }
+                if (arr.PathAlign) clone.Rotation = p.AngleDeg;
+            }
+            else
+            {
+                clone.Rotation = p.AngleDeg;
+            }
             clone.ZIndex = z;
             clone.IsSelected = false;  // 阵列副本不可作为普通图元被选中（选中走 SelectArray 整体高亮）
             clones.Add(clone);
@@ -539,28 +656,49 @@ public partial class SymbolDesignerViewModel
         }
     }
 
-    /// <summary>路径阵列布局：沿参考路径均匀分布（原 POC 1 逻辑）。
-    /// 路径走"几何 → 最长轮廓"通用入口，故圆轮廓 / 履带 / 布尔结果都能当路径，
-    /// 弧与闭合也由 PolylineToSegments 交给 WPF 摊平。</summary>
+    /// <summary>路径阵列布局：以"源中心在路径上的投影点"为起点（即"从源当前位置开始"），
+    /// 沿路径等弧长推进，副本中心在 BuildArrayClones 里再沿法线偏移 PathOffset。
+    /// 路径走"几何 → 最长轮廓 → 摊平直线段"通用入口，故圆轮廓 / 履带 / 布尔结果都能当路径。
+    /// 注意：这里给的是**路径落点**（未含 PathOffset），PathOffset 在装配克隆时统一施加。</summary>
     private static void BuildPathPlacements(ArrayInstance arr, List<PlacementP> anchors)
     {
         var segments = Converters.PolylineToSegments.Convert(ParsePathData(arr.PathData));
         if (segments.Count == 0) return;
-        var placements = Converters.PathDistributor.DistributeAlongPath(
-            segments, arr.Count, arr.IncludeSource);
-        foreach (var p in placements)
+
+        // 起始弧长：源中心到路径的最近投影点（= 源当前位置在路径上的落点）
+        var proj = Converters.PathDistributor.ProjectOntoPath(
+            segments, new System.Windows.Point(
+                arr.Source.X + arr.Source.Width / 2,
+                arr.Source.Y + arr.Source.Height / 2));
+        double startArc = proj?.ArcLength ?? 0;
+
+        // 闭合路径（末点回到首点）→ 整圈等分并回绕；开放路径 → 从起点排到终点
+        bool closed = IsClosedContour(segments);
+        foreach (var p in Converters.PathDistributor.DistributeAlongPath(
+                     segments, System.Math.Clamp(arr.Count, 1, 100), startArc, closed))
             anchors.Add(new PlacementP(p.X, p.Y, p.AngleDeg));
     }
 
-    /// <summary>图元 → 画布坐标的路径 mini-language（保留弧/贝塞尔，不提前摊平）。
+    /// <summary>段序列是否闭合（末段终点 ≈ 首段起点；PolylineToSegments 对闭合轮廓补了收尾边）。</summary>
+    private static bool IsClosedContour(IReadOnlyList<Converters.PathDistributor.PathSegment> segments)
+    {
+        if (segments.Count < 2) return false;
+        var a = segments[0].Start;
+        var b = segments[segments.Count - 1].End;
+        double dx = a.X - b.X;
+        double dy = a.Y - b.Y;
+        return dx * dx + dy * dy < 1e-9;
+    }
+
+    /// <summary>图元 → 画布坐标几何（保留弧/贝塞尔，不提前摊平）。
     /// 走**通用几何入口**：PrimitiveItem.SelectionGeometry 已按类型分发、覆盖全部图元
     /// （矩形/圆角/椭圆/三角/圆环/扇形/直线/折线(开+闭)/带状折线/布尔/履带），
     /// 只是它是**局部坐标**（相对自身 X/Y），这里把各段整体平移到画布坐标。
     /// 以后新增图元只要 SelectionGeometry 里有它，路径阵列自动支持 —— 不在此加类型分支。
     /// 不用"几何挂 Transform + 收口 PathGeometry"的写法：实测该组合对 RectangleGeometry /
     /// EllipseGeometry **不会**把变换烘进坐标（仍输出 M0,0），只有 GeometryGroup 会 —— 行为不一致。
-    /// 逐段平移与几何类型无关，结果确定。</summary>
-    private static string? CanvasPathData(PrimitiveItem? item)
+    /// 逐段平移与几何类型无关，结果确定。几何为空 / 序列化为空串 → null（视为"不可作路径"）。</summary>
+    private static System.Windows.Media.Geometry? CanvasGeometry(PrimitiveItem? item)
     {
         if (item?.SelectionGeometry is not { } local) return null;
         // CreateFromGeometry 对"已是 PathGeometry"的输入会**原样返回同一实例**（履带 / 带状折线 /
@@ -578,8 +716,9 @@ public partial class SymbolDesignerViewModel
             }
         }
         // 空几何（如宽高为 0 的图元）序列化为 "" → 视为"不可作路径"，避免建出 0 份副本的空阵列。
-        string data = pg.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        return string.IsNullOrWhiteSpace(data) ? null : data;
+        return string.IsNullOrWhiteSpace(pg.ToString(System.Globalization.CultureInfo.InvariantCulture))
+            ? null
+            : pg;
     }
 
     /// <summary>把一段路径段整体平移（保留段类型，不摊平）。</summary>
