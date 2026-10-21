@@ -53,13 +53,17 @@ public static class XamlExporter
         sb.AppendLine("<Canvas xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\"");
         sb.AppendLine("        xmlns:x=\"http://schemas.microsoft.com/winfx/2006/xaml\"");
         sb.AppendLine($"        Width=\"{Fmt(maxX - minX)}\" Height=\"{Fmt(maxY - minY)}\"");
-        sb.AppendLine($"        Background=\"#1a2a3a\">");
+        sb.AppendLine($"        Background=\"{CanvasBackground}\">");
 
-        // 写出 Pattern 资源定义（Canvas.Resources）。
-        if (ctx.PatternResources.Count > 0)
+        // 写出画刷资源定义（Canvas.Resources）：图案 + 渐变
+        if (ctx.PatternResources.Count > 0 || ctx.GradientResources.Count > 0)
         {
             sb.AppendLine("    <Canvas.Resources>");
             foreach (var (_, resXaml) in ctx.PatternResources)
+            {
+                sb.AppendLine("        " + resXaml);
+            }
+            foreach (var (_, resXaml) in ctx.GradientResources)
             {
                 sb.AppendLine("        " + resXaml);
             }
@@ -81,11 +85,16 @@ public static class XamlExporter
     private sealed class ExportContext
     {
         public Dictionary<string, string> PatternResources { get; } = new();
+        /// <summary>渐变画刷资源：Key → XAML。Fill 里只写 {StaticResource Key}。</summary>
+        public Dictionary<string, string> GradientResources { get; } = new();
         // 当前图元的 Fill 表达式 / Stroke 表达式 / 线宽。ExportOne 调用前由调用方设置。
         public string FillExpression = "#FFa8c4d8";
         public string StrokeExpression = "#FF5a7a8c";
         public string StrokeWidthExpression = "0.8";
     }
+
+    /// <summary>导出画布底色。圆环的内圆用它"挖洞"，两处必须一致。</summary>
+    private const string CanvasBackground = "#1a2a3a";
 
     /// <summary>把单个 PrimitiveItem 导出为 XAML 元素字符串（坐标相对包围盒左上角归一化）。</summary>
     public static string ExportOne(PrimitiveItem p, double originX, double originY)
@@ -128,6 +137,9 @@ public static class XamlExporter
             "Pie"
                 => PieElement(p, left, top, z, ctx),
 
+            "Ring"
+                => RingElement(left, top, w, h, z, p, ctx),
+
             "BooleanPath"
                 => BooleanPathElement(p, left, top, z, ctx),
 
@@ -143,7 +155,9 @@ public static class XamlExporter
     /// <summary>把旋转注入元素标签：RenderTransformOrigin=0.5,0.5 让旋转绕**自身中心**
     /// （与画布渲染的 ContentPresenter RenderTransformOrigin 一致）。
     /// 用 {RotateTransform Angle=..} 标记扩展 —— WPF 的 TransformConverter **不接受**
-    /// WinRT 风格的 rotate(angle) 简写（实测抛"无法从文本创建 RenderTransform"）。</summary>
+    /// WinRT 风格的 rotate(angle) 简写（实测抛"无法从文本创建 RenderTransform"）。
+    /// 注入点用"标签嵌套深度"扫描定位：渐变填充等表达式会把 &lt;LinearGradientBrush&gt;
+    /// 直接内联进属性值，其中的 '>' 不是外层标签的结束，长度/引号扫描都会误判。</summary>
     private static string ApplyRotation(string element, double angleDeg)
     {
         string trimmed = element.TrimStart();
@@ -153,12 +167,23 @@ public static class XamlExporter
             return element;
 
         string attr = $" RenderTransformOrigin=\"0.5,0.5\" RenderTransform=\"{{RotateTransform Angle={Fmt(angleDeg)}}}\"";
-        int selfClose = element.LastIndexOf("/>", System.StringComparison.Ordinal);
-        if (selfClose >= 0)
-            return element[..selfClose].TrimEnd() + attr + " />";
 
-        int tagEnd = element.LastIndexOf('>');
-        return tagEnd >= 0 ? element[..tagEnd].TrimEnd() + attr + ">" : element;
+        // 深度扫描：每个 '<' 进一层、每个 '>' 出一层，回到 0 的那个 '>' 就是外层起始标签的结束。
+        // 内联的 <LinearGradientBrush ...><GradientStop/></LinearGradientBrush> 成对匹配，不影响结果。
+        int depth = 0, tagEnd = -1;
+        for (int i = 0; i < element.Length; i++)
+        {
+            char c = element[i];
+            if (c == '<') depth++;
+            else if (c == '>' && --depth == 0) { tagEnd = i; break; }
+        }
+        if (tagEnd < 0) return element;
+
+        int slash = tagEnd - 1;
+        while (slash > 0 && char.IsWhiteSpace(element[slash])) slash--;
+        if (element[slash] == '/')
+            return element[..slash].TrimEnd() + attr + " />" + element[(tagEnd + 1)..];
+        return element[..tagEnd].TrimEnd() + attr + element[tagEnd..];
     }
 
     // ========================== 颜色/画刷表达式生成 ==========================
@@ -184,7 +209,7 @@ public static class XamlExporter
                 }
 
             case Models.FillStyle.Gradient:
-                return BuildLinearGradient(p.GradientStartColor, p.GradientEndColor, p.FillBrightness, p.FillOpacity, 45);
+                return BuildLinearGradient(p.GradientStartColor, p.GradientEndColor, p.FillBrightness, p.FillOpacity, 45, ctx);
 
             case Models.FillStyle.MonochromeGradient:
                 {
@@ -192,7 +217,7 @@ public static class XamlExporter
                     // 注意：DeriveMonochromeEnd 已把 brightness/opacity 合成进去，所以 BuildLinearGradient 不再二次合成。
                     var startHex = ColorUtil.ApplyBrightnessAndOpacity(p.FillColor, p.FillBrightness, p.FillOpacity);
                     var endHex = ColorUtil.DeriveMonochromeEnd(p.FillColor, p.FillBrightness, p.FillOpacity);
-                    return BuildLinearGradientPreApplied(startHex, endHex, 45);
+                    return BuildLinearGradientPreApplied(startHex, endHex, 45, ctx);
                 }
 
             case Models.FillStyle.Pattern:
@@ -233,34 +258,39 @@ public static class XamlExporter
         return HexToArgb(hex);
     }
 
-    private static string BuildLinearGradient(string startHex, string endHex, double brightness, double opacity, double angle)
+    /// <summary>线性渐变：注册到 Canvas.Resources，Fill 只写 {StaticResource Key}。
+    /// 不能把 &lt;LinearGradientBrush&gt; 内联进属性值 —— Fill="&lt;LinearGradientBrush…&gt;"
+    /// 是非法 XAML（XamlReader 抛 "'&lt;' is an invalid attribute character"），
+    /// 之前所有渐变图元导出后都无法加载。</summary>
+    private static string BuildLinearGradient(string startHex, string endHex, double brightness, double opacity, double angle, ExportContext ctx)
     {
         string start = HexToArgb(ColorUtil.ApplyBrightnessAndOpacity(startHex, brightness, opacity));
         string end = HexToArgb(ColorUtil.ApplyBrightnessAndOpacity(endHex, brightness, opacity));
-        double rad = angle * Math.PI / 180.0;
-        double dx = Math.Cos(rad), dy = Math.Sin(rad);
-        double x1 = 0.5 - dx * 0.5, y1 = 0.5 - dy * 0.5;
-        double x2 = 0.5 + dx * 0.5, y2 = 0.5 + dy * 0.5;
-        return $"<LinearGradientBrush StartPoint=\"{Fmt(x1)},{Fmt(y1)}\" EndPoint=\"{Fmt(x2)},{Fmt(y2)}\">" +
-               $"<GradientStop Offset=\"0\" Color=\"{start}\"/>" +
-               $"<GradientStop Offset=\"1\" Color=\"{end}\"/>" +
-               $"</LinearGradientBrush>";
+        return RegisterGradient(start, end, angle, ctx);
     }
 
     /// <summary>渐变两端已经合成过（亮度/透明度已并入），直接写 GradientStop。
     /// 用于 MonochromeGradient：DeriveMonochromeEnd 已内部走完亮度合成，不能二次合成。</summary>
-    private static string BuildLinearGradientPreApplied(string startHex, string endHex, double angle)
+    private static string BuildLinearGradientPreApplied(string startHex, string endHex, double angle, ExportContext ctx)
+        => RegisterGradient(HexToArgb(startHex), HexToArgb(endHex), angle, ctx);
+
+    /// <summary>把一组渐变端点登记为资源并返回引用表达式。同色/同角度复用同一个 Key。</summary>
+    private static string RegisterGradient(string start, string end, double angle, ExportContext ctx)
     {
-        string start = HexToArgb(startHex);
-        string end = HexToArgb(endHex);
-        double rad = angle * Math.PI / 180.0;
-        double dx = Math.Cos(rad), dy = Math.Sin(rad);
-        double x1 = 0.5 - dx * 0.5, y1 = 0.5 - dy * 0.5;
-        double x2 = 0.5 + dx * 0.5, y2 = 0.5 + dy * 0.5;
-        return $"<LinearGradientBrush StartPoint=\"{Fmt(x1)},{Fmt(y1)}\" EndPoint=\"{Fmt(x2)},{Fmt(y2)}\">" +
-               $"<GradientStop Offset=\"0\" Color=\"{start}\"/>" +
-               $"<GradientStop Offset=\"1\" Color=\"{end}\"/>" +
-               $"</LinearGradientBrush>";
+        string key = $"Grad_{start.TrimStart('#')}_{end.TrimStart('#')}_{Fmt(angle)}";
+        if (!ctx.GradientResources.ContainsKey(key))
+        {
+            double rad = angle * Math.PI / 180.0;
+            double dx = System.Math.Cos(rad), dy = System.Math.Sin(rad);
+            ctx.GradientResources[key] =
+                $"<LinearGradientBrush x:Key=\"{key}\"" +
+                $" StartPoint=\"{Fmt(0.5 - dx * 0.5)},{Fmt(0.5 - dy * 0.5)}\"" +
+                $" EndPoint=\"{Fmt(0.5 + dx * 0.5)},{Fmt(0.5 + dy * 0.5)}\">" +
+                $"<GradientStop Offset=\"0\" Color=\"{start}\"/>" +
+                $"<GradientStop Offset=\"1\" Color=\"{end}\"/>" +
+                "</LinearGradientBrush>";
+        }
+        return $"{{StaticResource {key}}}";
     }
 
     private static string HexToArgb(string hex)
@@ -394,6 +424,22 @@ public static class XamlExporter
         => $"<Ellipse Canvas.Left=\"{left}\" Canvas.Top=\"{top}\"" +
            $" Width=\"{w}\" Height=\"{h}\" Panel.ZIndex=\"{z}\"" +
            $" Fill=\"{ctx.FillExpression}\" Stroke=\"{ctx.StrokeExpression}\" StrokeThickness=\"{ctx.StrokeWidthExpression}\" />";
+
+    /// <summary>圆环导出：单 Path，Data = RingGeometry（外圆顺 + 内圆逆的 Nonzero 双环，
+    /// 内圆天然成洞）。用单 Path 而不是两个 Ellipse，是因为填充（尤其渐变/图案）
+    /// 必须作用在整条环带上：两个 Ellipse 的"挖洞"只能靠底色覆盖，渐变会被内圆截断。
+    /// 局部坐标（圆心 = 元素中心），Stretch=None + Canvas.Left/Top 定位。</summary>
+    private static string RingElement(string left, string top, string w, string h, string z,
+        PrimitiveItem p, ExportContext ctx)
+    {
+        var geom = p.RingGeometry;
+        if (geom is null) return Comment("Ring 尺寸无效，无法导出");
+        string dataStr = System.Security.SecurityElement.Escape(geom.ToString(CultureInfo.InvariantCulture));
+        return $"<Path Canvas.Left=\"{left}\" Canvas.Top=\"{top}\"" +
+               $" Data=\"{dataStr}\" Panel.ZIndex=\"{z}\"" +
+               $" Fill=\"{ctx.FillExpression}\" Stroke=\"{ctx.StrokeExpression}\" StrokeThickness=\"{ctx.StrokeWidthExpression}\"" +
+               $" StrokeLineJoin=\"Miter\" Stretch=\"None\" />";
+    }
 
     /// <summary>扇形导出：单 Path，Data = PieGeometry（M 弧起点 A 弧终点 L 圆心 Z 闭合扇面），
     /// 局部坐标（圆心 = 元素中心），Stretch=None + Canvas.Left/Top 定位。</summary>
