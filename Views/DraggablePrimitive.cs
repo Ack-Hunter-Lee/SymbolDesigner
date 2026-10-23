@@ -196,11 +196,22 @@ public class DraggablePrimitive : ContentControl
     /// <summary>圆环"圆心十字区"拾取半径：与 VM 子对象识别一致（视图中心区域用于拾取圆心）。</summary>
     private const double CenterPickRadius = 6.0;
 
+    /// <summary>描边命中用的"笔"：半宽 ≈ EntityHitTolerance，且不小于真实线宽（粗描边整条都可点）。
+    /// StrokeContains 用笔宽作为完整厚度，所以容差要乘 2。</summary>
+    private static Pen HitPen(PrimitiveItem item)
+        => new Pen(Brushes.Transparent, Math.Max(EntityHitTolerance * 2, item.StrokeWidth));
+
+    /// <summary>无填充图元（FillStyle=None）视觉上只有描边（线框），因此只允许点中描边，
+    /// 不能靠"点包围盒内部空白"选中/拖动。有填充的图元仍按填充区域判定。</summary>
+    private static bool IsStrokeOnly(PrimitiveItem item)
+        => item.FillStyle == Models.FillStyle.None;
+
     /// <summary>判断按下的**图元局部坐标**是否落在实体几何上（而非包围盒空白处）。
     /// 参数 local 是图元自身未旋转坐标系的点：图元容器的旋转由 RenderTransform 承担，
     /// Mouse.GetPosition 已反变换回该坐标系，这里无需再处理 Rotation。
     /// 按模板实际渲染几何判定：矩形/圆角矩形=矩形域；椭圆=椭圆域；三角=三角形域；
     /// 圆环=环带（含圆心十字区，供约束拾取圆心）；直线/Polyline/BandPolyline=骨架折线 ± 容差。
+    /// 无填充（线框）图元只认描边，见 <see cref="IsStrokeOnly"/>。
     /// 未知类型默认命中（保守，不阻止选中）。</summary>
     private static bool HitEntity(PrimitiveItem item, Point local)
     {
@@ -213,23 +224,35 @@ public class DraggablePrimitive : ContentControl
             {
                 double r = item.CornerRadius;
                 var g = new RectangleGeometry(new Rect(0, 0, item.Width, item.Height), r, r);
-                return g.FillContains(p);
+                return IsStrokeOnly(item) ? g.StrokeContains(HitPen(item), p) : g.FillContains(p);
             }
 
             case nameof(L1Primitive.Ellipse):
             {
                 var g = new EllipseGeometry(new Point(item.Width / 2, item.Height / 2),
                                             item.Width / 2, item.Height / 2);
-                return g.FillContains(p);
+                return IsStrokeOnly(item) ? g.StrokeContains(HitPen(item), p) : g.FillContains(p);
             }
 
             case nameof(L1Primitive.Triangle):
             {
                 // 模板 Points="0.5,0 1,1 0,1" Stretch=Fill → 局部三角 (0.5W,0)(W,H)(0,H)
-                return PointInTriangle(p,
-                    new Point(0.5 * item.Width, 0),
-                    new Point(item.Width, item.Height),
-                    new Point(0, item.Height));
+                if (!IsStrokeOnly(item))
+                {
+                    return PointInTriangle(p,
+                        new Point(0.5 * item.Width, 0),
+                        new Point(item.Width, item.Height),
+                        new Point(0, item.Height));
+                }
+                var tri = new StreamGeometry();
+                using (var ctx = tri.Open())
+                {
+                    ctx.BeginFigure(new Point(0.5 * item.Width, 0), true, true);
+                    ctx.LineTo(new Point(item.Width, item.Height), true, true);
+                    ctx.LineTo(new Point(0, item.Height), true, true);
+                }
+                tri.Freeze();
+                return tri.StrokeContains(HitPen(item), p);
             }
 
             case nameof(L1Primitive.Ring):
@@ -237,14 +260,37 @@ public class DraggablePrimitive : ContentControl
                 var c = new Point(item.Width / 2, item.Height / 2);
                 // 圆心十字区：供重合约束"点选圆心"（与 VM 子对象识别一致）
                 if (Dist(p, c) <= CenterPickRadius) return true;
+                double outer = Math.Min(item.Width, item.Height) / 2 - PrimitiveItem.RingStrokeHalfThickness;
+                double inner = Math.Max(0.01, Math.Min(item.InnerRadius, outer - 0.01));
+                double d = Dist(p, c);
+                // 无填充 Ring = 两个同心线框：只认内外两条圆周（含圆心区），环带中间的空隙不可点
+                if (IsStrokeOnly(item))
+                {
+                    double tol = Math.Max(EntityHitTolerance, item.StrokeWidth / 2);
+                    return Math.Abs(d - outer) <= tol || Math.Abs(d - inner) <= tol;
+                }
                 // 环带：优先用现成 RingGeometry 填充判定（外顺内逆 Nonzero = 环带）
                 if (item.RingGeometry is { } ringGeom)
                     return ringGeom.FillContains(p);
                 // 回退：外圆内且内圆外
-                double outer = Math.Min(item.Width, item.Height) / 2 - PrimitiveItem.RingStrokeHalfThickness;
-                double inner = Math.Max(0.01, Math.Min(item.InnerRadius, outer - 0.01));
-                double d = Dist(p, c);
                 return d <= outer && d >= inner;
+            }
+
+            case nameof(L1Primitive.Pie):
+            {
+                if (item.PieGeometry is not { } pieGeom) return true;
+                return IsStrokeOnly(item)
+                    ? pieGeom.StrokeContains(HitPen(item), p)
+                    : pieGeom.FillContains(p);
+            }
+
+            case nameof(L1Primitive.BooleanPath):
+            {
+                // 布尔结果 = 多环闭合骨架，局部几何即 OutlineGeometry
+                if (item.OutlineGeometry is not { } boolGeom) return true;
+                return IsStrokeOnly(item)
+                    ? boolGeom.StrokeContains(HitPen(item), p)
+                    : boolGeom.FillContains(p);
             }
 
             case nameof(L1Primitive.Line):
