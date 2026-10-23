@@ -3136,7 +3136,6 @@
                                         StringFormat="{}{0:0.#}°"
                                         Value="{Binding SelectedItem.Rotation, Mode=TwoWay}" />
                                 </StackPanel>
-                                <!--  扇形属性组（仅 Pie 时显示）：起始角（旋转）+ 扫掠角（夹角）。放最顶部，选中扇形时第一个出现。  -->
                                 <StackPanel
                                     Margin="0,0,0,6"
                                     Visibility="{Binding SelectedItemIsPie, Converter={StaticResource BoolToVis}}">
@@ -4969,13 +4968,20 @@
                                 隐藏行显示红色"已隐藏"徽标，方便一眼找出不可见的多余元素。
                             -->
                             <ListBox
+                                x:Name="ElementsList"
                                 Grid.Row="1"
+                                AllowDrop="True"
                                 Background="{StaticResource Brush.Bg.Transparent}"
                                 BorderThickness="0"
+                                DragOver="OnElementsListDragOver"
+                                Drop="OnElementsListDrop"
                                 ItemsSource="{Binding Primitives}"
+                                PreviewMouseLeftButtonDown="OnElementsListPreviewMouseLeftButtonDown"
+                                PreviewMouseMove="OnElementsListPreviewMouseMove"
                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                SelectedItem="{Binding SelectedItem, Mode=TwoWay}">
+                                SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+                                ToolTip="按住行上下拖动可调整图层前后顺序（列表自上而下 = 由后到前）">
                                 <ListBox.ItemContainerStyle>
                                     <Style TargetType="ListBoxItem">
                                         <Setter Property="Background" Value="{StaticResource Brush.Bg.Transparent}" />
@@ -5096,8 +5102,11 @@
                                                 </Grid>
                                             </Border>
                                             <!--
-                                                第三列：快速定位按钮（左侧，蓝色 E81E 准星）+ 删除按钮（右侧，红色 E74D 垃圾桶）。
-                                                横向 StackPanel 排列。两个按钮 MouseBinding 都走 Read 的 SelectedItem。
+                                                第三列：快速定位（蓝色 E81E 准星）+ 删除（红色 E74D 垃圾桶）。
+                                                横向 StackPanel 排列。
+                                                图层前后顺序改由"按住整行上下拖动"调整（见 ListBox 的拖放事件），
+                                                列表顺序即 Primitives 顺序（= ZIndex 0..N-1），拖完行会实时重排，
+                                                因此能直观看到前后（遮挡）相对关系。
                                             -->
                                             <StackPanel
                                                 Grid.Column="2"

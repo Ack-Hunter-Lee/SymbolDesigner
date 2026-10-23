@@ -466,6 +466,62 @@ public partial class SymbolDesignerView : UserControl
         return null;
     }
 
+    /// <summary>元素面板拖放排序的数据格式标记（仅同进程内使用）。</summary>
+    private const string ElementDragFormat = "SymbolDesigner.ElementRow";
+
+    /// <summary>按下时记录的行图元（尚未达到拖拽阈值），null = 当前没有可拖拽的行。</summary>
+    private PrimitiveItem? _elementDragCandidate;
+
+    /// <summary>按下位置（元素面板坐标），用于判断是否超过系统拖拽阈值。</summary>
+    private Point _elementDragOrigin;
+
+    /// <summary>元素面板按下：记录可拖拽的行；点在行内操作按钮（睁眼/定位/删除）上时不启动拖拽。
+    /// 这些按钮都用 InputBindings.MouseBinding 处理点击，据此识别，避免拖拽抢掉按钮。</summary>
+    private void OnElementsListPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        _elementDragCandidate = null;
+        if (e.OriginalSource is not DependencyObject src) return;
+        for (var d = src; d is not null && d is not ListBoxItem; d = VisualTreeHelper.GetParent(d))
+        {
+            if (d is UIElement el && el.InputBindings.Count > 0) return;
+        }
+        if (FindAncestor<ListBoxItem>(src)?.DataContext is not PrimitiveItem item) return;
+        _elementDragCandidate = item;
+        _elementDragOrigin = e.GetPosition(ElementsList);
+    }
+
+    /// <summary>元素面板拖动：超过系统拖拽阈值才发起拖放，避免普通点击被当成拖拽。</summary>
+    private void OnElementsListPreviewMouseMove(object sender, MouseEventArgs e)
+    {
+        if (_elementDragCandidate is not { } item || e.LeftButton != MouseButtonState.Pressed) return;
+        var p = e.GetPosition(ElementsList);
+        if (Math.Abs(p.X - _elementDragOrigin.X) < SystemParameters.MinimumHorizontalDragDistance &&
+            Math.Abs(p.Y - _elementDragOrigin.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+
+        _elementDragCandidate = null; // 一次按下只发起一次拖放
+        DragDrop.DoDragDrop(ElementsList, new DataObject(ElementDragFormat, item), DragDropEffects.Move);
+    }
+
+    private void OnElementsListDragOver(object sender, DragEventArgs e)
+    {
+        e.Effects = e.Data.GetDataPresent(ElementDragFormat) ? DragDropEffects.Move : DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    /// <summary>元素面板放下：把拖动行移到目标行所在位置（列表顺序 = ZIndex 顺序）。
+    /// 目标行 DataContext 即要插入的索引；落在空白区域时移到最前（列表末行 = 最前层）。</summary>
+    private void OnElementsListDrop(object sender, DragEventArgs e)
+    {
+        if (!e.Data.GetDataPresent(ElementDragFormat) ||
+            e.Data.GetData(ElementDragFormat) is not PrimitiveItem item) return;
+        if (DataContext is not SymbolDesignerViewModel vm) return;
+
+        var target = FindAncestor<ListBoxItem>(e.OriginalSource as DependencyObject)?.DataContext as PrimitiveItem;
+        var targetIndex = target is null ? vm.Primitives.Count - 1 : vm.Primitives.IndexOf(target);
+        vm.MovePrimitiveTo(item, targetIndex);
+        e.Handled = true;
+    }
+
     /// <summary>缩放按钮（+）：以画布中心为锚点放大（ZoomPanViewport 内置）。</summary>
     private void OnZoomInClick(object sender, MouseButtonEventArgs e)
     {

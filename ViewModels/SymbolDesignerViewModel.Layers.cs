@@ -1,19 +1,23 @@
 using CommunityToolkit.Mvvm.Input;
+using SymbolDesigner.Models;
 
 namespace SymbolDesigner.ViewModels;
 
-/// <summary>图层顺序控制：置顶 / 置底 / 上移一层 / 下移一层 + ZIndex 归一化。</summary>
+/// <summary>图层顺序控制：置顶 / 置底 / 上移一层 / 下移一层 + ZIndex 归一化。
+/// 四个命令都接受可选参数 target：元素面板按行传该行图元（无需先选中），
+/// 工具栏 / 属性面板传 null 则作用于当前选中图元。</summary>
 public partial class SymbolDesignerViewModel
 {
     /// <summary>
-    /// 把选中元素移到画布最上层（遮挡所有其他元素）。
-    /// 实现：将 SelectedItem 移到 Primitives 末尾，再重新归一化所有 ZIndex。
+    /// 把目标元素（未指定时用选中元素）移到画布最上层（遮挡所有其他元素）。
+    /// 实现：把元素移到 Primitives 末尾，再重新归一化所有 ZIndex。
     /// </summary>
     [RelayCommand]
-    private void BringToFront()
+    private void BringToFront(PrimitiveItem? target)
     {
-        if (SelectedItem is null) return;
-        var idx = Primitives.IndexOf(SelectedItem);
+        var item = target ?? SelectedItem;
+        if (item is null) return;
+        var idx = Primitives.IndexOf(item);
         if (idx < 0 || idx == Primitives.Count - 1) return;
         ForceCommitEdit(); // 排序 = 独立撤销步骤
         Primitives.Move(idx, Primitives.Count - 1);
@@ -21,13 +25,14 @@ public partial class SymbolDesignerViewModel
     }
 
     /// <summary>
-    /// 把选中元素移到画布最下层（被所有其他元素遮挡）。
+    /// 把目标元素（未指定时用选中元素）移到画布最下层（被所有其他元素遮挡）。
     /// </summary>
     [RelayCommand]
-    private void SendToBack()
+    private void SendToBack(PrimitiveItem? target)
     {
-        if (SelectedItem is null) return;
-        var idx = Primitives.IndexOf(SelectedItem);
+        var item = target ?? SelectedItem;
+        if (item is null) return;
+        var idx = Primitives.IndexOf(item);
         if (idx <= 0) return;
         ForceCommitEdit(); // 排序 = 独立撤销步骤
         Primitives.Move(idx, 0);
@@ -35,13 +40,14 @@ public partial class SymbolDesignerViewModel
     }
 
     /// <summary>
-    /// 把选中元素上移一层（ZIndex +1，遮挡其上方一个元素）。
+    /// 把目标元素（未指定时用选中元素）上移一层（遮挡原上方一个元素）。
     /// </summary>
     [RelayCommand]
-    private void MoveUp()
+    private void MoveUp(PrimitiveItem? target)
     {
-        if (SelectedItem is null) return;
-        var idx = Primitives.IndexOf(SelectedItem);
+        var item = target ?? SelectedItem;
+        if (item is null) return;
+        var idx = Primitives.IndexOf(item);
         if (idx < 0 || idx >= Primitives.Count - 1) return; // 已在最上层
         ForceCommitEdit(); // 排序 = 独立撤销步骤
         Primitives.Move(idx, idx + 1);
@@ -49,16 +55,32 @@ public partial class SymbolDesignerViewModel
     }
 
     /// <summary>
-    /// 把选中元素下移一层（ZIndex -1，被其下方一个元素遮挡）。
+    /// 把目标元素（未指定时用选中元素）下移一层（被原下方一个元素遮挡）。
     /// </summary>
     [RelayCommand]
-    private void MoveDown()
+    private void MoveDown(PrimitiveItem? target)
     {
-        if (SelectedItem is null) return;
-        var idx = Primitives.IndexOf(SelectedItem);
+        var item = target ?? SelectedItem;
+        if (item is null) return;
+        var idx = Primitives.IndexOf(item);
         if (idx <= 0) return; // 已在最下层
         ForceCommitEdit(); // 排序 = 独立撤销步骤
         Primitives.Move(idx, idx - 1);
+        NormalizeZIndex();
+    }
+
+    /// <summary>
+    /// 把图元移动到 Primitives 集合的指定索引（元素面板拖放排序用）。
+    /// 索引夹到 [0, Count-1]；排序作为独立撤销步骤，完成后归一化 ZIndex。
+    /// </summary>
+    public void MovePrimitiveTo(PrimitiveItem item, int targetIndex)
+    {
+        var idx = Primitives.IndexOf(item);
+        if (idx < 0 || Primitives.Count == 0) return;
+        targetIndex = Math.Clamp(targetIndex, 0, Primitives.Count - 1);
+        if (targetIndex == idx) return;
+        ForceCommitEdit(); // 排序 = 独立撤销步骤
+        Primitives.Move(idx, targetIndex);
         NormalizeZIndex();
     }
 
