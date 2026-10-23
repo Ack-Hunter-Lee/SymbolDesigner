@@ -2203,9 +2203,16 @@
                                 拖动端点 = 改变皮带走向：自动穿绕挡路的圆、脱离不再挡路的圆，
                                 两端靠近（< 吸附阈值）自动吸合成闭合环，已闭合时拖开即解除。
                             -->
+                            <!--
+                                Panel.ZIndex 必须高于所有图元容器：图元容器的 ZIndex = 图元自身 ZIndex
+                                （新图元 = Primitives.Count，第一个是 0，其余 ≥ 1），而手柄层之前是默认 0，
+                                只要传送带不是最底层那个图元，它的描边就压在端点手柄之上 —— 点端点实际命中
+                                皮带本体，走"整体拖动"分支，两个端点一起移动。
+                            -->
                             <ItemsControl
                                 IsHitTestVisible="True"
                                 ItemsSource="{Binding BeltHandles}"
+                                Panel.ZIndex="9990"
                                 PreviewMouseLeftButtonDown="OnBeltHandleMouseDown"
                                 PreviewMouseLeftButtonUp="OnBeltHandleMouseUp"
                                 PreviewMouseMove="OnBeltHandleMouseMove"
@@ -2220,37 +2227,46 @@
                                         <Setter Property="Canvas.Left" Value="{Binding X}" />
                                         <Setter Property="Canvas.Top" Value="{Binding Y}" />
                                         <Setter Property="Panel.ZIndex" Value="9996" />
-                                        <Setter Property="Width" Value="3.5" />
-                                        <Setter Property="Height" Value="3.5" />
-                                        <Setter Property="Margin" Value="-1.75,-1.75,0,0" />
+                                        <!--
+                                            命中区 12×12（-6 偏移让中心仍落在端点坐标）：端点方块本身只有 3.5，
+                                            端点又正好在皮带描边上，命中区太小时稍微偏一点就落到皮带上 → 变成整体拖动。
+                                        -->
+                                        <Setter Property="Width" Value="12" />
+                                        <Setter Property="Height" Value="12" />
+                                        <Setter Property="Margin" Value="-6,-6,0,0" />
                                     </Style>
                                 </ItemsControl.ItemContainerStyle>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <!--  端点 A：蓝色方块；端点 B：橙色圆点。反向缩放：屏幕尺寸恒定。  -->
-                                        <Rectangle
-                                            Cursor="SizeAll"
-                                            RenderTransformOrigin="0.5,0.5"
-                                            Stroke="{StaticResource Brush.Brand.Stroke}"
-                                            StrokeThickness="0.1">
-                                            <Rectangle.RenderTransform>
-                                                <ScaleTransform
-                                                    ScaleX="{Binding InverseScale}"
-                                                    ScaleY="{Binding InverseScale}" />
-                                            </Rectangle.RenderTransform>
-                                            <Rectangle.Style>
-                                                <Style TargetType="Rectangle">
-                                                    <Setter Property="Fill" Value="{StaticResource Brush.Port.Input2}" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding Kind}" Value="{x:Static viewmodels:BeltHandleKind.End}">
-                                                            <Setter Property="Fill" Value="{StaticResource Brush.Port.OutputDeep}" />
-                                                            <Setter Property="RadiusX" Value="1.75" />
-                                                            <Setter Property="RadiusY" Value="1.75" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Rectangle.Style>
-                                        </Rectangle>
+                                        <Grid Cursor="SizeAll" Background="Transparent">
+                                            <Rectangle
+                                                Width="3.5"
+                                                Height="3.5"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                RenderTransformOrigin="0.5,0.5"
+                                                Stroke="{StaticResource Brush.Brand.Stroke}"
+                                                StrokeThickness="0.1">
+                                                <Rectangle.RenderTransform>
+                                                    <ScaleTransform
+                                                        ScaleX="{Binding InverseScale}"
+                                                        ScaleY="{Binding InverseScale}" />
+                                                </Rectangle.RenderTransform>
+                                                <Rectangle.Style>
+                                                    <Style TargetType="Rectangle">
+                                                        <Setter Property="Fill" Value="{StaticResource Brush.Port.Input2}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Kind}" Value="{x:Static viewmodels:BeltHandleKind.End}">
+                                                                <Setter Property="Fill" Value="{StaticResource Brush.Port.OutputDeep}" />
+                                                                <Setter Property="RadiusX" Value="1.75" />
+                                                                <Setter Property="RadiusY" Value="1.75" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Rectangle.Style>
+                                            </Rectangle>
+                                        </Grid>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
