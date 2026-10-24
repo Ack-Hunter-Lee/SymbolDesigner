@@ -19,11 +19,12 @@ confidence: high
 一切分支（`PrimitiveTemplateSelector`、`XamlExporter`、`SelectionGeometry`、`CanvasFillGeometry`、`IsFillable`）都按它 switch。
 `L1Primitive` 枚举只用于"新建图元"的默认值（`PrimitiveItem.Create(L1Primitive...)`），不参与运行时分派。
 
-> **工具 Key 与 TypeKey 同源**：工具栏工具标识就是 `"L1_" + TypeKey`（如工具 `"L1_Belt"` → 图元 `"Belt"`，
-> 见 `SymbolDesignerViewModel.Tools.cs`）。两者不是两套分类，而是同一个身份分别挂在
-> "工具条目"（`ToolboxEntry.Key`，创建入口）和"图元实例"（`PrimitiveItem.TypeKey`，产物身份）上。
-> 工具 Key 额外映射 `DrawMode`（决定绘制交互流程），TypeKey 决定渲染/导出/命中。
-> 唯一需要区分二者的场景：画线工具 Polyline/BandPolyline 共用同一绘制状态机，提交时按 `DrawMode` 决定产出哪种 TypeKey。
+> **工具标识与 TypeKey 是同一个值**：`ToolboxEntry.TypeKey` 与 `PrimitiveItem.TypeKey` 取值完全相同
+> （都是 `L1Primitive` 枚举名，如 `"Belt"`），见 `SymbolDesignerViewModel.Tools.cs` 用
+> `nameof(L1Primitive.X)` 生成。旧的 `"L1_" + TypeKey` 前缀式标识已废弃。
+> `DrawMode` 与枚举名逐一同名，因此工具栏点击进入模式直接 `Enum.TryParse`，不再维护映射表。
+> 唯一需要区分"模式"与"产物"的场景：画线工具 Polyline/BandPolyline 共用同一绘制状态机，
+> 提交时按 `DrawMode` 决定产出哪种 TypeKey。
 
 ## 几何表示：局部坐标 + 包围盒
 

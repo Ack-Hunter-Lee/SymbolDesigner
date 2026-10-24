@@ -818,7 +818,7 @@
                         <DataTemplate DataType="{x:Type models:ToolboxEntry}">
                             <!--
                                 所有工具统一走 MouseLeftButtonUp → SelectTool → DrawMode。
-                                高亮态：MultiBinding 比较当前 item 的 Key 与 ActiveToolKey，仅命中自身。
+                                高亮态：MultiBinding 比较当前 item 的 TypeKey 与 ActiveToolKey，仅命中自身。
                                 （不能把 Background/BorderBrush 设为本地值，否则本地值优先级高于 Style 触发器，高亮永不生效。）
                             -->
                             <Border
@@ -827,7 +827,7 @@
                                 CornerRadius="2"
                                 Cursor="Hand"
                                 MouseLeftButtonUp="OnToolboxItemClick"
-                                Tag="{Binding Key}"
+                                Tag="{Binding TypeKey}"
                                 ToolTip="{Binding Label}">
                                 <Border.Style>
                                     <Style TargetType="Border">
@@ -837,7 +837,7 @@
                                             <DataTrigger Value="True">
                                                 <DataTrigger.Binding>
                                                     <MultiBinding Converter="{StaticResource KeyActive}">
-                                                        <Binding Path="Key" />
+                                                        <Binding Path="TypeKey" />
                                                         <Binding Path="DataContext.ActiveToolKey" RelativeSource="{RelativeSource AncestorType=UserControl}" />
                                                     </MultiBinding>
                                                 </DataTrigger.Binding>
@@ -855,34 +855,34 @@
                                     <ContentControl.Style>
                                         <Style TargetType="ContentControl">
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding Key}" Value="L1_Rectangle">
+                                                <DataTrigger Binding="{Binding TypeKey}" Value="Rectangle">
                                                     <Setter Property="ContentTemplate" Value="{StaticResource L1RectanglePreview}" />
                                                 </DataTrigger>
-                                                <DataTrigger Binding="{Binding Key}" Value="L1_Ellipse">
+                                                <DataTrigger Binding="{Binding TypeKey}" Value="Ellipse">
                                                     <Setter Property="ContentTemplate" Value="{StaticResource L1EllipsePreview}" />
                                                 </DataTrigger>
-                                                <DataTrigger Binding="{Binding Key}" Value="L1_RoundedRectangle">
+                                                <DataTrigger Binding="{Binding TypeKey}" Value="RoundedRectangle">
                                                     <Setter Property="ContentTemplate" Value="{StaticResource L1RoundedPreview}" />
                                                 </DataTrigger>
-                                                <DataTrigger Binding="{Binding Key}" Value="L1_Triangle">
+                                                <DataTrigger Binding="{Binding TypeKey}" Value="Triangle">
                                                     <Setter Property="ContentTemplate" Value="{StaticResource L1TrianglePreview}" />
                                                 </DataTrigger>
-                                                <DataTrigger Binding="{Binding Key}" Value="L1_Ring">
+                                                <DataTrigger Binding="{Binding TypeKey}" Value="Ring">
                                                     <Setter Property="ContentTemplate" Value="{StaticResource L1RingPreview}" />
                                                 </DataTrigger>
-                                                <DataTrigger Binding="{Binding Key}" Value="L1_Pie">
+                                                <DataTrigger Binding="{Binding TypeKey}" Value="Pie">
                                                     <Setter Property="ContentTemplate" Value="{StaticResource L1PiePreview}" />
                                                 </DataTrigger>
-                                                <DataTrigger Binding="{Binding Key}" Value="L1_Line">
+                                                <DataTrigger Binding="{Binding TypeKey}" Value="Line">
                                                     <Setter Property="ContentTemplate" Value="{StaticResource L1LinePreview}" />
                                                 </DataTrigger>
-                                                <DataTrigger Binding="{Binding Key}" Value="L1_Polyline">
+                                                <DataTrigger Binding="{Binding TypeKey}" Value="Polyline">
                                                     <Setter Property="ContentTemplate" Value="{StaticResource L1PolylinePreview}" />
                                                 </DataTrigger>
-                                                <DataTrigger Binding="{Binding Key}" Value="L1_BandPolyline">
+                                                <DataTrigger Binding="{Binding TypeKey}" Value="BandPolyline">
                                                     <Setter Property="ContentTemplate" Value="{StaticResource L1BandPolylinePreview}" />
                                                 </DataTrigger>
-                                                <DataTrigger Binding="{Binding Key}" Value="L1_Belt">
+                                                <DataTrigger Binding="{Binding TypeKey}" Value="Belt">
                                                     <Setter Property="ContentTemplate" Value="{StaticResource L1BeltPreview}" />
                                                 </DataTrigger>
                                             </Style.Triggers>

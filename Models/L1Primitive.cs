@@ -92,6 +92,6 @@ public enum DrawMode
     /// <summary>扇形（Pie）模式。两次点击：中心点 + 半径点（周长点，正圆），提交后默认扫掠角 = 60°。</summary>
     Pie,
     /// <summary>传送带（Belt）模式。两次点击：自由端点 A + 自由端点 B，提交时自动收录挡路的圆
-    /// （与 Tool 项的 "L1_Belt" 对应）。之后拖端点手柄可继续穿绕/脱开/两两靠近闭合。</summary>
+    /// （与工具栏 "Belt" 工具项对应，TypeKey 同名）。之后拖端点手柄可继续穿绕/脱开/两两靠近闭合。</summary>
     Belt,
 }

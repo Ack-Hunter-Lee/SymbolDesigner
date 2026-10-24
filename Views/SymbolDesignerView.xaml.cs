@@ -146,18 +146,14 @@ public partial class SymbolDesignerView : UserControl
             SyncCornerRadiusSlider();
     }
 
-    /// <summary>
-/// 工具栏图标被点击：所有 Key（路径类 + 形状类）一律走 SelectTool 进入 DrawMode。
-/// 阶段 1 目标：彻底放弃拖拽路径，所有工具统一走"点击进入模式"语义。
-/// 形状类在阶段 2 实现"两次点击 = 中心点 + 对角点/圆周点"绘制；阶段 1 进入模式后画布暂无形状图元生成。
-/// </summary>
+    /// <summary>工具栏图标被点击：所有工具一律走 SelectTool 进入 DrawMode（参数即该工具的 TypeKey）。</summary>
     private void OnToolboxItemClick(object sender, MouseButtonEventArgs e)
     {
         if (sender is not FrameworkElement fe || fe.DataContext is not ToolboxEntry entry) return;
         if (e.ChangedButton != MouseButton.Left) return;
 
         if (DataContext is SymbolDesignerViewModel vm)
-            vm.SelectToolCommand.Execute(entry.Key);
+            vm.SelectToolCommand.Execute(entry.TypeKey);
 
         e.Handled = true;
     }

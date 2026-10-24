@@ -9,19 +9,24 @@ namespace SymbolDesigner.Models;
 
 /// <summary>
 /// 工具栏的单个图形项（绑定到左侧工具栏的图标 + 标签）。
-/// 不直接出现在画布上，拖入画布后由 SymbolDesignerViewModel 生成对应的 PrimitiveItem。
-/// 旧版有 PrimitiveKind(L1/L2) 分类概念，已废弃：图元身份仅由 Key + TypeKey 一维字符串决定，
-/// Key 用作拖拽决策 + 工具栏预览匹配的唯一标识。
+/// 不直接出现在画布上，点击后由 SymbolDesignerViewModel 进入对应 DrawMode 并在画布上生成 PrimitiveItem。
+/// <para>
+/// 图元身份只有一个来源：<see cref="L1Primitive"/> 枚举名。
+/// 这里 <see cref="TypeKey"/> 与 <see cref="PrimitiveItem.TypeKey"/> 取值完全相同（如 "Rectangle" / "Belt"），
+/// 旧版前缀式标识（"L1_Belt"）与"PrimitiveKind(L1/L2)"分类概念均已废弃。
+/// </para>
 /// </summary>
 public class ToolboxEntry
 {
-    public string Key { get; init; } = string.Empty;
+    /// <summary>图元类型标识，取值与 PrimitiveItem.TypeKey 一致（= L1Primitive 枚举名）。</summary>
+    public string TypeKey { get; init; } = string.Empty;
+
     public string Label { get; init; } = string.Empty;
     public string Icon { get; init; } = string.Empty;
 
-    public ToolboxEntry(string key, string label, string icon)
+    public ToolboxEntry(string typeKey, string label, string icon)
     {
-        Key = key;
+        TypeKey = typeKey;
         Label = label;
         Icon = icon;
     }
