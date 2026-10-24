@@ -127,6 +127,9 @@ public partial class SymbolDesignerViewModel
     private void OnPrimitiveItemPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (_suppressDirty) return;
+        // 纯 UI 选中态：不落盘（ToDto 无此字段）、不参与撤销，变化不代表文档被修改。
+        // 不过滤会导致"仅点击/框选图元"就把工程标脏（关窗误弹"未保存"）。
+        if (e.PropertyName == nameof(PrimitiveItem.IsSelected)) return;
         if (e.PropertyName == nameof(PrimitiveItem.OutlineGeometry))
         {
             // 渲染几何不标 dirty（由 PathData/BandWidth 驱动），但顶点带宽等编辑仍应进入撤销历史

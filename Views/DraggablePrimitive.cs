@@ -56,8 +56,6 @@ public class DraggablePrimitive : ContentControl
         var view = FindAncestor<SymbolDesignerView>(this);
         if (view?.DataContext is SymbolDesignerViewModel vm)
             vm.BeginEdit();
-        else
-            System.Diagnostics.Debug.WriteLine("[DraggablePrimitive] 未找到 VM,跳过 BeginEdit");
 
         // 记录按下时的坐标。局部坐标由 Mouse.GetPosition 给出（旋转容器已被 WPF 反变换，
         // 因此是未旋转的图元坐标系）；画布坐标另按 Rotation 折算，供子对象识别使用。

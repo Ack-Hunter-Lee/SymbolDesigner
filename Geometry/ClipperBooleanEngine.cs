@@ -50,11 +50,10 @@ public static class ClipperBooleanEngine
             c.AddPaths(clip, PathType.Clip, false);
             if (!c.Execute(clipType.Value, Clipper2Lib.FillRule.EvenOdd, solution)) return null;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             // Clipper 侧缺陷/资源异常 → 降级 Geometry.Combine（BooleanOps 兜底）。
-            // 留痕仅调试可见，生产不弹窗打断；触发即表明 Clipper 对当前输入有缺陷。
-            System.Diagnostics.Debug.WriteLine($"[ClipperBooleanEngine] {mode} 降级 Combine: {ex}");
+            // 返回 null 由上层静默回退，不弹窗打断。
             return null;
         }
         if (solution.Count == 0) return null;

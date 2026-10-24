@@ -273,6 +273,13 @@ public partial class SymbolDesignerViewModel
         return System.Enum.TryParse<JoinStyle>(s, out var result) ? result : JoinStyle.Miter;
     }
 
+    /// <summary>容错解析线轴模式：老文件缺省 / 非法值 → Free（与模型字段默认值一致）。</summary>
+    private static LineAxisMode ParseLineAxis(string? s)
+    {
+        if (string.IsNullOrEmpty(s)) return LineAxisMode.Free;
+        return System.Enum.TryParse<LineAxisMode>(s, out var result) ? result : LineAxisMode.Free;
+    }
+
     /// <summary>容错解析虚线样式：老文件缺省 Solid。</summary>
     private static Models.StrokeDashStyle ParseStrokeDashStyle(string? s)
     {
@@ -451,7 +458,7 @@ public partial class SymbolDesignerViewModel
             InnerRadius = dto.InnerRadius > 0 ? dto.InnerRadius : 10,
             Rotation = dto.Rotation,
             ZIndex = dto.ZIndex,
-            LineAxis = System.Enum.Parse<LineAxisMode>(dto.LineAxis),
+            LineAxis = ParseLineAxis(dto.LineAxis),
             PathData = dto.PathData,
             OutlineJoinStyle = ParseJoinStyle(dto.OutlineJoinStyle),
             CollinearSplitPairs = dto.CollinearSplitPairs ?? true,

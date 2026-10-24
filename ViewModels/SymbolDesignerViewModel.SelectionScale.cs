@@ -230,7 +230,6 @@ public partial class SymbolDesignerViewModel
         IntersectShapesCommand.NotifyCanExecuteChanged();
 
         RefreshScaleSelectionHandles();
-        System.Diagnostics.Debug.WriteLine($"[SelectInRect] {selected.Count} items selected, rect={r}");
     }
 
     /// <summary>单图元包围盒（画布坐标）：PathData 型解析点范围,其余 X/Y/W/H。

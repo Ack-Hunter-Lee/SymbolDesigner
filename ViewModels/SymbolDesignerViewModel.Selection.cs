@@ -85,7 +85,6 @@ public partial class SymbolDesignerViewModel
         IntersectShapesCommand.NotifyCanExecuteChanged();
         NotifyBooleanCanExecuteChanged(); // 调整源/重新合并按钮随多选态刷新
         RefreshScaleSelectionHandles();
-        System.Diagnostics.Debug.WriteLine($"[CanApplyTangent?={CanApplyTangent}] MultiSelected.Count={MultiSelected.Count} items=[{string.Join(",", MultiSelected.Select(p => p.TypeKey))}]  Constraints.Count={Constraints.Count}");
     }
 
     /// <summary>清空多选集合并复位选中高亮（切换到单选时调用）。</summary>
@@ -107,7 +106,6 @@ public partial class SymbolDesignerViewModel
         IntersectShapesCommand.NotifyCanExecuteChanged();
         NotifyBooleanCanExecuteChanged(); // 调整源/重新合并按钮随多选态刷新
         RefreshScaleSelectionHandles();
-        System.Diagnostics.Debug.WriteLine($"[CanApplyTangent?={CanApplyTangent}] MultiSelected.Count={MultiSelected.Count} (after clear) Constraints.Count={Constraints.Count}");
     }
 
     /// <summary>把"被识别的子对象命中点"同步到画布覆盖层标记（圆心=橙，端点=绿）。
