@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using SymbolDesigner.Geometry;
 
 namespace SymbolDesigner.Models;
 
@@ -48,14 +49,14 @@ public sealed class LineCircleTangentConstraint : GeometricConstraint
         if (AnchorIsLine)
         {
             // 锚 = 直线：圆移动到新位置保持相切
-            var center = Converters.TangentSolver.SolveTangency(line, circle, Side);
+            var center = TangentSolver.SolveTangency(line, circle, Side);
             if (center is { } c)
-                Converters.TangentSolver.PlaceCircleByCenter(circle, c);
+                TangentSolver.PlaceCircleByCenter(circle, c);
         }
         else
         {
             // 锚 = 圆：直线移动到新位置保持相切
-            Converters.TangentSolver.MoveLineToTangent(circle, line, Side);
+            TangentSolver.MoveLineToTangent(circle, line, Side);
         }
     }
 

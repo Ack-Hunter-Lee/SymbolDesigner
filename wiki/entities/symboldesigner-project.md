@@ -1,7 +1,7 @@
 ---
 title: SymbolDesigner 项目
 created: 2026-11-17
-updated: 2026-11-17
+updated: 2026-10-24
 type: entity
 tags: [architecture, wpf, mvvm]
 prerequisites: []
@@ -29,7 +29,7 @@ confidence: high
 | 目录 | 职责 |
 |---|---|
 | `Models/` | 图元模型（`PrimitiveItem`/DTO）、工程文件（`SymbolProject`/`SymbolProjectFile`）、约束、阵列 |
-| `Geometry/` | 纯几何算法（轮廓/布尔/皮带/相切/路径分布/SVG 解析），多数类命名空间却是 `SymbolDesigner.Converters`（历史遗留） |
+| `Geometry/` | 纯几何算法（轮廓/布尔/皮带/相切/路径分布/SVG 解析），命名空间统一为 `SymbolDesigner.Geometry` |
 | `ViewModels/` | `SymbolDesignerViewModel` 按职责拆成 25+ partial 文件（单体架构） |
 | `Views/` | 画布视图、`DraggablePrimitive`（交互路由）、`PrimitiveTemplateSelector`（按 TypeKey 选模板） |
 | `Controls/` | `ZoomPanViewport`、取色器、`SliderSpinBox` 等可复用控件 |

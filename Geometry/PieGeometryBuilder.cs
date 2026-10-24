@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace SymbolDesigner.Converters;
+namespace SymbolDesigner.Geometry;
 
 /// <summary>
 /// 扇形（Pie）Path Data 生成器。

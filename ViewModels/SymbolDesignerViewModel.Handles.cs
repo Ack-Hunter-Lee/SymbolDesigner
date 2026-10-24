@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
+using SymbolDesigner.Geometry;
 using SymbolDesigner.Models;
 
 namespace SymbolDesigner.ViewModels;
@@ -34,7 +35,7 @@ public partial class SymbolDesignerViewModel
         // BooleanPath：骨架模式不出拖拽手柄（轮廓点不允许拖拽）
         if (item.TypeKey == nameof(L1Primitive.BooleanPath)) return;
 
-        var pts = Converters.BandOutlineBuilder.ParsePathData(item.PathData);
+        var pts = BandOutlineBuilder.ParsePathData(item.PathData);
         for (int i = 0; i < pts.Count; i++)
             VertexHandles.Add(new VertexHandle(i, item.X + pts[i].X, item.Y + pts[i].Y));
     }
@@ -59,11 +60,11 @@ public partial class SymbolDesignerViewModel
         _suppressVertexRefresh = true;
         try
         {
-            var pts = Converters.BandOutlineBuilder.ParsePathData(item.PathData);
+            var pts = BandOutlineBuilder.ParsePathData(item.PathData);
             if (index < 0 || index >= pts.Count) return;
             pts[index] = new Point(localX, localY);
 
-            item.PathData = Converters.GeometryMath.BuildPathData(pts);
+            item.PathData = GeometryMath.BuildPathData(pts);
             // 顶点数不变时 SyncVertexBandWidths 为 no-op；防御性调用，避免未来加/删顶点逻辑不同步
             item.SyncVertexBandWidths(pts.Count, item.BandWidth);
         }
@@ -80,7 +81,7 @@ public partial class SymbolDesignerViewModel
 
         // 顶点移动后，包围盒（X/Y/Width/Height）可能过小（顶点超出原框）。
         // 重算 bbox，让 X/Y 跟随顶点位置，确保所有顶点在可见范围内。
-        Converters.GeometryMath.RecalcBoundingBox(item);
+        GeometryMath.RecalcBoundingBox(item);
 
         // 持久约束：直线端点被拖动 → 圆跟随保持相切
         OnItemGeometryChanged(item);
@@ -117,7 +118,7 @@ public partial class SymbolDesignerViewModel
             return;
         if (string.IsNullOrEmpty(item.PathData)) return;
 
-        var pts = Converters.BandOutlineBuilder.ParsePathData(item.PathData);
+        var pts = BandOutlineBuilder.ParsePathData(item.PathData);
         for (int i = 0; i < pts.Count - 1; i++)
         {
             var midX = item.X + (pts[i].X + pts[i + 1].X) * 0.5;
@@ -144,7 +145,7 @@ public partial class SymbolDesignerViewModel
         if (string.IsNullOrEmpty(item.PathData)) return;
         if (item.BandWidth <= 0) return;
 
-        var pts = Converters.BandOutlineBuilder.ParsePathData(item.PathData);
+        var pts = BandOutlineBuilder.ParsePathData(item.PathData);
         if (pts.Count < 2) return;
 
         int n = pts.Count;
@@ -545,12 +546,12 @@ public partial class SymbolDesignerViewModel
         if (string.IsNullOrEmpty(item.PathData)) return;
         if (item.BandWidth <= 0 && !isClosedPolyline && !isBoolean) return;
 
-        var pts = Converters.BandOutlineBuilder.ParsePathData(item.PathData);
+        var pts = BandOutlineBuilder.ParsePathData(item.PathData);
         int n;
         if (isBoolean)
         {
             // 布尔快照带 F0 前缀：ParsePathData 解析不出骨架，段结构骨架点 = 每环段端点
-            n = Converters.BooleanOps.GetSkeletonCount(item.PathData);
+            n = BooleanOps.GetSkeletonCount(item.PathData);
             if (n < 2) return;
         }
         else
@@ -570,11 +571,11 @@ public partial class SymbolDesignerViewModel
             if (isBoolean)
             {
                 // 布尔结果：骨架点步骤（段端点，弧不摊平）——仅作手柄定位，不参与渲染
-                steps = Converters.BandOutlineBuilder.BuildClosedShapeSegmentsSteps(item.PathData, null);
+                steps = BandOutlineBuilder.BuildClosedShapeSegmentsSteps(item.PathData, null);
             }
             else if (isClosedPolyline)
             {
-                steps = Converters.BandOutlineBuilder.BuildClosedShapeSteps(item.PathData, null);
+                steps = BandOutlineBuilder.BuildClosedShapeSteps(item.PathData, null);
             }
             else
             {
@@ -601,7 +602,7 @@ public partial class SymbolDesignerViewModel
                     else
                         jss[i] = item.GetVertexJoinStyle(i) ?? item.OutlineJoinStyle;
                 }
-                steps = Converters.BandOutlineBuilder.BuildOutlineSteps(item.PathData, vt, jss, item.CollinearSplitPairs);
+                steps = BandOutlineBuilder.BuildOutlineSteps(item.PathData, vt, jss, item.CollinearSplitPairs);
             }
         }
 
@@ -625,8 +626,8 @@ public partial class SymbolDesignerViewModel
 
             string stepKind = step switch
             {
-                Converters.ArcStep => "ArcStep",
-                Converters.BevelStep => "BevelStep",
+                Geometry.ArcStep => "ArcStep",
+                Geometry.BevelStep => "BevelStep",
                 _ => "PointStep",
             };
 
@@ -696,7 +697,7 @@ public partial class SymbolDesignerViewModel
             // 透传 Kind：骨线转折产生的转角点 (Corner) vs 普通轮廓点 (Normal)
             var handle = new OutlineCornerHandle(vi, canvasX, canvasY, side, perStyle, effectiveStyle,
                 i, stepKind, inDir, outDir,
-                isCorner: step.Kind == Converters.OutlinePointKind.Corner,
+                isCorner: step.Kind == Geometry.OutlinePointKind.Corner,
                 getRadius: getRadius, setRadius: setRadius, setCurrentStyle: setStyle);
             // 订阅对应 VertexBandWidth 字段变化 → 联动发 CurrentRadius 属性通知给 UI（属性面板数值/Slider 实时跟随）
             AttachCornerRadiusAutoSync(handle, item);
@@ -774,7 +775,7 @@ public partial class SymbolDesignerViewModel
         if (item.IsLocked) return;   // 锁定图元禁止段编辑
         if (string.IsNullOrEmpty(item.PathData)) return;
 
-        var pts = Converters.BandOutlineBuilder.ParsePathData(item.PathData);
+        var pts = BandOutlineBuilder.ParsePathData(item.PathData);
         if (segmentIndex < 0 || segmentIndex >= pts.Count - 1) return;
 
         // 段 i 两端画布坐标
@@ -816,7 +817,7 @@ public partial class SymbolDesignerViewModel
         _suppressVertexRefresh = true;
         try
         {
-            item.PathData = Converters.GeometryMath.BuildPathData(pts);
+            item.PathData = GeometryMath.BuildPathData(pts);
             item.SyncVertexBandWidths(pts.Count, item.BandWidth);
         }
         finally

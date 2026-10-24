@@ -1,7 +1,7 @@
 ---
 title: 架构总览
 created: 2026-11-17
-updated: 2026-11-17
+updated: 2026-10-24
 type: concept
 tags: [architecture, wpf, mvvm]
 prerequisites: [symboldesigner-project]
@@ -33,7 +33,7 @@ Clipper2（唯一第三方几何依赖）
   共享 `Primitives`/`ArrayInstances`/`Constraints` 三个 ObservableCollection。
   代码审查曾建议抽 service，团队选择**保持单体**（见 `.trae/documents/review-report-2026-09-12.md`）。
 - **几何是纯函数**：`GeometryMath`、`BandOutlineBuilder`、`BooleanOps`、`BeltSolver`、`PathDistributor`
-  都不依赖 VM 状态，GUI 与 CLI 共用。注意它们多数位于 `Geometry/` 目录但命名空间是 `SymbolDesigner.Converters`（历史遗留）。
+  都不依赖 VM 状态，GUI 与 CLI 共用。它们位于 `Geometry/` 目录，命名空间统一为 `SymbolDesigner.Geometry`。
 
 ## 核心数据流
 

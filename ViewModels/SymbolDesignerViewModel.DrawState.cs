@@ -3,6 +3,7 @@ using System.Text;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using SymbolDesigner.Geometry;
 using SymbolDesigner.Models;
 
 namespace SymbolDesigner.ViewModels;
@@ -181,8 +182,8 @@ public partial class SymbolDesignerViewModel
             {
                 var sb = new StringBuilder();
                 int flat = 0;
-                var rings = Converters.BooleanOps.GetSkeletonRings(SelectedItem.PathData);
-                var figs = Converters.BooleanOps.ParseFigures(SelectedItem.PathData);
+                var rings = BooleanOps.GetSkeletonRings(SelectedItem.PathData);
+                var figs = BooleanOps.ParseFigures(SelectedItem.PathData);
                 for (int ri = 0; ri < rings.Count; ri++)
                 {
                     var ring = rings[ri];

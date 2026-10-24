@@ -43,7 +43,7 @@ internal static class DslToProject
             Rotation = p.Rotation,
             Opacity = p.Opacity,
             IsVisible = p.Visible,
-            Thickness = p.Thickness,
+            BandWidth = p.Thickness,
             LineAxis = ResolveLineAxis(p) ?? "Free",
         };
         ApplyAppearance(p, dto);

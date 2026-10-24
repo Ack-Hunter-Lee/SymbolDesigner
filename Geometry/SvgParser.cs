@@ -6,7 +6,7 @@ using System.Windows;
 using System.Xml;
 using SymbolDesigner.Models;
 
-namespace SymbolDesigner.Svg;
+namespace SymbolDesigner.Geometry;
 
 /// <summary>SVG 导入结果:解析后的一组画布图元 + viewBox 上下文。
 /// MVP 范围:只解析 &lt;rect&gt;/&lt;circle&gt;/&lt;ellipse&gt;/&lt;line&gt;/&lt;polyline&gt;/&lt;polygon&gt;/&lt;path&gt;,

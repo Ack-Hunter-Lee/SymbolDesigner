@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using SymbolDesigner.Converters;
+using SymbolDesigner.Geometry;
 using SymbolDesigner.ViewModels;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -298,7 +299,7 @@ public partial class PrimitiveItem : ObservableObject
             double radius = System.Math.Min(Width, Height) / 2;
             if (Width <= 0 || Height <= 0 || radius <= 0) return null;
             return System.Windows.Media.Geometry.Parse(
-                Converters.PieGeometryBuilder.BuildPath(Width / 2, Height / 2, radius, StartAngle, SweepAngle));
+                PieGeometryBuilder.BuildPath(Width / 2, Height / 2, radius, StartAngle, SweepAngle));
         }
     }
 
@@ -361,7 +362,7 @@ public partial class PrimitiveItem : ObservableObject
         OnPropertyChanged(nameof(SelectionGeometry));
         // 闭合形状每顶点圆角需要 VertexBandWidths 作为半径容器（带宽恒 0，仅用 LeftCornerRadius）
         if (value && !string.IsNullOrEmpty(PathData))
-            SyncVertexBandWidths(Converters.BandOutlineBuilder.ParsePathData(PathData).Count, 0);
+            SyncVertexBandWidths(BandOutlineBuilder.ParsePathData(PathData).Count, 0);
     }
 
     // ===== 传送带（Belt）=====
@@ -549,16 +550,16 @@ public partial class PrimitiveItem : ObservableObject
         // 重建 PathData 解析缓存（选区包围盒/命中检测复用,避免每帧重复 Split+TryParse）
         _parsedPathPoints = string.IsNullOrEmpty(value)
             ? null
-            : Converters.BandOutlineBuilder.ParsePathData(value);
+            : BandOutlineBuilder.ParsePathData(value);
         if (!string.IsNullOrEmpty(value))
         {
             if (TypeKey == nameof(L1Primitive.BooleanPath))
             {
                 // 骨架点数 = 各环"段链起点+终点"去重后的总数（段端点，弧段不摊平）
-                SyncVertexBandWidths(Converters.BooleanOps.GetSkeletonCount(value), 0);
+                SyncVertexBandWidths(BooleanOps.GetSkeletonCount(value), 0);
             }
             else if (IsClosed && TypeKey == nameof(L1Primitive.Polyline) && !string.IsNullOrEmpty(value))
-                SyncVertexBandWidths(Converters.BandOutlineBuilder.ParsePathData(value).Count, 0);
+                SyncVertexBandWidths(BandOutlineBuilder.ParsePathData(value).Count, 0);
         }
         OnPropertyChanged(nameof(OutlineGeometry));
         OnPropertyChanged(nameof(PolylineGeometry));
@@ -598,7 +599,7 @@ public partial class PrimitiveItem : ObservableObject
 
     // 缓存：上次计算的输入 + 输出，避免 WPF Binding 双调用造成的重复 BuildOutline
     private System.Windows.Media.Geometry? _outlineCache;
-    private System.Collections.Generic.List<SymbolDesigner.Converters.PointStep>? _cachedSteps;
+    private System.Collections.Generic.List<SymbolDesigner.Geometry.PointStep>? _cachedSteps;
     private int _cachedStepsVersion;  // 步骤被外部（手柄拖动）就地替换时递增，触发 re-emit
     private string? _cachedPathData;
     private double _cachedBandWidth;
@@ -613,7 +614,7 @@ public partial class PrimitiveItem : ObservableObject
     /// <summary>直接对外暴露缓存的 emit 步骤（合并 lefts+rights 的单条序列）。
     /// 外部（轮廓编辑手柄拖动）可通过修改此集合的某一项后调用 NotifyOutlineGeometryChanged() 触发重绘。
     /// 返回 internal 类型：PointStep 是 internal class，访问性受限于程序集内（仅同程序集可见）。</summary>
-    internal System.Collections.Generic.IList<SymbolDesigner.Converters.PointStep>? CachedOutlineSteps => _cachedSteps;
+    internal System.Collections.Generic.IList<SymbolDesigner.Geometry.PointStep>? CachedOutlineSteps => _cachedSteps;
 
     /// <summary>手柄改步骤后通知轮廓重算（不修改输入参数，只重 emit）。</summary>
     public void NotifyOutlineGeometryChanged()
@@ -677,15 +678,15 @@ public partial class PrimitiveItem : ObservableObject
             }
 
             // 重算 + 更新缓存
-            List<Converters.PointStep> steps;
+            List<SymbolDesigner.Geometry.PointStep> steps;
             if (IsClosed && TypeKey == nameof(L1Primitive.Polyline))
             {
                 // Polyline 闭合形态：骨架点直连单环（无带宽偏移），复用同一个 emit/圆角/手柄管道。
                 // 顶点圆角半径存 VertexBandWidths[vi].LeftCornerRadius（单环无左右侧）。
-                steps = Converters.BandOutlineBuilder.BuildClosedShapeSteps(PathData, ToVertexBandWidthArray());
+                steps = BandOutlineBuilder.BuildClosedShapeSteps(PathData, ToVertexBandWidthArray());
             }
             else if (VertexBandWidths.Count == 0)
-                steps = Converters.BandOutlineBuilder.BuildOutlineSteps(PathData, BandWidth, CollinearSplitPairs);
+                steps = BandOutlineBuilder.BuildOutlineSteps(PathData, BandWidth, CollinearSplitPairs);
             else
             {
                 var vs = new VertexBandWidth[VertexBandWidths.Count];
@@ -697,7 +698,7 @@ public partial class PrimitiveItem : ObservableObject
                 for (int i = 0; i < n; i++)
                     jsArr[i] = _vertexJoinStyles[i] ?? OutlineJoinStyle;
 
-                steps = Converters.BandOutlineBuilder.BuildOutlineSteps(PathData, vs, jsArr, CollinearSplitPairs);
+                steps = BandOutlineBuilder.BuildOutlineSteps(PathData, vs, jsArr, CollinearSplitPairs);
             }
 
             // 把步骤合成 Geometry 缓存
@@ -743,7 +744,7 @@ public partial class PrimitiveItem : ObservableObject
             radii[i] = VertexBandWidths[i].LeftCornerRadius;
             styles[i] = _vertexJoinStyles[i] ?? OutlineJoinStyle;  // null 槽位继承全局样式
         }
-        string baked = Converters.BooleanOps.BakeCornerRadii(PathData, radii, styles);
+        string baked = BooleanOps.BakeCornerRadii(PathData, radii, styles);
         System.Windows.Media.Geometry? g = null;
         if (!string.IsNullOrEmpty(baked))
         {
@@ -778,8 +779,8 @@ public partial class PrimitiveItem : ObservableObject
     private int _lastEmittedStepsVersion;  // 上次 emit 时对应的步骤版本号
 
     /// <summary>把 emit 步骤序列拼成 StreamGeometry（多环布尔结果按 FigureIndex 逐环开 figure，委托给 BandOutlineBuilder）。</summary>
-    private static System.Windows.Media.Geometry EmitSteps(System.Collections.Generic.List<SymbolDesigner.Converters.PointStep> steps)
-        => Converters.BandOutlineBuilder.EmitSteps(steps);
+    private static System.Windows.Media.Geometry EmitSteps(System.Collections.Generic.List<SymbolDesigner.Geometry.PointStep> steps)
+        => BandOutlineBuilder.EmitSteps(steps);
 
     /// <summary>VertexBandWidths 内容的轻量 hash（Incoming/Outgoing + 三类圆角字段）。
     /// 用于检测带宽数组内容变化（不只数量）。圆角字段参与 hash 是缓存失效的前提：

@@ -4,7 +4,7 @@ using System.Windows;
 using System.Windows.Media;
 using Clipper2Lib;
 
-namespace SymbolDesigner.Converters;
+namespace SymbolDesigner.Geometry;
 
 /// <summary>
 /// 基于 Clipper2 的折线布尔引擎（第一版：椭圆 2° 均匀离散，其余几何取原生折线）。
@@ -24,7 +24,7 @@ public static class ClipperBooleanEngine
     public const double EllipseStepDeg = 2.0;
 
     /// <summary>对两个画布坐标几何执行布尔，返回局部坐标段结构 PathData。失败/不支持 → null。</summary>
-    public static BooleanOps.BooleanResult? Compute(Geometry a, Geometry b, GeometryCombineMode mode)
+    public static BooleanOps.BooleanResult? Compute(System.Windows.Media.Geometry a, System.Windows.Media.Geometry b, GeometryCombineMode mode)
     {
         // —— 参数准备（自身逻辑：异常应上抛暴露 bug，不吞） ——
         var subject = new PathsD();
@@ -94,7 +94,7 @@ public static class ClipperBooleanEngine
     }
 
     /// <summary>把 Geometry 转为画布坐标折线集合。椭圆 2° 均匀离散；其余走原生折线 + 套 Transform。</summary>
-    private static bool GeometryToPaths(Geometry g, PathsD result)
+    private static bool GeometryToPaths(System.Windows.Media.Geometry g, PathsD result)
     {
         switch (g)
         {
@@ -152,7 +152,7 @@ public static class ClipperBooleanEngine
     }
 
     /// <summary>把 PathGeometry/StreamGeometry/GeometryGroup 摊平成画布坐标折线（各闭合 figure 一条 PathD）。</summary>
-    private static bool FlattenToPath(Geometry g, PathsD result)
+    private static bool FlattenToPath(System.Windows.Media.Geometry g, PathsD result)
     {
         var flat = g.GetFlattenedPathGeometry(0.5, ToleranceType.Absolute);
         foreach (var f in flat.Figures)

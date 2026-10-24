@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Windows;
 
-namespace SymbolDesigner.Converters;
+namespace SymbolDesigner.Geometry;
 
 /// <summary>
 /// 沿路径（直线段 + 圆弧段）等弧长采样 N 个放置点（位置 + 朝向）的算法库。

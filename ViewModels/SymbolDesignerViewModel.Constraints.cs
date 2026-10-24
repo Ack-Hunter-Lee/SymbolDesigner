@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using SymbolDesigner.Converters;
+using SymbolDesigner.Geometry;
 using SymbolDesigner.Models;
 using Point = System.Windows.Point;
 
@@ -45,11 +45,11 @@ public partial class SymbolDesignerViewModel
         if (existingCo is not null)
             existingCo.LockToTangentPoint = true;
 
-        if (!Converters.TangentSolver.TryGetLineEndpoints(line, out var a, out var b))
+        if (!TangentSolver.TryGetLineEndpoints(line, out var a, out var b))
         {
             return;
         }
-        if (!Converters.TangentSolver.TryGetCircle(circle, out var c, out _))
+        if (!TangentSolver.TryGetCircle(circle, out var c, out _))
         {
             return;
         }
@@ -74,22 +74,22 @@ public partial class SymbolDesignerViewModel
         if (anchorIsLine)
         {
             // 锚 = 直线：圆移动到新位置凑相切
-            var newCenter = Converters.TangentSolver.SolveTangency(line, circle, side);
+            var newCenter = TangentSolver.SolveTangency(line, circle, side);
             if (newCenter is { } center)
-                Converters.TangentSolver.PlaceCircleByCenter(circle, center);
+                TangentSolver.PlaceCircleByCenter(circle, center);
         }
         else
         {
             // 锚 = 圆：直线移动到新位置凑相切
-            Converters.TangentSolver.MoveLineToTangent(circle, line, side);
+            TangentSolver.MoveLineToTangent(circle, line, side);
         }
 
         // 双重约束收尾：若升级了已有端点落圆弧重合，把该端点吸附到当前切点
         if (existingCo is not null)
         {
-            var tp = Converters.TangentSolver.SolveEndpointAtTangentPoint(circle, line, existingCo.EndpointIndex);
+            var tp = TangentSolver.SolveEndpointAtTangentPoint(circle, line, existingCo.EndpointIndex);
             if (tp is { } t)
-                Converters.TangentSolver.SetLineEndpointAt(line, existingCo.EndpointIndex, t);
+                TangentSolver.SetLineEndpointAt(line, existingCo.EndpointIndex, t);
         }
     }
 
@@ -112,11 +112,11 @@ public partial class SymbolDesignerViewModel
             return;
         }
 
-        if (!Converters.TangentSolver.TryGetLineEndpoints(line, out var a, out var b))
+        if (!TangentSolver.TryGetLineEndpoints(line, out var a, out var b))
         {
             return;
         }
-        if (!Converters.TangentSolver.TryGetCircle(circle, out var c, out double r))
+        if (!TangentSolver.TryGetCircle(circle, out var c, out double r))
         {
             return;
         }
@@ -139,7 +139,7 @@ public partial class SymbolDesignerViewModel
                 Mode = CoincidentMode.PointCoincide,
                 EndpointIndex = lineEndIdx,
             });
-            Converters.TangentSolver.PlaceLineEndpointAtCircleCenter(circle, line, lineEndIdx);
+            TangentSolver.PlaceLineEndpointAtCircleCenter(circle, line, lineEndIdx);
         }
         else if (lineEndIdx < 0 && circleIsCenter)
         {
@@ -157,7 +157,7 @@ public partial class SymbolDesignerViewModel
                 CircleId = circle.Id,
                 Mode = CoincidentMode.CenterOnLine,
             });
-            Converters.TangentSolver.PlaceCircleCenterOnLine(line, circle);
+            TangentSolver.PlaceCircleCenterOnLine(line, circle);
         }
         else if (lineEndIdx >= 0)
         {
@@ -176,22 +176,22 @@ public partial class SymbolDesignerViewModel
             });
             if (hasTangent)
             {
-                var tp = Converters.TangentSolver.SolveEndpointAtTangentPoint(circle, line, lineEndIdx);
+                var tp = TangentSolver.SolveEndpointAtTangentPoint(circle, line, lineEndIdx);
                 if (tp is { } t)
-                    Converters.TangentSolver.SetLineEndpointAt(line, lineEndIdx, t);
+                    TangentSolver.SetLineEndpointAt(line, lineEndIdx, t);
             }
             else
             {
-                var newP = Converters.TangentSolver.SolveEndpointOnArc(circle, line, lineEndIdx);
+                var newP = TangentSolver.SolveEndpointOnArc(circle, line, lineEndIdx);
                 if (newP is { } p)
-                    Converters.TangentSolver.SetLineEndpointAt(line, lineEndIdx, p);
+                    TangentSolver.SetLineEndpointAt(line, lineEndIdx, p);
             }
         }
         else
         {
             // 回退：无可用命中 / 命中线段+圆弧 → 端点落圆弧（取更接近圆弧的端点）
-            double dA = System.Math.Abs(Converters.GeometryMath.Dist(c, a) - r);
-            double dB = System.Math.Abs(Converters.GeometryMath.Dist(c, b) - r);
+            double dA = System.Math.Abs(GeometryMath.Dist(c, a) - r);
+            double dB = System.Math.Abs(GeometryMath.Dist(c, b) - r);
             int endpointIndex = dA <= dB ? 0 : 1;
             bool hasTangent2 = Constraints.Any(c => c is LineCircleTangentConstraint __t
                 && __t.Participants.Contains(line.Id) && __t.Participants.Contains(circle.Id));
@@ -205,15 +205,15 @@ public partial class SymbolDesignerViewModel
             });
             if (hasTangent2)
             {
-                var tp2 = Converters.TangentSolver.SolveEndpointAtTangentPoint(circle, line, endpointIndex);
+                var tp2 = TangentSolver.SolveEndpointAtTangentPoint(circle, line, endpointIndex);
                 if (tp2 is { } t2)
-                    Converters.TangentSolver.SetLineEndpointAt(line, endpointIndex, t2);
+                    TangentSolver.SetLineEndpointAt(line, endpointIndex, t2);
             }
             else
             {
-                var proj = Converters.TangentSolver.SolveEndpointOnArc(circle, line, endpointIndex);
+                var proj = TangentSolver.SolveEndpointOnArc(circle, line, endpointIndex);
                 if (proj is { } pp)
-                    Converters.TangentSolver.SetLineEndpointAt(line, endpointIndex, pp);
+                    TangentSolver.SetLineEndpointAt(line, endpointIndex, pp);
             }
         }
     }
@@ -328,7 +328,7 @@ public partial class SymbolDesignerViewModel
                 var line = Primitives.FirstOrDefault(p => p.Id == lc.LineId);
                 if (line is null) continue;
                 // 圆保留当前（推荐）位置，直线平移保持相切 → 返回 null，不再回写圆
-                Converters.TangentSolver.TranslateLineToKeepTangent(line, circle, lc.Side);
+                TangentSolver.TranslateLineToKeepTangent(line, circle, lc.Side);
                 return null;
             }
         }
@@ -346,7 +346,7 @@ public partial class SymbolDesignerViewModel
             {
                 var circle = Primitives.FirstOrDefault(p => p.Id == lc.CircleId);
                 if (circle is null) continue;
-                return Converters.TangentSolver.ConstrainLineAlongTangent(circle, line, recommendedXY);
+                return TangentSolver.ConstrainLineAlongTangent(circle, line, recommendedXY);
             }
         }
         return null;

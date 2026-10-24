@@ -3,7 +3,7 @@ using System.Text;
 using System.Windows;
 using SymbolDesigner.Models;
 
-namespace SymbolDesigner.Converters;
+namespace SymbolDesigner.Geometry;
 
 /// <summary>纯几何 / 图元类型判定的静态工具集。
 /// 从 SymbolDesignerViewModel 剥离：不依赖任何 VM 状态，可独立测试、供各层复用。</summary>

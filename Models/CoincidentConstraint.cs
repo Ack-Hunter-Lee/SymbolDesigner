@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using SymbolDesigner.Geometry;
 
 namespace SymbolDesigner.Models;
 
@@ -65,24 +66,24 @@ public sealed class LineCircleCoincidentConstraint : GeometricConstraint
 
         if (Mode == CoincidentMode.CenterOnLine)
         {
-            Converters.TangentSolver.PlaceCircleCenterOnLine(line, circle);
+            TangentSolver.PlaceCircleCenterOnLine(line, circle);
         }
         else if (Mode == CoincidentMode.PointCoincide)
         {
-            Converters.TangentSolver.PlaceLineEndpointAtCircleCenter(circle, line, EndpointIndex);
+            TangentSolver.PlaceLineEndpointAtCircleCenter(circle, line, EndpointIndex);
         }
         else if (LockToTangentPoint)
         {
             // 双重约束（相切+端点落圆弧）：端点钉在切点
-            var tp = Converters.TangentSolver.SolveEndpointAtTangentPoint(line, circle, EndpointIndex);
+            var tp = TangentSolver.SolveEndpointAtTangentPoint(line, circle, EndpointIndex);
             if (tp is { } t)
-                Converters.TangentSolver.SetLineEndpointAt(line, EndpointIndex, t);
+                TangentSolver.SetLineEndpointAt(line, EndpointIndex, t);
         }
         else
         {
-            var newP = Converters.TangentSolver.SolveEndpointOnArc(circle, line, EndpointIndex);
+            var newP = TangentSolver.SolveEndpointOnArc(circle, line, EndpointIndex);
             if (newP is { } p)
-                Converters.TangentSolver.SetLineEndpointAt(line, EndpointIndex, p);
+                TangentSolver.SetLineEndpointAt(line, EndpointIndex, p);
         }
     }
 

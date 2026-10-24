@@ -1,7 +1,7 @@
 ---
 title: 带宽轮廓几何管道（BandOutline）
 created: 2026-11-17
-updated: 2026-11-17
+updated: 2026-10-24
 type: concept
 tags: [geometry, wpf]
 prerequisites: [primitive-model]
@@ -10,7 +10,7 @@ confidence: high
 
 # 带宽轮廓几何管道（BandOutline）
 
-`Geometry/BandOutlineBuilder.cs`（命名空间 `SymbolDesigner.Converters`）把"骨架折线 + 逐顶点带宽 + 接缝样式"
+`Geometry/BandOutlineBuilder.cs`（命名空间 `SymbolDesigner.Geometry`）把"骨架折线 + 逐顶点带宽 + 接缝样式"
 实时合成一条**闭合轮廓带**（CAD stroke-outline 效果），是 BandPolyline / 闭合 Polyline / BooleanPath 的渲染核心。
 
 ## 算法流程（BuildOutlineSteps）

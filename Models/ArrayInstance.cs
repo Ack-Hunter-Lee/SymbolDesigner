@@ -1,5 +1,4 @@
 using System;
-using SymbolDesigner.Converters;
 
 namespace SymbolDesigner.Models;
 

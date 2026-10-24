@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Windows;
 using SymbolDesigner.Models;
 
-namespace SymbolDesigner.Converters;
+namespace SymbolDesigner.Geometry;
 
 /// <summary>
 /// 相切约束求解器（用户选定的模式：固定直线为锚，移动圆以满足相切）。

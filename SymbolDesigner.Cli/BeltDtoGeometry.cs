@@ -1,6 +1,6 @@
 using System.Windows;
 using System.Windows.Media;
-using SymbolDesigner.Converters;
+using SymbolDesigner.Geometry;
 using SymbolDesigner.Models;
 
 namespace SymbolDesigner.Cli;
@@ -57,7 +57,7 @@ internal static class BeltDtoGeometry
     }
 
     /// <summary>按落盘拓扑求解皮带几何（局部坐标 M/L/A/Z，原点 = 求解包围盒左上角 = DTO.X/Y）。null = 退化/无解。</summary>
-    public static Geometry? SolveGeometry(PrimitiveItemDto belt, IReadOnlyList<PrimitiveItemDto> all)
+    public static System.Windows.Media.Geometry? SolveGeometry(PrimitiveItemDto belt, IReadOnlyList<PrimitiveItemDto> all)
     {
         var res = BeltSolver.Solve(
             new Point(belt.BeltStartX, belt.BeltStartY),
@@ -66,7 +66,7 @@ internal static class BeltDtoGeometry
             CollectRollers(all, belt.Id),
             ReadAnchors(belt));
         if (res.Degenerate || string.IsNullOrWhiteSpace(res.PathData)) return null;
-        try { return Geometry.Parse(res.PathData); }
+        try { return System.Windows.Media.Geometry.Parse(res.PathData); }
         catch (FormatException) { return null; }
     }
 

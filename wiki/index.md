@@ -3,6 +3,10 @@
 > SymbolDesigner 项目知识库。写作规范见 [[SCHEMA]]；用户画像见 [[user-profile]]。
 > 探索入口：[[project-exploration-2026-11]]。
 
+## 术语表
+
+- [[glossary]] - 术语表（TypeKey / BandWidth / BooleanPath / 阵列 / 约束等黑话速查）
+
 ## 项目与架构
 
 - [[symboldesigner-project]] - 项目实体（独立 WinExe + 被 FactoryKanban 复用）

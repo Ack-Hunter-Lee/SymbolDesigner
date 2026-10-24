@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.Input;
+using SymbolDesigner.Geometry;
 using SymbolDesigner.Models;
 using Point = System.Windows.Point;
 
@@ -27,12 +28,12 @@ public partial class SymbolDesignerViewModel
     /// 放宽为"至少"而非"恰好2项"，配合累积式多选（点击即加入），
     /// 避免"再选一个其它图元按钮就变灰"的困惑。</summary>
     public bool CanApplyTangent =>
-        MultiSelected.Any(Converters.GeometryMath.IsLineLike) && MultiSelected.Any(Converters.GeometryMath.IsCircleLike);
+        MultiSelected.Any(GeometryMath.IsLineLike) && MultiSelected.Any(GeometryMath.IsCircleLike);
 
     /// <summary>能否执行"重合"约束：与相切相同的多选前提（直线 + 圆）。
     /// 智能识别模式（端点落圆弧 / 圆心落直线）在 ApplyCoincident 内根据几何判定。</summary>
     public bool CanApplyCoincident =>
-        MultiSelected.Any(Converters.GeometryMath.IsLineLike) && MultiSelected.Any(Converters.GeometryMath.IsCircleLike);
+        MultiSelected.Any(GeometryMath.IsLineLike) && MultiSelected.Any(GeometryMath.IsCircleLike);
 
     /// <summary>Ctrl+点击：切换某图元是否在多选集合（并在视觉上高亮）。
     /// canvasPick 为用户点在该图元上的画布逻辑坐标（用于重合约束的子对象识别）。</summary>
@@ -49,7 +50,7 @@ public partial class SymbolDesignerViewModel
         {
             MultiSelected.Add(item);
             _pickCanvasByItem[item.Id] = canvasPick;
-            _pickKindByItem[item.Id] = Converters.GeometryMath.ClassifyPick(item, canvasPick, out _);
+            _pickKindByItem[item.Id] = GeometryMath.ClassifyPick(item, canvasPick, out _);
             item.IsSelected = true;
         }
         RaiseMultiSelectChanged();
@@ -64,7 +65,7 @@ public partial class SymbolDesignerViewModel
         {
             MultiSelected.Add(item);
             _pickCanvasByItem[item.Id] = canvasPick;
-            _pickKindByItem[item.Id] = Converters.GeometryMath.ClassifyPick(item, canvasPick, out _);
+            _pickKindByItem[item.Id] = GeometryMath.ClassifyPick(item, canvasPick, out _);
             item.IsSelected = true;
         }
         SelectedItem = item;
@@ -123,7 +124,7 @@ public partial class SymbolDesignerViewModel
             }
             else if (kind == PickKind.EndPoint0 || kind == PickKind.EndPoint1)
             {
-                if (Converters.TangentSolver.TryGetLineEndpoint(item, kind == PickKind.EndPoint0 ? 0 : 1, out var ep))
+                if (TangentSolver.TryGetLineEndpoint(item, kind == PickKind.EndPoint0 ? 0 : 1, out var ep))
                     MultiPickMarkers.Add(new PickMarker { X = ep.X, Y = ep.Y });
             }
         }
@@ -132,8 +133,8 @@ public partial class SymbolDesignerViewModel
     [RelayCommand(CanExecute = nameof(CanApplyTangent))]
     private void ApplyTangent()
     {
-        var line = MultiSelected.FirstOrDefault(Converters.GeometryMath.IsLineLike);
-        var circle = MultiSelected.FirstOrDefault(Converters.GeometryMath.IsCircleLike);
+        var line = MultiSelected.FirstOrDefault(GeometryMath.IsLineLike);
+        var circle = MultiSelected.FirstOrDefault(GeometryMath.IsCircleLike);
         if (line is null || circle is null) return;
 
         // AutoCAD GCTANGENT 规则：先选 = 锚（不动），后选 = 调整对象（移动去凑相切）。
@@ -148,8 +149,8 @@ public partial class SymbolDesignerViewModel
     [RelayCommand(CanExecute = nameof(CanApplyCoincident))]
     private void ApplyCoincident()
     {
-        var line = MultiSelected.FirstOrDefault(Converters.GeometryMath.IsLineLike);
-        var circle = MultiSelected.FirstOrDefault(Converters.GeometryMath.IsCircleLike);
+        var line = MultiSelected.FirstOrDefault(GeometryMath.IsLineLike);
+        var circle = MultiSelected.FirstOrDefault(GeometryMath.IsCircleLike);
         if (line is null || circle is null) return;
 
         ApplyCoincident(line, circle);

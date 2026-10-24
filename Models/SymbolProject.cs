@@ -110,7 +110,9 @@ public class PrimitiveItemDto
     public int ZIndex { get; set; }
     public string LineAxis { get; set; } = "Free";
     public string PathData { get; set; } = string.Empty;
-    public double Thickness { get; set; } = 6;
+    /// <summary>带宽（BandPolyline 的体宽；旧文件 JSON 键名 "Thickness"，见 [[notes/legacy-thickness-handle]]）。</summary>
+    [JsonPropertyName("Thickness")]
+    public double BandWidth { get; set; } = 6;
     /// <summary>元素透明度 0.0~1.0,默认 1.0。老工程缺省 = 1.0(完全不透明)。</summary>
     public double Opacity { get; set; } = 1.0;
     /// <summary>元素可见性（false=编辑期隐藏，用于排查不可见的多余元素）。
@@ -123,7 +125,8 @@ public class PrimitiveItemDto
     /// <summary>共线同向直通点拆分模式：true=两对（默认，保留厚度台阶）；false=合并为一对。
     /// 可空：老文件缺省 = null → 加载时按 true 处理（与老版本行为一致）。</summary>
     public bool? CollinearSplitPairs { get; set; }
-    public List<VertexThicknessDto> VertexThicknesses { get; set; } = new();
+    [JsonPropertyName("VertexThicknesses")]
+    public List<VertexBandWidthDto> VertexBandWidths { get; set; } = new();
     /// <summary>逐顶点接缝样式覆盖（稀疏：只存非 null 的项）。
     /// 老文件没有此字段 → 加载时所有顶点继承全局 OutlineJoinStyle。</summary>
     public List<VertexJoinStyleDto>? VertexJoinStyles { get; set; }
@@ -196,7 +199,7 @@ public class PrimitiveItemDto
     public double? PatternSpacing { get; set; }
 }
 
-/// <summary>逐顶点接缝样式覆盖（稀疏存储）。Index 指向 VertexThicknesses 中的顶点序号。</summary>
+/// <summary>逐顶点接缝样式覆盖（稀疏存储）。Index 指向 VertexBandWidths 中的顶点序号。</summary>
 public class VertexJoinStyleDto
 {
     public int Index { get; set; }
@@ -283,12 +286,14 @@ public class ProjectSnapshotDto
     public List<TangencyConstraintDto>? Constraints { get; set; }
 }
 
-/// <summary>顶点厚度 DTO。IsStart/IsEnd 不保存（加载时按 Index 和集合 Count 重新计算）。</summary>
-public class VertexThicknessDto
+/// <summary>逐顶点带宽 DTO。IsStart/IsEnd 不保存（加载时按 Index 和集合 Count 重新计算）。</summary>
+public class VertexBandWidthDto
 {
     public int Index { get; set; }
-    public double IncomingThickness { get; set; }
-    public double OutgoingThickness { get; set; }
+    [JsonPropertyName("IncomingThickness")]
+    public double IncomingBandWidth { get; set; }
+    [JsonPropertyName("OutgoingThickness")]
+    public double OutgoingBandWidth { get; set; }
     /// <summary>Round join 内径圆弧半径（默认 0 = 经典无内径弧）。末顶点 = 0。</summary>
     public double JoinInnerRadius { get; set; }
     /// <summary>左侧普通轮廓点圆角半径（0 = 无）。端点/段末端圆角化用，渲染由 BuildOutlineSteps 重建。</summary>

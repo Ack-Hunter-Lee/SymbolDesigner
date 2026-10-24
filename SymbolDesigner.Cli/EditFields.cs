@@ -9,7 +9,7 @@ namespace SymbolDesigner.Cli;
 internal static class EditFields
 {
     /// <summary>可编辑字段 → 对应的 DTO 属性类型。读写一致用反射写值。
-    /// 白名单刻意排除 Id/Kind/TypeKey/PathData/BooleanSources/VertexThicknesses 等结构性字段。</summary>
+    /// 白名单刻意排除 Id/Kind/TypeKey/PathData/BooleanSources/VertexBandWidths 等结构性字段。</summary>
     private static readonly HashSet<string> s_allowed = new(StringComparer.Ordinal)
     {
         // 几何 / 定位

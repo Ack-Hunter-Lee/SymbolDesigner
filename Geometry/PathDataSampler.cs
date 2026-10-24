@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Windows;
 
-namespace SymbolDesigner.Svg;
+namespace SymbolDesigner.Geometry;
 
 /// <summary>SVG &lt;path d="..."&gt; 解析 + 曲线降采样为折线段。
 /// MVP 范围:M/L/H/V/C/S/Q/T/A/Z(全大写=绝对,小写=相对)。

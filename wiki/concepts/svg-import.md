@@ -10,7 +10,7 @@ confidence: high
 
 # SVG 导入（SvgParser）
 
-`Geometry/SvgParser.cs`（命名空间 `SymbolDesigner.Svg`）把 SVG 文件解析成 `PrimitiveItem` 列表，支持常见基础图形。
+`Geometry/SvgParser.cs`（命名空间 `SymbolDesigner.Geometry`）把 SVG 文件解析成 `PrimitiveItem` 列表，支持常见基础图形。
 
 ## 解析器
 

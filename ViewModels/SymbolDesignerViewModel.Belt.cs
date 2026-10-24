@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using SymbolDesigner.Converters;
+using SymbolDesigner.Geometry;
 using SymbolDesigner.Models;
 
 namespace SymbolDesigner.ViewModels;

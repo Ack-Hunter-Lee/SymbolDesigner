@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Media;
 
-namespace SymbolDesigner.Converters;
+namespace SymbolDesigner.Geometry;
 
 /// <summary>
 /// 把任意图元的几何（画布坐标）转成"可用于沿路径分布"的直线段序列。
@@ -21,7 +21,7 @@ public static class PolylineToSegments
 {
     /// <summary>任意几何 → 直线段序列（只取最长轮廓）。几何为空 / 无轮廓 → 空列表，
     /// 让调用方走"无可用路径"分支。</summary>
-    public static IReadOnlyList<PathDistributor.PathSegment> Convert(Geometry? geometry)
+    public static IReadOnlyList<PathDistributor.PathSegment> Convert(System.Windows.Media.Geometry? geometry)
     {
         if (geometry is null) return Array.Empty<PathDistributor.PathSegment>();
         if (LongestContour(geometry.GetFlattenedPathGeometry()) is not { } contour)

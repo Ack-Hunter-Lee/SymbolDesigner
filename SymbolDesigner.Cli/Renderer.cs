@@ -92,7 +92,7 @@ internal static class Renderer
 
     /// <summary>构造图元局部几何（以 X/Y 为原点），语义与 PrimitiveItem 渲染管线对齐。
     /// Belt 需全部兄弟图元（滚轮）才能求解，故额外收 all。</summary>
-    private static Geometry? BuildLocalGeometry(PrimitiveItemDto dto, IReadOnlyList<PrimitiveItemDto> all)
+    private static System.Windows.Media.Geometry? BuildLocalGeometry(PrimitiveItemDto dto, IReadOnlyList<PrimitiveItemDto> all)
     {
         double w = dto.Width, h = dto.Height;
         switch (dto.TypeKey)
@@ -122,7 +122,7 @@ internal static class Renderer
         }
     }
 
-    private static Geometry BuildTriangle(double w, double h)
+    private static System.Windows.Media.Geometry BuildTriangle(double w, double h)
     {
         var pg = new PathGeometry();
         var fig = new PathFigure { StartPoint = new Point(w * 0.5, 0), IsClosed = true, IsFilled = true };
@@ -134,7 +134,7 @@ internal static class Renderer
     }
 
     /// <summary>圆环：外圆顺 + 内圆逆的 Nonzero 单 Path，内圆天然空洞（复刻 PrimitiveItem.RingGeometry）。</summary>
-    private static Geometry? BuildRing(double w, double h, double innerRadius)
+    private static System.Windows.Media.Geometry? BuildRing(double w, double h, double innerRadius)
     {
         if (w <= 0 || h <= 0) return null;
         double cx = w / 2, cy = h / 2;
@@ -158,7 +158,7 @@ internal static class Renderer
     }
 
     /// <summary>扇形 Path（复刻 PieGeometryBuilder.BuildPath，弧度关于 StartAngle 对称展开 StartAngle±Sweep/2）。</summary>
-    private static Geometry? BuildPie(double w, double h, double startAngle, double sweepAngle)
+    private static System.Windows.Media.Geometry? BuildPie(double w, double h, double startAngle, double sweepAngle)
     {
         double r = Math.Min(w, h) / 2;
         if (w <= 0 || h <= 0 || r <= 0) return null;
@@ -173,13 +173,13 @@ internal static class Renderer
         sb.Append(" A ").Append(F(r)).Append(',').Append(F(r)).Append(" 0 ")
           .Append(largeArc).Append(",1 ").Append(F(ex)).Append(',').Append(F(ey));
         sb.Append(" L ").Append(F(cx)).Append(',').Append(F(cy)).Append(" Z");
-        return Geometry.Parse(sb.ToString());
+        return System.Windows.Media.Geometry.Parse(sb.ToString());
     }
 
-    private static Geometry? ParsePath(string? pathData)
+    private static System.Windows.Media.Geometry? ParsePath(string? pathData)
     {
         if (string.IsNullOrWhiteSpace(pathData)) return null;
-        try { return Geometry.Parse(pathData); }
+        try { return System.Windows.Media.Geometry.Parse(pathData); }
         catch (FormatException) { return null; }
     }
 

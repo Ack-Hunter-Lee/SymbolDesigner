@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using SymbolDesigner.Geometry;
 using SymbolDesigner.Models;
 
 namespace SymbolDesigner.ViewModels;
@@ -194,7 +195,7 @@ public partial class SymbolDesignerViewModel
             ZIndex = p.ZIndex,
             LineAxis = p.LineAxis.ToString(),
             PathData = p.PathData,
-            Thickness = p.BandWidth,
+            BandWidth = p.BandWidth,
             OutlineJoinStyle = p.OutlineJoinStyle.ToString(),
             CollinearSplitPairs = p.CollinearSplitPairs,
             Opacity = p.Opacity,
@@ -240,11 +241,11 @@ public partial class SymbolDesignerViewModel
             }
         }
         foreach (var v in p.VertexBandWidths)
-            dto.VertexThicknesses.Add(new VertexThicknessDto
+            dto.VertexBandWidths.Add(new VertexBandWidthDto
             {
                 Index = v.Index,
-                IncomingThickness = v.IncomingBandWidth,
-                OutgoingThickness = v.OutgoingBandWidth,
+                IncomingBandWidth = v.IncomingBandWidth,
+                OutgoingBandWidth = v.OutgoingBandWidth,
                 JoinInnerRadius = v.JoinInnerRadius,
                 LeftCornerRadius = v.LeftCornerRadius,
                 RightCornerRadius = v.RightCornerRadius,
@@ -485,16 +486,16 @@ public partial class SymbolDesignerViewModel
             PatternSpacing = dto.PatternSpacing is { } ps ? System.Math.Clamp(ps, 1, 40) : 6.0,
         };
         // 先设整体 BandWidth（触发同步时 VertexBandWidths 尚未填充，不会覆盖任何顶点带宽）
-        item.BandWidth = dto.Thickness;
+        item.BandWidth = dto.BandWidth;
         // 再填逐顶点带宽（per-vertex 独立值，覆盖整体 BandWidth 的位置）
-        int vertexCount = dto.VertexThicknesses.Count;
+        int vertexCount = dto.VertexBandWidths.Count;
         for (int i = 0; i < vertexCount; i++)
         {
-            var vd = dto.VertexThicknesses[i];
+            var vd = dto.VertexBandWidths[i];
             bool isStart = i == 0;
             bool isEnd = i == vertexCount - 1;
             item.VertexBandWidths.Add(new VertexBandWidth(
-                vd.Index, vd.IncomingThickness, vd.OutgoingThickness, isStart, isEnd)
+                vd.Index, vd.IncomingBandWidth, vd.OutgoingBandWidth, isStart, isEnd)
             {
                 JoinInnerRadius = vd.JoinInnerRadius,
                 LeftCornerRadius = vd.LeftCornerRadius,
@@ -508,7 +509,7 @@ public partial class SymbolDesignerViewModel
             && !string.IsNullOrEmpty(item.PathData))
         {
             // 顶点数从 PathData 解析
-            var pts = Converters.BandOutlineBuilder.ParsePathData(item.PathData);
+            var pts = BandOutlineBuilder.ParsePathData(item.PathData);
             item.SyncVertexBandWidths(pts.Count, item.BandWidth);
         }
         // 恢复逐顶点接缝样式（稀疏：只覆盖 DTO 中明确给出的项）

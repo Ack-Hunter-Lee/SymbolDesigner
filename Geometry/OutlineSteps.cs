@@ -1,8 +1,7 @@
 using System.Windows;
 using System.Windows.Media;
 
-namespace SymbolDesigner.Converters
-{
+namespace SymbolDesigner.Geometry;
     /// <summary>轮廓点种类：区分"骨线转折产生的转角点"与"普通轮廓点"。
     /// 圆角等轮廓编辑按此分类分开处理：转角点走骨架转角圆角，普通点走端点/轮廓点圆角。</summary>
     internal enum OutlinePointKind
@@ -110,4 +109,3 @@ namespace SymbolDesigner.Converters
         internal override List<Point> GetCapturePoints()
             => new List<Point> { Point };
     }
-}

@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using SymbolDesigner.Geometry;
 using SymbolDesigner.Models;
 using Point = System.Windows.Point;
 using Rect = System.Windows.Rect;
@@ -150,7 +151,7 @@ public partial class SymbolDesignerViewModel
 
     /// <summary>计算一组图元的整体包围盒（画布坐标）。
     /// PathData 型图元用解析点求真实范围（X/Y 定位 + 局部点平移），其余用 X/Y/Width/Height。
-    /// 纯靠 Width/Height 会忽略 PathData 局部越界；防越界见 Converters.GeometryMath.RecalcBoundingBox。</summary>
+    /// 纯靠 Width/Height 会忽略 PathData 局部越界；防越界见 GeometryMath.RecalcBoundingBox。</summary>
     private static Rect? GetUnionBounds(IReadOnlyList<PrimitiveItem> items)
     {
         double minX = double.MaxValue, minY = double.MaxValue, maxX = double.MinValue, maxY = double.MinValue;
@@ -329,7 +330,7 @@ public partial class SymbolDesignerViewModel
                 W = item.Width,
                 H = item.Height,
                 PathData = pd,
-                PathDataClosed = SymbolDesigner.Converters.BandOutlineBuilder.IsPathDataClosed(pd),
+                PathDataClosed = BandOutlineBuilder.IsPathDataClosed(pd),
                 CornerRadius = item.CornerRadius,
                 InnerRadius = item.InnerRadius,
                 BandWidth = item.BandWidth,
@@ -434,7 +435,7 @@ public partial class SymbolDesignerViewModel
     private static void ScalePathData(PrimitiveItem item, ScaleSnapshot snap, Point anchor, double scale)
     {
         if (string.IsNullOrEmpty(snap.PathData)) return;
-        var pts = SymbolDesigner.Converters.BandOutlineBuilder.ParsePathData(snap.PathData);
+        var pts = BandOutlineBuilder.ParsePathData(snap.PathData);
 
         // 画布坐标缩放
         double bx1 = double.MaxValue, by1 = double.MaxValue;
@@ -551,9 +552,9 @@ public partial class SymbolDesignerViewModel
     {
         var pd = item.PathData;
         if (string.IsNullOrEmpty(pd)) return;
-        var pts = SymbolDesigner.Converters.BandOutlineBuilder.ParsePathData(pd);
+        var pts = BandOutlineBuilder.ParsePathData(pd);
         if (pts.Count == 0) return;
-        bool closed = SymbolDesigner.Converters.BandOutlineBuilder.IsPathDataClosed(pd);
+        bool closed = BandOutlineBuilder.IsPathDataClosed(pd);
 
         double bx1 = double.MaxValue, by1 = double.MaxValue, bx2 = double.MinValue, by2 = double.MinValue;
         var mx = new List<Point>(pts.Count);

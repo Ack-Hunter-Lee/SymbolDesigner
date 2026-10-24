@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
+using SymbolDesigner.Geometry;
 using SymbolDesigner.Models;
 
 namespace SymbolDesigner.ViewModels;
@@ -27,7 +28,7 @@ public partial class SymbolDesignerViewModel
         get
         {
             if (SelectedItem is not { } item || string.IsNullOrEmpty(item.PathData)) return 200;
-            var pts = Converters.BandOutlineBuilder.ParsePathData(item.PathData);
+            var pts = BandOutlineBuilder.ParsePathData(item.PathData);
             if (pts.Count < 2) return 200;
             double minLen = double.MaxValue;
             for (int i = 1; i < pts.Count; i++)
@@ -146,14 +147,14 @@ public partial class SymbolDesignerViewModel
     /// - BevelStep（拆点）不可圆角化；入线/出线缺失或共线时跳过；
     /// - 圆弧端点 = 圆心 ± 方向 * len，len 由 GetArcTangentOffset 半角公式换算（与渲染同一行为）；
     /// - sweep：det(inDir,outDir) &lt; 0 → 外凸角 → Counterclockwise；det &gt; 0 → 内凹角 → Clockwise。</summary>
-    private static string? TryReplaceWithArc(IList<Converters.PointStep> steps,
+    private static string? TryReplaceWithArc(IList<Geometry.PointStep> steps,
         OutlineCornerHandle h, double radius)
     {
         int idx = h.StepIndex;
         if (idx < 0 || idx >= steps.Count)
             return $"StepIndex={idx} 越界（steps.Count={steps.Count}）";
         var step = steps[idx];
-        if (step is Converters.BevelStep)
+        if (step is Geometry.BevelStep)
             return "Bevel 拆点不可圆角化";
         Vector inDir = h.InDir;
         Vector outDir = h.OutDir;
@@ -164,13 +165,13 @@ public partial class SymbolDesignerViewModel
             return "入边/出边共线（0° 或 180°）";
 
         // 切点偏移 = 半径 × cot(半跨角)，与 BandOutlineBuilder.AdjustForRound 同一换算
-        double len = Converters.BandOutlineBuilder.GetArcTangentOffset(inDir, outDir, radius);
+        double len = BandOutlineBuilder.GetArcTangentOffset(inDir, outDir, radius);
         Point center = step.Point;
         Point arcStart = center - inDir * len;
         Point arcEnd = center + outDir * len;
         var sweep = det < 0 ? SweepDirection.Counterclockwise : SweepDirection.Clockwise;
         // 保留原步骤的 Kind/JoinIndex/BoneIndex（否则缓存直接复用时骨架映射丢失）
-        steps[idx] = new Converters.ArcStep(center, arcStart, arcEnd, radius, sweep,
+        steps[idx] = new Geometry.ArcStep(center, arcStart, arcEnd, radius, sweep,
             step.Kind, step.JoinIndex, step.BoneIndex);
         h.StepKind = "ArcStep";
         return null;
@@ -320,8 +321,8 @@ public partial class SymbolDesignerViewModel
         if (steps is null) return;
         int idx = h.StepIndex;
         if (idx < 0 || idx >= steps.Count) return;
-        if (steps[idx] is not Converters.ArcStep) return;
-        steps[idx] = new Converters.PointStep(steps[idx].Point);
+        if (steps[idx] is not Geometry.ArcStep) return;
+        steps[idx] = new Geometry.PointStep(steps[idx].Point);
         item.NotifyOutlineGeometryChanged();
         h.StepKind = "PointStep";
     }

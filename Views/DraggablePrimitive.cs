@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
+using SymbolDesigner.Geometry;
 using SymbolDesigner.Models;
 using SymbolDesigner.ViewModels;
 
@@ -296,7 +297,7 @@ public class DraggablePrimitive : ContentControl
             case nameof(L1Primitive.BandPolyline):
             {
                 // PathData 是图元局部坐标，直接与局部点击点比较
-                var pts = SymbolDesigner.Converters.BandOutlineBuilder.ParsePathData(item.PathData);
+                var pts = BandOutlineBuilder.ParsePathData(item.PathData);
                 if (pts.Count < 2)
                 {
                     // 无 PathData（模板对角线回退 / 矩形线）：用包围盒对角线近似

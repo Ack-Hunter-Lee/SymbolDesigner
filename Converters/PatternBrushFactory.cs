@@ -137,7 +137,7 @@ public static class PatternBrushFactory
     ///   Horizontal / Diagonal(旋转前) - n 根水平线
     ///   Vertical - n 根竖直线
     ///   Cross    - 水平 + 竖直叠加（网格）</summary>
-    private static Geometry BuildTileGeometry(PatternStyle style, double tileSize, double spacing)
+    private static System.Windows.Media.Geometry BuildTileGeometry(PatternStyle style, double tileSize, double spacing)
     {
         // 用线数 n 均匀铺在 [0,T]：n 大则密、n 小则疏，且保证 tile 边界无缝（线与 tile 边界两侧对齐）。
         int n = Math.Max(1, (int)Math.Round(tileSize / spacing));

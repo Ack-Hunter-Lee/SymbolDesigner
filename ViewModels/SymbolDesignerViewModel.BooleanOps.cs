@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using SymbolDesigner.Geometry;
 using SymbolDesigner.Models;
 
 namespace SymbolDesigner.ViewModels;
@@ -49,7 +50,7 @@ public partial class SymbolDesignerViewModel
         var gb = b.CanvasFillGeometry;
         if (ga is null || gb is null) return;
 
-        var result = Converters.BooleanOps.Compute(ga, gb, mode);
+        var result = BooleanOps.Compute(ga, gb, mode);
         if (result is null)
         {
             System.Windows.MessageBox.Show("两个图元不相交，该运算没有有效结果。", "布尔运算",
@@ -241,7 +242,7 @@ public partial class SymbolDesignerViewModel
         var mode = System.Enum.TryParse<System.Windows.Media.GeometryCombineMode>(item.BooleanMode, out var m)
             ? m
             : System.Windows.Media.GeometryCombineMode.Union;
-        var result = Converters.BooleanOps.Compute(ga, gb, mode);
+        var result = BooleanOps.Compute(ga, gb, mode);
         if (result is null) return null;
 
         item.PathData = result.PathData;

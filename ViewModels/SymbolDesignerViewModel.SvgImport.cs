@@ -2,7 +2,7 @@ using System.Linq;
 using System.Windows;
 using CommunityToolkit.Mvvm.Input;
 using SymbolDesigner.Models;
-using SymbolDesigner.Svg;
+using SymbolDesigner.Geometry;
 
 namespace SymbolDesigner.ViewModels;
 

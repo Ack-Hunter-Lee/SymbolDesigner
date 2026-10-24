@@ -2,6 +2,28 @@
 
 > 所有 wiki 操作按时间追加。近期记录保留在此，更早按月归档到 `_archive/log/`。
 
+## 2026-10-24
+
+- 新增术语表页 `glossary.md`（TypeKey / BandWidth / BooleanPath / 阵列 / 约束 / 撤销 / 视图主题 / 工具命令），
+  并登记到 `index.md`。目的：降低新人读代码时的黑话门槛（可读性改进第一步）。
+- 新增仓库根 `README.md`：项目简介 / 双重身份 / 技术栈 / 功能概览 / 编译运行 / 目录导览 / 文档链接。
+  与术语表共同完成"可读性改进第 1 步（README + Glossary）"。
+- 可读性改进第 2 步（命名空间统一 + DTO 术语统一）：
+  - `Geometry/` 13 个类命名空间统一为 `SymbolDesigner.Geometry`（原 `SymbolDesigner.Converters` / `SymbolDesigner.Svg`），
+    同步更新约 16 个引用方的 using 与 `Converters.*` 前缀（88 处引用）。
+  - `PrimitiveItemDto.Thickness` → `BandWidth`、`VertexThicknesses` → `VertexBandWidths`、
+    `VertexThicknessDto` → `VertexBandWidthDto`、`Incoming/OutgoingThickness` → `Incoming/OutgoingBandWidth`，
+    均加 `[JsonPropertyName]` 保持旧文件 JSON 键名兼容；CLI DSL 的 `Thickness` 保留（外部契约）。
+  - 同步更新 README 与 wiki 中"命名空间历史遗留"的过时描述。
+  - 构建验证：`SymbolDesigner.csproj` 与 `SymbolDesigner.Cli.csproj` 均 0 错误通过
+    （`--disable-build-servers`；6 / 1 条既有警告）。
+  - 坑：`SymbolDesigner.Geometry` 命名空间存在后，`SymbolDesigner.*` 下的裸 `Geometry` 会被解析成命名空间
+    而非 WPF 的 `System.Windows.Media.Geometry`（**类型位置**尤其明显，using 别名救不了——命名空间成员优先）。
+    涉及 `BandOutlineBuilder` / `BooleanOps` / `ClipperBooleanEngine` / `PolylineToSegments` /
+    `PatternBrushFactory` / `Renderer` / `BeltDtoGeometry`，统一改为全限定名。
+  - CLI 侧连带：`DslToProject` 的 DTO 赋值改 `BandWidth = p.Thickness`（DSL 字段名不变）；
+    `Renderer` 恢复 `using SymbolDesigner.Converters;`（ColorUtil / PatternBrushFactory 仍归属 UI 转换器）。
+
 ## 2026-11-17
 
 - 初始化项目 wiki 结构：创建 `SCHEMA.md`、`index.md`、`log.md`、`user-profile.md`。

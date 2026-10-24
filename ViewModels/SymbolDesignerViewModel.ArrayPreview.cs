@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using SymbolDesigner.Geometry;
 using SymbolDesigner.Models;
 
 namespace SymbolDesigner.ViewModels;
@@ -328,9 +329,9 @@ public partial class SymbolDesignerViewModel
     /// <summary>把画布坐标点投影到路径几何，返回有符号垂直距离；路径为空 → null。</summary>
     private static double? ProjectOffset(System.Windows.Media.Geometry pathGeo, System.Windows.Point point)
     {
-        var segments = Converters.PolylineToSegments.Convert(pathGeo);
+        var segments = PolylineToSegments.Convert(pathGeo);
         if (segments.Count == 0) return null;
-        return Converters.PathDistributor.ProjectOntoPath(segments, point)?.SignedOffset;
+        return PathDistributor.ProjectOntoPath(segments, point)?.SignedOffset;
     }
 
     /// <summary>源的画布中心（包围盒中心）：全工程统一约定"中心 = 包围盒中心"，
@@ -674,11 +675,11 @@ public partial class SymbolDesignerViewModel
     /// 返回**源位处的路径切线角**，供副本按"相对增量"旋转。</summary>
     private static double BuildPathPlacements(ArrayInstance arr, List<PlacementP> anchors)
     {
-        var segments = Converters.PolylineToSegments.Convert(ParsePathData(arr.PathData));
+        var segments = PolylineToSegments.Convert(ParsePathData(arr.PathData));
         if (segments.Count == 0) return 0;
 
         // 起始弧长：源中心到路径的最近投影点（= 源当前位置在路径上的落点）
-        var proj = Converters.PathDistributor.ProjectOntoPath(
+        var proj = PathDistributor.ProjectOntoPath(
             segments, new System.Windows.Point(
                 arr.Source.X + arr.Source.Width / 2,
                 arr.Source.Y + arr.Source.Height / 2));
@@ -687,7 +688,7 @@ public partial class SymbolDesignerViewModel
 
         // 闭合路径（末点回到首点）→ 整圈等分并回绕；开放路径 → 从起点排到终点
         bool closed = IsClosedContour(segments);
-        foreach (var p in Converters.PathDistributor.DistributeAlongPath(
+        foreach (var p in PathDistributor.DistributeAlongPath(
                      segments, System.Math.Clamp(arr.Count, 1, 100), startArc, closed))
             anchors.Add(new PlacementP(p.X, p.Y, p.AngleDeg));
         return baseAngle;
@@ -703,7 +704,7 @@ public partial class SymbolDesignerViewModel
     }
 
     /// <summary>段序列是否闭合（末段终点 ≈ 首段起点；PolylineToSegments 对闭合轮廓补了收尾边）。</summary>
-    private static bool IsClosedContour(IReadOnlyList<Converters.PathDistributor.PathSegment> segments)
+    private static bool IsClosedContour(IReadOnlyList<PathDistributor.PathSegment> segments)
     {
         if (segments.Count < 2) return false;
         var a = segments[0].Start;

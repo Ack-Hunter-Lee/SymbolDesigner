@@ -3,7 +3,7 @@ using System.Windows;
 using System.Windows.Media;
 using SymbolDesigner.Models;
 
-namespace SymbolDesigner.Converters;
+namespace SymbolDesigner.Geometry;
 
 /// <summary>布尔结果快照的段类型。</summary>
 public enum SegKind
@@ -72,14 +72,14 @@ public static class BooleanOps
     /// 对两个画布坐标填充几何执行布尔运算，整理为局部坐标段结构快照（弧段保留，不摊平）。
     /// 两几何不相交 / 结果无面积（如不相交的 Intersect）→ 返回 null（调用方拒绝/提示）。
     /// a/b 必须是画布坐标系（调用方自行平移 X/Y，见 PrimitiveItem.CanvasFillGeometry）。</summary>
-    public static BooleanResult? Compute(Geometry a, Geometry b, GeometryCombineMode mode)
+    public static BooleanResult? Compute(System.Windows.Media.Geometry a, System.Windows.Media.Geometry b, GeometryCombineMode mode)
     {
         // 优先 Clipper2 折线布尔（椭圆 2° 均匀离散 → 稳定输出，无 Combine 的弧重建偏心）。
         // 任何失败/不支持（含非圆几何、含弧环等）自动回退到 Geometry.Combine，保住既有能力。
         var clipperResult = ClipperBooleanEngine.Compute(a, b, mode);
         if (clipperResult is not null) return clipperResult;
 
-        var combined = Geometry.Combine(a, b, mode, null, Tolerance, ToleranceType.Absolute);
+        var combined = System.Windows.Media.Geometry.Combine(a, b, mode, null, Tolerance, ToleranceType.Absolute);
         if (combined is null || combined.IsEmpty() || combined.Bounds.IsEmpty) return null;
         var bounds = combined.Bounds;
 

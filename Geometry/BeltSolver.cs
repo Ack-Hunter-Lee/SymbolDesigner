@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Windows;
 
-namespace SymbolDesigner.Converters;
+namespace SymbolDesigner.Geometry;
 
 /// <summary>皮带绕行的圆滚轮（画布坐标圆心 + 半径）。</summary>
 public readonly record struct BeltRoller(Guid Id, Point Center, double Radius);

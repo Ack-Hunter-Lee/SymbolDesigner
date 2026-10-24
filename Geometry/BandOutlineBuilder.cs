@@ -12,7 +12,7 @@ using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using Point = System.Windows.Point;
 
-namespace SymbolDesigner.Converters;
+namespace SymbolDesigner.Geometry;
 
 /// <summary>
 /// BandPolyline 轮廓生成工具（纯静态方法，不实现 IValueConverter 接口）。
@@ -38,11 +38,11 @@ public static class BandOutlineBuilder
 
     /// <summary>整体带宽版本：所有段统一 bandWidth，用 miter join。
     /// 内部转成 VertexBandWidth[] 走新架构（避免两套 miter 实现并存）。</summary>
-    public static Geometry BuildOutline(string pathData, double bandWidth)
+    public static System.Windows.Media.Geometry BuildOutline(string pathData, double bandWidth)
     {
         var pts = ParsePathData(pathData);
-        if (pts.Count < 2) return Geometry.Parse(pathData);
-        if (bandWidth <= 0) return Geometry.Parse(pathData);
+        if (pts.Count < 2) return System.Windows.Media.Geometry.Parse(pathData);
+        if (bandWidth <= 0) return System.Windows.Media.Geometry.Parse(pathData);
 
         int n = pts.Count;
         var vt = new VertexBandWidth[n];
@@ -61,18 +61,18 @@ public static class BandOutlineBuilder
     /// 段 i 的末端宽度 = VertexBandWidths[i+1].IncomingBandWidth
     /// 段首末宽度不同 → 段为梯形（中间线性渐变）。
     /// 中间顶点衔接由 JoinStyle 控制：Miter（尖角）/ Bevel（斜切封口）/ Round（圆弧替代尖点）。</summary>
-    public static Geometry BuildOutline(string pathData, VertexBandWidth[] vertexBandWidths)
+    public static System.Windows.Media.Geometry BuildOutline(string pathData, VertexBandWidth[] vertexBandWidths)
         => BuildOutline(pathData, vertexBandWidths, JoinStyle.Miter);
 
     /// <summary>按 join 风格分发：miter / bevel / round 三种接缝可选。
     /// 全局 join 风格作用于所有内部顶点；如需逐顶点控制，用带 JoinStyle[] 的重载。</summary>
-    public static Geometry BuildOutline(string pathData, VertexBandWidth[] vertexBandWidths, JoinStyle joinStyle)
+    public static System.Windows.Media.Geometry BuildOutline(string pathData, VertexBandWidth[] vertexBandWidths, JoinStyle joinStyle)
         => BuildOutline(pathData, vertexBandWidths, ExpandUniform(joinStyle, vertexBandWidths));
 
     /// <summary>逐顶点 join 风格版本：每内部顶点（Index 1..N-2）从 perVertexStyles 取值，
     /// 首末顶点（0/N-1）的样式不参与接缝计算但保留数组下标对齐。
     /// perVertexStyles 长度必须 ≥ vertexBandWidths 长度，否则退回全局 Miter。</summary>
-    public static Geometry BuildOutline(string pathData, VertexBandWidth[] vertexBandWidths, JoinStyle[] perVertexStyles)
+    public static System.Windows.Media.Geometry BuildOutline(string pathData, VertexBandWidth[] vertexBandWidths, JoinStyle[] perVertexStyles)
         => EmitSteps(BuildOutlineSteps(pathData, vertexBandWidths, perVertexStyles));
 
     // ===== 新增：emit 步骤缓存版（外部可改步骤后 re-emit）=====
@@ -341,7 +341,7 @@ public static class BandOutlineBuilder
     /// 按 FigureIndex 分组开 figure：无标记（-1，BandPolyline/单环）整条序列一个闭合 figure；
     /// 多环布尔结果每环一个 figure（环内各自闭合），环间边界用 BeginFigure 断开，不串环连线。
     /// Each ring's first step：ArcStep → 以 ArcStart 起手直接画弧，否则以 Point 为起点。</summary>
-    internal static Geometry EmitSteps(List<PointStep> steps)
+    internal static System.Windows.Media.Geometry EmitSteps(List<PointStep> steps)
     {
         var stream = new StreamGeometry();
         using (var ctx = stream.Open())

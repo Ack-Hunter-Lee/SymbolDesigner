@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text;
 
-namespace SymbolDesigner.Converters;
+namespace SymbolDesigner.Geometry;
 
 /// <summary>
 /// 圆环 Path Data 生成器。

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using SymbolDesigner.Geometry;
 using SymbolDesigner.Models;
 
 namespace SymbolDesigner.ViewModels;
@@ -70,7 +71,7 @@ public partial class SymbolDesignerViewModel
                 var center = DraftPoints[0];
                 bool isCircleLike = DrawMode is DrawMode.Ellipse or DrawMode.Ring or DrawMode.Pie;
                 if (_shiftKey && !isCircleLike)
-                    clamped = Converters.GeometryMath.ConstrainShapeToSquare(center, clamped);
+                    clamped = GeometryMath.ConstrainShapeToSquare(center, clamped);
                 DraftPoints.Add(clamped);
                 EndDraw();
             }
@@ -152,7 +153,7 @@ public partial class SymbolDesignerViewModel
             // - 其它形状（Rect/RoundedRect/Triangle）：Shift 锁等比（正方形/正三角形）
             bool isCircleLike = DrawMode is DrawMode.Ellipse or DrawMode.Ring or DrawMode.Pie;
             if (!isCircleLike && shiftKey)
-                DraftPreviewPoint = Converters.GeometryMath.ConstrainShapeToSquare(anchor, clamped);
+                DraftPreviewPoint = GeometryMath.ConstrainShapeToSquare(anchor, clamped);
             else
                 DraftPreviewPoint = clamped;
         }
@@ -427,7 +428,7 @@ public partial class SymbolDesignerViewModel
             foreach (var p in DraftPoints)
                 shifted.Add(new System.Windows.Point(p.X - minX, p.Y - minY));
 
-            var pathData = Converters.GeometryMath.BuildPathData(shifted);
+            var pathData = GeometryMath.BuildPathData(shifted);
             // 画线工具提交：根据 DrawMode 决定目标 primitive 类型。
             //   DrawMode.BandPolyline → BandPolyline（带带宽的连贯图形）
             //   DrawMode.Polyline     → Polyline（无带宽的兄弟类型，纯描边骨架）
@@ -590,7 +591,7 @@ public partial class SymbolDesignerViewModel
         {
             combined.Add(DraftPreviewPoint);
         }
-        DraftPathData = Converters.GeometryMath.BuildPathData(combined);
+        DraftPathData = GeometryMath.BuildPathData(combined);
     }
 
     /// <summary>形状绘制实时预览：依据 DraftPoints[0]=中心点 + DraftPreviewPoint=当前鼠标位置，
@@ -702,7 +703,7 @@ public partial class SymbolDesignerViewModel
                     // 对称张角默认 60°（鼻尖朝向鼠标）。
                     double rawAxis = AngleOf(center.X, center.Y, p.X, p.Y);
                     double snappedAxis = SnapPieAxis(rawAxis);
-                    sb.Append(Converters.PieGeometryBuilder.BuildPath(center.X, center.Y, halfW, snappedAxis, 60));
+                    sb.Append(PieGeometryBuilder.BuildPath(center.X, center.Y, halfW, snappedAxis, 60));
                     // 实时角度读数 + 吸附提示线
                     bool snapped = Math.Abs(snappedAxis - rawAxis) > 1e-9; // 吸附前后角度不同 → 吸附命中
                     // 角度标注：吸附命中显示特殊角整度数（45°），否则显示实时角度（一位小数）
