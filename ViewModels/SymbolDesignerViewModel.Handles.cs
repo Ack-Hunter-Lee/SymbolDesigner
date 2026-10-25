@@ -37,7 +37,10 @@ public partial class SymbolDesignerViewModel
 
         var pts = BandOutlineBuilder.ParsePathData(item.PathData);
         for (int i = 0; i < pts.Count; i++)
-            VertexHandles.Add(new VertexHandle(i, item.X + pts[i].X, item.Y + pts[i].Y));
+        {
+            var canvas = GeometryMath.LocalToCanvas(item, pts[i]);
+            VertexHandles.Add(new VertexHandle(i, canvas.X, canvas.Y));
+        }
     }
 
     /// <summary>顶点手柄被拖拽时调用：更新顶点坐标到 SelectedItem.PathData。
@@ -51,9 +54,10 @@ public partial class SymbolDesignerViewModel
         if (item.TypeKey == nameof(L1Primitive.BooleanPath))
             return;  // 布尔结果轮廓点不可拖拽（需求），骨架模式也不显示手柄，此分支为防御
 
-        // 把画布坐标转回 Path 局部坐标
-        var localX = newCanvasX - item.X;
-        var localY = newCanvasY - item.Y;
+        // 把画布坐标先反旋转回未旋转坐标系（图元本体渲染绕包围盒中心旋转），再转成 Path 局部坐标
+        var unrotated = GeometryMath.UnrotateCanvasPoint(item, new Point(newCanvasX, newCanvasY));
+        var localX = unrotated.X - item.X;
+        var localY = unrotated.Y - item.Y;
 
         // 重写 PathData；通过 _suppressVertexRefresh 跳过 OnSelectedItemPathDataChanged，
         // 因为手柄位置已经在 View 端通过 TwoWay 绑定跟随鼠标更新，不需要重建集合。
@@ -121,9 +125,9 @@ public partial class SymbolDesignerViewModel
         var pts = BandOutlineBuilder.ParsePathData(item.PathData);
         for (int i = 0; i < pts.Count - 1; i++)
         {
-            var midX = item.X + (pts[i].X + pts[i + 1].X) * 0.5;
-            var midY = item.Y + (pts[i].Y + pts[i + 1].Y) * 0.5;
-            SegmentHandles.Add(new SegmentDragHandle(i, midX, midY));
+            var mid = GeometryMath.LocalToCanvas(item,
+                new Point((pts[i].X + pts[i + 1].X) * 0.5, (pts[i].Y + pts[i + 1].Y) * 0.5));
+            SegmentHandles.Add(new SegmentDragHandle(i, mid.X, mid.Y));
         }
     }
 
@@ -187,24 +191,24 @@ public partial class SymbolDesignerViewModel
             double halfEnd = HalfIncoming(i + 1);  // 段 i 末端带宽半值（= vt[i+1].Incoming）
 
             // Left Start（映射骨点 i，出端 ▼）
-            BandWidthHandles.Add(new BandWidthHandle(i, "L", "Start", i,
-                item.X + pts[i].X + nx * halfStart,
-                item.Y + pts[i].Y + ny * halfStart));
+            var ls = GeometryMath.LocalToCanvas(item,
+                new Point(pts[i].X + nx * halfStart, pts[i].Y + ny * halfStart));
+            BandWidthHandles.Add(new BandWidthHandle(i, "L", "Start", i, ls.X, ls.Y));
             // Right Start（出端 ▼）
-            BandWidthHandles.Add(new BandWidthHandle(i, "R", "Start", i,
-                item.X + pts[i].X - nx * halfStart,
-                item.Y + pts[i].Y - ny * halfStart));
+            var rs = GeometryMath.LocalToCanvas(item,
+                new Point(pts[i].X - nx * halfStart, pts[i].Y - ny * halfStart));
+            BandWidthHandles.Add(new BandWidthHandle(i, "R", "Start", i, rs.X, rs.Y));
             // 入端端点（▲）：顶点 i+1 的入端被隐藏（首顶点 / 合并共线顶点）时整体跳过
             bool showIn = i + 1 < vt.Count && vt[i + 1].ShowIncoming;
             if (!showIn) continue;
             // Left End（映射骨点 i+1，入端 ▲）
-            BandWidthHandles.Add(new BandWidthHandle(i, "L", "End", i + 1,
-                item.X + pts[i + 1].X + nx * halfEnd,
-                item.Y + pts[i + 1].Y + ny * halfEnd));
+            var le = GeometryMath.LocalToCanvas(item,
+                new Point(pts[i + 1].X + nx * halfEnd, pts[i + 1].Y + ny * halfEnd));
+            BandWidthHandles.Add(new BandWidthHandle(i, "L", "End", i + 1, le.X, le.Y));
             // Right End（入端 ▲）
-            BandWidthHandles.Add(new BandWidthHandle(i, "R", "End", i + 1,
-                item.X + pts[i + 1].X - nx * halfEnd,
-                item.Y + pts[i + 1].Y - ny * halfEnd));
+            var re = GeometryMath.LocalToCanvas(item,
+                new Point(pts[i + 1].X - nx * halfEnd, pts[i + 1].Y - ny * halfEnd));
+            BandWidthHandles.Add(new BandWidthHandle(i, "R", "End", i + 1, re.X, re.Y));
         }
     }
 
@@ -222,17 +226,20 @@ public partial class SymbolDesignerViewModel
         if (item.TypeKey != nameof(L1Primitive.Ring)) return;
         if (item.Width <= 0 || item.Height <= 0 || item.InnerRadius <= 0) return;
 
-        double cx = item.X + item.Width / 2;
-        double cy = item.Y + item.Height / 2;
+        double halfW = item.Width / 2;
+        double halfH = item.Height / 2;
         double outer = Math.Min(item.Width, item.Height) / 2;
         double inner = Math.Clamp(item.InnerRadius, 0.01, outer - 0.01);
 
         // 中心手柄（拖动 = 平移）
-        RingHandles.Add(new RingHandle(RingHandleKind.Center, cx, cy));
+        var center = GeometryMath.LocalToCanvas(item, new Point(halfW, halfH));
+        RingHandles.Add(new RingHandle(RingHandleKind.Center, center.X, center.Y));
         // 外圆手柄：东侧（拖动水平距离 = 外径，最直观）
-        RingHandles.Add(new RingHandle(RingHandleKind.Outer, cx + outer, cy, RingHandleDirection.E));
+        var outerPt = GeometryMath.LocalToCanvas(item, new Point(halfW + outer, halfH));
+        RingHandles.Add(new RingHandle(RingHandleKind.Outer, outerPt.X, outerPt.Y, RingHandleDirection.E));
         // 内圆手柄：东侧（拖动水平距离 = 内径，最直观）
-        RingHandles.Add(new RingHandle(RingHandleKind.Inner, cx + inner, cy, RingHandleDirection.E));
+        var innerPt = GeometryMath.LocalToCanvas(item, new Point(halfW + inner, halfH));
+        RingHandles.Add(new RingHandle(RingHandleKind.Inner, innerPt.X, innerPt.Y, RingHandleDirection.E));
     }
 
     /// <summary>圆环手柄拖拽：根据手柄类型 + 鼠标在画布上的位置，更新圆环几何。
@@ -244,6 +251,11 @@ public partial class SymbolDesignerViewModel
         if (SelectedItem is not { } item) return;
         if (item.IsLocked) return;   // 锁定图元禁止圆环手柄拖拽
         if (item.TypeKey != nameof(L1Primitive.Ring)) return;
+
+        // 鼠标画布坐标先反旋转回未旋转坐标系（手柄拖动写回几何用未旋转坐标）
+        var m = GeometryMath.UnrotateCanvasPoint(item, new Point(mouseX, mouseY));
+        mouseX = m.X;
+        mouseY = m.Y;
 
         double halfW = item.Width / 2;
         double halfH = item.Height / 2;
@@ -294,21 +306,15 @@ public partial class SymbolDesignerViewModel
         for (int i = 0; i < RingHandles.Count; i++)
         {
             var h = RingHandles[i];
-            if (h.Kind == RingHandleKind.Center)
-            {
-                h.X = item.X + item.Width / 2;
-                h.Y = item.Y + item.Height / 2;
-            }
-            else // Outer / Inner 都在东侧
-            {
-                double ox = item.X + item.Width / 2;
-                double oy = item.Y + item.Height / 2;
-                double r = h.Kind == RingHandleKind.Outer
-                    ? Math.Min(item.Width, item.Height) / 2
-                    : Math.Clamp(item.InnerRadius, 0.01, Math.Min(item.Width, item.Height) / 2 - 0.01);
-                h.X = ox + r;
-                h.Y = oy;
-            }
+            var local = h.Kind == RingHandleKind.Center
+                ? new Point(item.Width / 2, item.Height / 2)
+                : new Point(item.Width / 2 + (h.Kind == RingHandleKind.Outer
+                        ? Math.Min(item.Width, item.Height) / 2
+                        : Math.Clamp(item.InnerRadius, 0.01, Math.Min(item.Width, item.Height) / 2 - 0.01)),
+                    item.Height / 2);
+            var c = GeometryMath.LocalToCanvas(item, local);
+            h.X = c.X;
+            h.Y = c.Y;
         }
     }
 
@@ -329,8 +335,10 @@ public partial class SymbolDesignerViewModel
         if (item.IsLocked) return;   // 锁定图元不渲染端点手柄
         if (item.TypeKey != nameof(L1Primitive.Belt)) return;
 
-        BeltHandles.Add(new BeltHandle(BeltHandleKind.Start, item.BeltStartX, item.BeltStartY));
-        BeltHandles.Add(new BeltHandle(BeltHandleKind.End, item.BeltEndX, item.BeltEndY));
+        var start = GeometryMath.RotateCanvasPoint(item, new Point(item.BeltStartX, item.BeltStartY));
+        var end = GeometryMath.RotateCanvasPoint(item, new Point(item.BeltEndX, item.BeltEndY));
+        BeltHandles.Add(new BeltHandle(BeltHandleKind.Start, start.X, start.Y));
+        BeltHandles.Add(new BeltHandle(BeltHandleKind.End, end.X, end.Y));
     }
 
     /// <summary>传送带端点手柄拖拽：把鼠标所在的画布坐标写回对应自由端点，然后重算整条皮带
@@ -342,6 +350,11 @@ public partial class SymbolDesignerViewModel
         if (SelectedItem is not { } item) return;
         if (item.IsLocked) return;   // 锁定图元禁止端点拖拽
         if (item.TypeKey != nameof(L1Primitive.Belt)) return;
+
+        // 鼠标画布坐标先反旋转回未旋转坐标系（BeltStart/End 存的是未旋转画布坐标）
+        var m = GeometryMath.UnrotateCanvasPoint(item, new Point(mouseX, mouseY));
+        mouseX = m.X;
+        mouseY = m.Y;
 
         if (kind == BeltHandleKind.Start)
         {
@@ -361,8 +374,11 @@ public partial class SymbolDesignerViewModel
         // 集合不重建（保持手柄引用稳定，避免ItemsControl闪烁）：直接同步两个手柄的位置
         foreach (var h in BeltHandles)
         {
-            if (h.Kind == BeltHandleKind.Start) { h.X = item.BeltStartX; h.Y = item.BeltStartY; }
-            else { h.X = item.BeltEndX; h.Y = item.BeltEndY; }
+            var c = GeometryMath.RotateCanvasPoint(item, h.Kind == BeltHandleKind.Start
+                ? new Point(item.BeltStartX, item.BeltStartY)
+                : new Point(item.BeltEndX, item.BeltEndY));
+            h.X = c.X;
+            h.Y = c.Y;
         }
     }
 
@@ -405,18 +421,26 @@ public partial class SymbolDesignerViewModel
         if (item.TypeKey != nameof(L1Primitive.Pie)) return;
         if (item.Width <= 0 || item.Height <= 0) return;
 
-        double cx = item.X + item.Width / 2;
-        double cy = item.Y + item.Height / 2;
+        double halfW = item.Width / 2;
+        double halfH = item.Height / 2;
         double r = Math.Min(item.Width, item.Height) / 2;
         double axis = item.StartAngle * Math.PI / 180;
         double half = item.SweepAngle * Math.PI / 180 / 2;
         double a0 = axis - half; // 起始弧端点（中轴-张角/2）
         double a1 = axis + half; // 终止弧端点（中轴+张角/2）
 
-        PieHandles.Add(new PieHandle(PieHandleKind.Center, cx, cy));
-        PieHandles.Add(new PieHandle(PieHandleKind.Radius, cx + r * Math.Cos(axis), cy + r * Math.Sin(axis)));
-        PieHandles.Add(new PieHandle(PieHandleKind.Start, cx + r * Math.Cos(a0), cy + r * Math.Sin(a0)));
-        PieHandles.Add(new PieHandle(PieHandleKind.End, cx + r * Math.Cos(a1), cy + r * Math.Sin(a1)));
+        var center = GeometryMath.LocalToCanvas(item, new Point(halfW, halfH));
+        var axisPt = GeometryMath.LocalToCanvas(item,
+            new Point(halfW + r * Math.Cos(axis), halfH + r * Math.Sin(axis)));
+        var startPt = GeometryMath.LocalToCanvas(item,
+            new Point(halfW + r * Math.Cos(a0), halfH + r * Math.Sin(a0)));
+        var endPt = GeometryMath.LocalToCanvas(item,
+            new Point(halfW + r * Math.Cos(a1), halfH + r * Math.Sin(a1)));
+
+        PieHandles.Add(new PieHandle(PieHandleKind.Center, center.X, center.Y));
+        PieHandles.Add(new PieHandle(PieHandleKind.Radius, axisPt.X, axisPt.Y));
+        PieHandles.Add(new PieHandle(PieHandleKind.Start, startPt.X, startPt.Y));
+        PieHandles.Add(new PieHandle(PieHandleKind.End, endPt.X, endPt.Y));
     }
 
     /// <summary>扇形手柄拖拽：根据手柄类型 + 鼠标在画布上的位置，更新扇形几何。
@@ -428,6 +452,11 @@ public partial class SymbolDesignerViewModel
         if (SelectedItem is not { } item) return;
         if (item.IsLocked) return;   // 锁定图元禁止扇形手柄拖拽
         if (item.TypeKey != nameof(L1Primitive.Pie)) return;
+
+        // 鼠标画布坐标先反旋转回未旋转坐标系（圆心/角度均在未旋转的局部坐标系里计算）
+        var m = GeometryMath.UnrotateCanvasPoint(item, new Point(mouseX, mouseY));
+        mouseX = m.X;
+        mouseY = m.Y;
 
         double halfW = item.Width / 2;
         double halfH = item.Height / 2;
@@ -471,30 +500,31 @@ public partial class SymbolDesignerViewModel
         {
             var h = PieHandles[i];
             double r = Math.Min(item.Width, item.Height) / 2;
-            double kx = item.X + item.Width / 2;
-            double ky = item.Y + item.Height / 2;
+            double hw = item.Width / 2;
+            double hh = item.Height / 2;
+            Point local;
             switch (h.Kind)
             {
                 case PieHandleKind.Center:
-                    h.X = kx;
-                    h.Y = ky;
+                    local = new Point(hw, hh);
                     break;
                 case PieHandleKind.Radius:
                     {
                         double ax = item.StartAngle * Math.PI / 180;
-                        h.X = kx + r * Math.Cos(ax);
-                        h.Y = ky + r * Math.Sin(ax);
+                        local = new Point(hw + r * Math.Cos(ax), hh + r * Math.Sin(ax));
                         break;
                     }
                 default:
                     {
                         double off = (h.Kind == PieHandleKind.Start ? -0.5 : 0.5) * item.SweepAngle;
                         double ang = (item.StartAngle + off) * Math.PI / 180;
-                        h.X = kx + r * Math.Cos(ang);
-                        h.Y = ky + r * Math.Sin(ang);
+                        local = new Point(hw + r * Math.Cos(ang), hh + r * Math.Sin(ang));
                         break;
                     }
             }
+            var c = GeometryMath.LocalToCanvas(item, local);
+            h.X = c.X;
+            h.Y = c.Y;
         }
     }
 
@@ -647,8 +677,7 @@ public partial class SymbolDesignerViewModel
             inDir.Normalize();
             outDir.Normalize();
 
-            double canvasX = item.X + step.Point.X;
-            double canvasY = item.Y + step.Point.Y;
+            var canvasPoint = GeometryMath.LocalToCanvas(item, step.Point);
             JoinStyle? perStyle = item.GetVertexJoinStyle(vi);
             JoinStyle effectiveStyle = perStyle ?? item.OutlineJoinStyle;
             // 圆角半径 getter/setter：lambda 捕获 item，按 IsCorner/Side 路由到不同源字段。
@@ -695,7 +724,7 @@ public partial class SymbolDesignerViewModel
                 RefreshOutlineCornerHandles();
             };
             // 透传 Kind：骨线转折产生的转角点 (Corner) vs 普通轮廓点 (Normal)
-            var handle = new OutlineCornerHandle(vi, canvasX, canvasY, side, perStyle, effectiveStyle,
+            var handle = new OutlineCornerHandle(vi, canvasPoint.X, canvasPoint.Y, side, perStyle, effectiveStyle,
                 i, stepKind, inDir, outDir,
                 isCorner: step.Kind == Geometry.OutlinePointKind.Corner,
                 getRadius: getRadius, setRadius: setRadius, setCurrentStyle: setStyle);
@@ -774,6 +803,11 @@ public partial class SymbolDesignerViewModel
         if (SelectedItem is not { } item) return;
         if (item.IsLocked) return;   // 锁定图元禁止段编辑
         if (string.IsNullOrEmpty(item.PathData)) return;
+
+        // 鼠标画布坐标先反旋转回未旋转坐标系（顶点使用未旋转坐标计算 delta）
+        var m = GeometryMath.UnrotateCanvasPoint(item, new Point(newCanvasX, newCanvasY));
+        newCanvasX = m.X;
+        newCanvasY = m.Y;
 
         var pts = BandOutlineBuilder.ParsePathData(item.PathData);
         if (segmentIndex < 0 || segmentIndex >= pts.Count - 1) return;

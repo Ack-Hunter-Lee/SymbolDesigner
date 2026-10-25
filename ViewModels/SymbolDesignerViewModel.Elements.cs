@@ -18,7 +18,14 @@ public partial class SymbolDesignerViewModel
             {
                 p.PropertyChanged -= OnPrimitiveItemPropertyChanged;
                 p.VisibilityChanged -= OnPrimitiveVisibilityChanged;
+                DropDtoCache(p);
             }
+        // Clear() 等 Reset 动作不带 OldItems：整体清空撤销快照缓存
+        if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
+        {
+            _dtoFragmentCache.Clear();
+            _dtoVersion.Clear();
+        }
         if (e.NewItems != null)
             foreach (PrimitiveItem p in e.NewItems)
             {
@@ -126,6 +133,9 @@ public partial class SymbolDesignerViewModel
     private bool _suppressDirty;
     private void OnPrimitiveItemPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
+        // 先让该图元的撤销快照片段失效（即使下面因脏标记抑制而提前返回，状态也确实变了）
+        if (sender is PrimitiveItem changed)
+            InvalidateDtoCache(changed);
         if (_suppressDirty) return;
         // 纯 UI 选中态：不落盘（ToDto 无此字段）、不参与撤销，变化不代表文档被修改。
         // 不过滤会导致"仅点击/框选图元"就把工程标脏（关窗误弹"未保存"）。

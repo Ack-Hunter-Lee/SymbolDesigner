@@ -29,6 +29,36 @@ public static class GeometryMath
     /// <summary>子对象命中容差（画布逻辑单位）。点击位置距端点/圆心 ≤ 此值 → 命中该子对象。</summary>
     public const double SubObjectSnapTol = 6.0;
 
+    // —— 旋转映射（图元渲染用 RenderTransform 绕包围盒中心旋转；手柄/拖动写回需与之保持一致） ——
+
+    /// <summary>图元旋转中心（画布坐标）= 包围盒中心，与 XAML 容器 RenderTransformOrigin=0.5,0.5 一致。</summary>
+    public static Point RotationCenter(PrimitiveItem item) =>
+        new(item.X + item.Width / 2, item.Y + item.Height / 2);
+
+    /// <summary>绕指定中心旋转一点（角度为度，屏幕坐标 y 向下；正角=顺时针）。
+    /// angle==0 时原样返回，保证未旋转图元零开销、零浮点误差。</summary>
+    public static Point RotateAbout(Point center, double angleDeg, Point p)
+    {
+        if (angleDeg == 0) return p;
+        double rad = angleDeg * Math.PI / 180;
+        double cos = System.Math.Cos(rad), sin = System.Math.Sin(rad);
+        double dx = p.X - center.X, dy = p.Y - center.Y;
+        return new Point(center.X + dx * cos - dy * sin, center.Y + dx * sin + dy * cos);
+    }
+
+    /// <summary>未旋转画布坐标 → 旋转后的画布坐标（与渲染一致）。</summary>
+    public static Point RotateCanvasPoint(PrimitiveItem item, Point unrotatedCanvas)
+        => RotateAbout(RotationCenter(item), item.Rotation, unrotatedCanvas);
+
+    /// <summary>旋转后的画布坐标 → 未旋转画布坐标（<see cref="RotateCanvasPoint"/> 的逆）。
+    /// 用于把手柄拖动时的鼠标位置换算回图元未旋转坐标系再写回几何。</summary>
+    public static Point UnrotateCanvasPoint(PrimitiveItem item, Point canvas)
+        => RotateAbout(RotationCenter(item), -item.Rotation, canvas);
+
+    /// <summary>图元局部坐标（相对 X/Y 原点）→ 旋转后的画布坐标。</summary>
+    public static Point LocalToCanvas(PrimitiveItem item, Point local)
+        => RotateCanvasPoint(item, new Point(item.X + local.X, item.Y + local.Y));
+
     // —— 布尔 / 折线数值容差（集中自 BooleanOps / ClipperBooleanEngine，统一语义，避免散布） ——
 
     /// <summary>近重合合并阈值：Combine 在切点处把同一交点算成两个数值不等的端点，圆被采样为贝塞尔后

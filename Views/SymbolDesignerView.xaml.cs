@@ -4,6 +4,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using SymbolDesigner.Controls;
+using SymbolDesigner.Geometry;
 using SymbolDesigner.Models;
 using SymbolDesigner.ViewModels;
 
@@ -1041,14 +1042,18 @@ public partial class SymbolDesignerView : UserControl
         // 闭合判定：只有拖 End 手柄时参与（拖 Start 时把 B 一起带走 = 整体平移，不触发闭合切换）
         if (_draggingBelt.Kind == BeltHandleKind.End)
         {
-            double dx = pos.X - belt.BeltStartX;
-            double dy = pos.Y - belt.BeltStartY;
+            // 皮带端点存的是未旋转画布坐标：先把鼠标位置反旋转回来再做距离判定
+            var unrotated = GeometryMath.UnrotateCanvasPoint(belt, pos);
+            double dx = unrotated.X - belt.BeltStartX;
+            double dy = unrotated.Y - belt.BeltStartY;
             double dist = System.Math.Sqrt(dx * dx + dy * dy);
 
             if (!belt.IsClosed && dist < CloseSnapThreshold)
             {
-                // 吸附到起点（A）并闭合：此后两端点合一，几何变为滚轮间的闭环
-                vm.UpdateBeltHandle(_draggingBelt.Kind, belt.BeltStartX, belt.BeltStartY);
+                // 吸附到起点（A）并闭合：此后两端点合一，几何变为滚轮间的闭环。
+                // UpdateBeltHandle 接收的是"旋转后的画布坐标"，而 BeltStartX/Y 存的是未旋转坐标 → 先正变换。
+                var startCanvas = GeometryMath.RotateCanvasPoint(belt, new Point(belt.BeltStartX, belt.BeltStartY));
+                vm.UpdateBeltHandle(_draggingBelt.Kind, startCanvas.X, startCanvas.Y);
                 vm.SetBeltClosed(true);
                 return;
             }
@@ -1137,17 +1142,19 @@ public partial class SymbolDesignerView : UserControl
         if (CornerRadiusSlider is null) return;
         if (DataContext is not ViewModels.SymbolDesignerViewModel vm) return;
         double v = vm.SelectedOutlineCorner?.CurrentRadius ?? 0;
-        // 避免 ValueChanged 回调里再次写回（取消订阅→设值→重订阅）
+        // 用 SetCurrentValue 而不是直接赋值：直接赋值会写入"本地值"并覆盖 XAML 上的绑定
+        // （绑定的 SliderSpinBox 是 Mode=OneWay，覆盖后 CurrentRadius 再变就推不到滑块）。
+        // SetCurrentValue 只更新当前有效值，保留绑定本身。
         if (Math.Abs(CornerRadiusSlider.Value - v) > 1e-9)
-            CornerRadiusSlider.Value = v;
+            CornerRadiusSlider.SetCurrentValue(Slider.ValueProperty, v);
         // 动态上限：与属性面板"非转角点"Slider 同源（最短段长/2），由 VM.CornerArcRadiusMax 暴露
         double max = vm.CornerArcRadiusMax;
         if (Math.Abs(CornerRadiusSlider.Maximum - max) > 1e-9)
-            CornerRadiusSlider.Maximum = max;
+            CornerRadiusSlider.SetCurrentValue(Slider.MaximumProperty, max);
         // 刻度步长：图元大时 0.5 步长会让用户拖半天，按上限 1/100 比例取，最小不低于 0.5
         double tick = Math.Max(0.5, Math.Round(max / 100, 1));
         if (Math.Abs(CornerRadiusSlider.TickFrequency - tick) > 1e-9)
-            CornerRadiusSlider.TickFrequency = tick;
+            CornerRadiusSlider.SetCurrentValue(Slider.TickFrequencyProperty, tick);
     }
 
     /// <summary>一键圆角：把所有轮廓接缝统一应用当前圆角半径（无需逐个选中）。

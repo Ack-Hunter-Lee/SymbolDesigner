@@ -71,23 +71,10 @@ public partial class SliderSpinBox : UserControl
         set => SetValue(IsSnapToTickEnabledProperty, value);
     }
 
-    /// <summary>禁用整个控件（含内部 Slider 和微调按钮）。覆盖 UserControl.IsEnabled，
-    /// 以便外层 Style TargetType=controls:SliderSpinBox 用 Setter Property="IsEnabled" 控制可用性。</summary>
-    public new static readonly DependencyProperty IsEnabledProperty =
-        DependencyProperty.Register(nameof(IsEnabled), typeof(bool), typeof(SliderSpinBox),
-            new FrameworkPropertyMetadata(true, FrameworkPropertyMetadataOptions.Inherits, OnIsEnabledChanged));
-    public new bool IsEnabled
-    {
-        get => (bool)GetValue(IsEnabledProperty);
-        set => SetValue(IsEnabledProperty, value);
-    }
-
-    private static void OnIsEnabledChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        if (d is not SliderSpinBox s) return;
-        // UserControl.IsEnabled 内部分发到视觉树，但内部的 RepeatButton 默认不会变灰；这里强制同步
-        s.PART_Slider.IsEnabled = (bool)e.NewValue;
-    }
+    // IsEnabled 直接沿用 UserControl 基类的 DP（IsEnabled 的元数据带 Inherits，会沿视觉树把
+    // 不可用态传给内部 Slider / RepeatButton / TextBlock）。此前用 `new` 自建同名 DP，
+    // 遮蔽了基类属性且回调只灰化 PART_Slider，导致 ▲▼ 按钮在"禁用"时仍可点击。
+    // 外层 Style（TargetType=SliderSpinBox）设 IsEnabled 与直接赋值都会落到基类 DP 上，行为一致。
 
     /// <summary>数值显示格式（StringFormat）。例如 "{0:0}px" / "{0:0}%"。
     /// 注意：XAML 里通常写成 StringFormat="{}{0:0.#}"（{} 用于防止被当成标记扩展），

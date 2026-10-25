@@ -50,25 +50,68 @@ public partial class SymbolDesignerViewModel
 
     /// <summary>生成当前 Primitives + ArrayInstances + Constraints 的深拷贝快照(DTO JSON)。
     /// 序列化顺序与内容完全确定性:相同状态 → 相同字符串,可直接比较。
-    /// 把两个集合打包成单个 JSON 对象（Primitives + ArrayInstances + Constraints）→ 一个快照覆盖画布全部状态。</summary>
+    /// 热路径优化：图元片段按"版本号"缓存 —— 只有属性变化过的图元才重新 ToDto + 序列化，
+    /// 未变化的图元直接复用上次片段，避免每次撤销步都全量转换所有图元。</summary>
     private string SnapshotPrimitives()
     {
-        var dtoList = new List<PrimitiveItemDto>(Primitives.Count);
-        foreach (var p in Primitives)
-            dtoList.Add(ToDto(p));
-        var arrDtoList = new List<ArrayInstanceDto>(ArrayInstances.Count);
-        foreach (var a in ArrayInstances)
-            arrDtoList.Add(ArrayInstanceToDto(a));
-        var conDtoList = new List<TangencyConstraintDto>(Constraints.Count);
-        foreach (var c in Constraints)
-            conDtoList.Add(ToConstraintDto(c));
-        var snap = new ProjectSnapshotDto
+        var sb = new System.Text.StringBuilder(256 * Primitives.Count + 128);
+        sb.Append("{\"Primitives\":[");
+        for (int i = 0; i < Primitives.Count; i++)
         {
-            Primitives = dtoList,
-            ArrayInstances = arrDtoList,
-            Constraints = conDtoList,
-        };
-        return System.Text.Json.JsonSerializer.Serialize(snap);
+            if (i > 0) sb.Append(',');
+            sb.Append(GetPrimitiveDtoJson(Primitives[i]));
+        }
+        sb.Append("],\"ArrayInstances\":[");
+        for (int i = 0; i < ArrayInstances.Count; i++)
+        {
+            if (i > 0) sb.Append(',');
+            sb.Append(System.Text.Json.JsonSerializer.Serialize(ArrayInstanceToDto(ArrayInstances[i])));
+        }
+        sb.Append("],\"Constraints\":[");
+        for (int i = 0; i < Constraints.Count; i++)
+        {
+            if (i > 0) sb.Append(',');
+            sb.Append(System.Text.Json.JsonSerializer.Serialize(ToConstraintDto(Constraints[i])));
+        }
+        sb.Append("]}");
+        return sb.ToString();
+    }
+
+    /// <summary>单图元 DTO 片段缓存项：Version 与 <see cref="_dtoVersion"/> 不一致时失效。</summary>
+    private sealed class DtoFragment
+    {
+        public long Version = -1;
+        public string Json = string.Empty;
+    }
+
+    private readonly Dictionary<PrimitiveItem, DtoFragment> _dtoFragmentCache = new();
+    private readonly Dictionary<PrimitiveItem, long> _dtoVersion = new();
+    private long _dtoVersionSeq;
+
+    /// <summary>取（或重算）单图元的序列化片段。版本未变 → 直接复用缓存。</summary>
+    private string GetPrimitiveDtoJson(PrimitiveItem p)
+    {
+        long version = _dtoVersion.TryGetValue(p, out var v) ? v : 0;
+        if (_dtoFragmentCache.TryGetValue(p, out var frag) && frag.Version == version)
+            return frag.Json;
+
+        frag ??= new DtoFragment();
+        _dtoFragmentCache[p] = frag;
+        frag.Version = version;
+        frag.Json = System.Text.Json.JsonSerializer.Serialize(ToDto(p));
+        return frag.Json;
+    }
+
+    /// <summary>图元任一属性变化 → 递增其版本号，令快照缓存片段失效。
+    /// 与 ScheduleUndoCommit 共用同一个变化信号（PropertyChanged），不会漏记状态。</summary>
+    private void InvalidateDtoCache(PrimitiveItem p)
+        => _dtoVersion[p] = ++_dtoVersionSeq;
+
+    /// <summary>移除已不在集合中的图元的缓存项（避免长会话持有已删图元）。</summary>
+    private void DropDtoCache(PrimitiveItem p)
+    {
+        _dtoFragmentCache.Remove(p);
+        _dtoVersion.Remove(p);
     }
 
     /// <summary>用快照整体替换 Primitives + ArrayInstances + Constraints(撤销/重做恢复)。

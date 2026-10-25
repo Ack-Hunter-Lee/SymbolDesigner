@@ -53,6 +53,8 @@ public partial class SymbolDesignerViewModel
     private sealed class ScaleSnapshot
     {
         public double X, Y, W, H;
+        public double Rotation;             // 手势开始时的旋转角（缩放锚点需反旋转回未旋转坐标系）
+        public double CenterX, CenterY;     // 手势开始时的旋转中心（快照包围盒中心）
         public string PathData = string.Empty;
         public bool PathDataClosed;         // 原 PathData 以 Z 结尾（重建时保留）
         public double CornerRadius, InnerRadius, BandWidth;
@@ -169,17 +171,26 @@ public partial class SymbolDesignerViewModel
             var pts = item.ParsedPathPoints;
             if (pts is { Count: > 0 })
             {
-                bool any = false;
                 foreach (var p in pts)
                 {
-                    Inflate(item.X + p.X, item.Y + p.Y, item.X + p.X, item.Y + p.Y);
-                    any = true;
+                    var c = GeometryMath.LocalToCanvas(item, p);
+                    Inflate(c.X, c.Y, c.X, c.Y);
                 }
-                if (!any) continue;
             }
             else
             {
-                Inflate(item.X, item.Y, item.X + item.Width, item.Y + item.Height);
+                // 四个角先经旋转映射，再取轴对齐包围盒（覆盖"图元已旋转"的视觉范围）
+                foreach (var local in new[]
+                         {
+                             new Point(0, 0),
+                             new Point(item.Width, 0),
+                             new Point(0, item.Height),
+                             new Point(item.Width, item.Height),
+                         })
+                {
+                    var c = GeometryMath.LocalToCanvas(item, local);
+                    Inflate(c.X, c.Y, c.X, c.Y);
+                }
             }
         }
 
@@ -323,12 +334,16 @@ public partial class SymbolDesignerViewModel
         foreach (var item in items)
         {
             string pd = item.PathData ?? string.Empty;
+            var center = GeometryMath.RotationCenter(item);
             _scaleTargets.Add((item, new ScaleSnapshot
             {
                 X = item.X,
                 Y = item.Y,
                 W = item.Width,
                 H = item.Height,
+                Rotation = item.Rotation,
+                CenterX = center.X,
+                CenterY = center.Y,
                 PathData = pd,
                 PathDataClosed = BandOutlineBuilder.IsPathDataClosed(pd),
                 CornerRadius = item.CornerRadius,
@@ -370,7 +385,12 @@ public partial class SymbolDesignerViewModel
 
         foreach (var (item, snap) in _scaleTargets)
         {
-            ApplyScale(item, snap, _scaleAnchor, scale);
+            // 手柄/锚点都在"旋转后的画布坐标"里；缩放写回用的是未旋转几何坐标，
+            // 故先把锚点绕该图元的旋转中心反旋转回去（Rotation==0 时原样不变）。
+            var anchor = snap.Rotation == 0
+                ? _scaleAnchor
+                : GeometryMath.RotateAbout(new Point(snap.CenterX, snap.CenterY), -snap.Rotation, _scaleAnchor);
+            ApplyScale(item, snap, anchor, scale);
         }
         RefreshScaleSelectionHandles();
     }

@@ -243,6 +243,19 @@ public partial class SymbolDesignerViewModel
             // 圆环：外径变 → 刷新外圆/内圆手柄位置
             RefreshRingHandles();
         }
+        else if (e.PropertyName == nameof(PrimitiveItem.Rotation))
+        {
+            // 旋转改变 → 各手柄层（画布坐标）必须跟着旋到新位置；选区缩放手柄的包围盒同步重算。
+            RefreshVertexHandles();
+            RefreshSegmentHandles();
+            if (OutlineEditMode == OutlineEditMode.Outline)
+                RefreshOutlineCornerHandles();
+            RefreshBandWidthHandles();
+            RefreshRingHandles();
+            RefreshPieHandles();
+            RefreshBeltHandles();
+            RefreshScaleSelectionHandles();
+        }
         else if (e.PropertyName == nameof(PrimitiveItem.PathData))
         {
             OnSelectedItemPathDataChanged();
