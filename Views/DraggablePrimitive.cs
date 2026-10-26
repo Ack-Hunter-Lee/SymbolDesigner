@@ -294,6 +294,7 @@ public class DraggablePrimitive : ContentControl
 
             case nameof(L1Primitive.Line):
             case nameof(L1Primitive.Polyline):
+            case nameof(L1Primitive.Curve):
             case nameof(L1Primitive.BandPolyline):
             {
                 // PathData 是图元局部坐标，直接与局部点击点比较

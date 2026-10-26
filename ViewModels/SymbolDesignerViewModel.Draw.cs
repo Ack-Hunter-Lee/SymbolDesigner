@@ -58,6 +58,24 @@ public partial class SymbolDesignerViewModel
         var clamped = ClampToCanvas(x, y);
         _shiftKey = shiftKey;
 
+        // 曲线（三次贝塞尔）：点 起点 → 点 终点 即提交（初始为直线），随后用两个控制点手柄调弯曲。
+        // 三次需要两个控制点，两次点击定形后再摆控制点，比"四次点击"顺手。
+        if (DrawMode == DrawMode.Curve)
+        {
+            if (!IsDrawing)
+            {
+                DraftPoints.Clear();
+                DraftPoints.Add(clamped);
+                IsDrawing = true;
+                DraftPreviewPoint = new System.Windows.Point(double.NaN, double.NaN);
+                UpdateDraftPathData();
+                return true;
+            }
+            DraftPoints.Add(clamped);   // 第二点 = 终点
+            EndDraw();
+            return true;
+        }
+
         // 形状类两段式：IsDrawing=true 时 DraftPoints 含 [中心点]；第二次点击 → 提交 + 退出
         if (IsShapeDrawMode(DrawMode))
         {
@@ -144,6 +162,15 @@ public partial class SymbolDesignerViewModel
         _shiftKey = shiftKey;
         var clamped = ClampToCanvas(x, y);
         var anchor = DraftPoints[^1];
+
+        // 曲线：鼠标位置直接当控制点（不走轴对齐/对象吸附，否则弯曲方向会被钉在端点轴线上）
+        if (DrawMode == DrawMode.Curve)
+        {
+            DraftPreviewPoint = clamped;
+            UpdateDraftPathData();
+            return;
+        }
+
         if (IsShapeDrawMode(DrawMode))
         {
             // 形状模式：
@@ -397,6 +424,55 @@ public partial class SymbolDesignerViewModel
             ItemCount = Primitives.Count;
             SelectedItem = belt;
             SolveBelt(belt, autoEngage: true);
+
+            DraftPoints.Clear();
+            DraftPathData = string.Empty;
+            DraftPreviewPoint = new System.Windows.Point(double.NaN, double.NaN);
+            DraftShapeData = string.Empty;
+            IsShapePreviewVisible = false;
+            ResetDraftSnapVisuals();
+            DrawMode = DrawMode.None;
+            ActiveToolKey = null;
+            return;
+        }
+
+        // —— 曲线（L1 Curve / 三次贝塞尔）：DraftPoints = [起点, 终点] ——
+        // 提交时两个控制点按 1/3、2/3 落在弦上（初始是一条直线）；弯曲由选中后的两个控制点手柄调整。
+        if (DrawMode == DrawMode.Curve)
+        {
+            if (DraftPoints.Count >= 2)
+            {
+                var a = DraftPoints[0];
+                var b = DraftPoints[1];
+                var c1 = new System.Windows.Point(a.X + (b.X - a.X) / 3, a.Y + (b.Y - a.Y) / 3);
+                var c2 = new System.Windows.Point(a.X + (b.X - a.X) * 2 / 3, a.Y + (b.Y - a.Y) * 2 / 3);
+
+                // 用摊平后的真实弧线求包围盒（控制点可能远在弧线外，不能拿控制点当范围）
+                var flat = new System.Collections.Generic.List<System.Windows.Point> { a };
+                flat.AddRange(BandOutlineBuilder.FlattenCubic(a, c1, c2, b));
+                double minX = flat[0].X, minY = flat[0].Y, maxX = minX, maxY = minY;
+                foreach (var p in flat)
+                {
+                    if (p.X < minX) minX = p.X;
+                    if (p.Y < minY) minY = p.Y;
+                    if (p.X > maxX) maxX = p.X;
+                    if (p.Y > maxY) maxY = p.Y;
+                }
+                double w = System.Math.Max(2, maxX - minX);
+                double h = System.Math.Max(2, maxY - minY);
+
+                var item = PrimitiveItem.Create(L1Primitive.Curve, minX, minY, w, h);
+                item.PathData = GeometryMath.BuildCurvePathData(
+                    new System.Windows.Point(a.X - minX, a.Y - minY),
+                    new System.Windows.Point(c1.X - minX, c1.Y - minY),
+                    new System.Windows.Point(c2.X - minX, c2.Y - minY),
+                    new System.Windows.Point(b.X - minX, b.Y - minY));
+                item.BandWidth = 0;   // 单线语义：无带宽
+                item.ZIndex = Primitives.Count;
+                Primitives.Add(item);
+                ItemCount = Primitives.Count;
+                SelectedItem = item;
+            }
 
             DraftPoints.Clear();
             DraftPathData = string.Empty;

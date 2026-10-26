@@ -166,6 +166,7 @@ public partial class SymbolDesignerViewModel
             RefreshBandWidthHandles();
             RefreshRingHandles();
             RefreshBeltHandles();
+            RefreshCurveHandles();
             if (OutlineEditMode == OutlineEditMode.Outline)
                 RefreshOutlineCornerHandles();
         }
@@ -189,6 +190,7 @@ public partial class SymbolDesignerViewModel
             OutlineEditMode = OutlineEditMode.Outline;
         RefreshVertexHandles();
         RefreshSegmentHandles();
+        RefreshCurveHandles();
         RefreshRingHandles();
         RefreshPieHandles();
         RefreshBeltHandles();
@@ -215,6 +217,7 @@ public partial class SymbolDesignerViewModel
         if (_suppressVertexRefresh) return;
         RefreshVertexHandles();
         RefreshSegmentHandles();
+        RefreshCurveHandles();
         if (OutlineEditMode == OutlineEditMode.Outline)
             RefreshOutlineCornerHandles();
         RefreshBandWidthHandles();
@@ -248,6 +251,7 @@ public partial class SymbolDesignerViewModel
             // 旋转改变 → 各手柄层（画布坐标）必须跟着旋到新位置；选区缩放手柄的包围盒同步重算。
             RefreshVertexHandles();
             RefreshSegmentHandles();
+            RefreshCurveHandles();
             if (OutlineEditMode == OutlineEditMode.Outline)
                 RefreshOutlineCornerHandles();
             RefreshBandWidthHandles();
@@ -268,6 +272,7 @@ public partial class SymbolDesignerViewModel
             // 图元被拖动 → 顶点画布坐标跟着变，刷新手柄位置
             RefreshVertexHandles();
             RefreshSegmentHandles();
+            RefreshCurveHandles();
             // 轮廓手柄位置也要同步（外尖点坐标 = item.X + 局部坐标）
             if (OutlineEditMode == OutlineEditMode.Outline)
                 RefreshOutlineCornerHandles();

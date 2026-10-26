@@ -48,6 +48,11 @@ public enum L1Primitive
     /// 渲染用单 Path（Data = PieGeometry：M 弧起点 A 弧终点 L 圆心 Z），可填充、可参与布尔。</summary>
     Pie,
 
+    /// <summary>曲线（二次贝塞尔单弧）：PathData = "M 起点 Q 控制点 终点"（局部坐标）。
+    /// 渲染/选中/导出都用 CurveGeometry（真曲线，不摊平）；包围盒/命中/缩放用摊平后的折线。
+    /// 用于花瓣轮廓、圆润过渡线等折线表达不了的地方。</summary>
+    Curve,
+
     /// <summary>传送带（Belt）：一条皮带绕若干"圆滚轮"（Ellipse / Ring）穿行的单条路径。
     /// 几何 = 两圆公切线（直线段）+ 绕圆包络弧（真圆弧）拼接，由 BeltSolver 依"绕行拓扑 +
     /// 两个自由端点 + 滚轮实时位置"重算（不落盘）。
@@ -79,6 +84,9 @@ public enum DrawMode
     Polyline,
     /// <summary>直线模式。第一次点击确定起点，第二次点击确定终点；提交后自动退出。</summary>
     Line,
+    /// <summary>曲线模式。三次点击：起点 → 终点 → 弯曲控制点（拖动鼠标时预览弧线弯向光标），
+    /// 第三次点击提交为 L1 Curve（二次贝塞尔）。</summary>
+    Curve,
     /// <summary>矩形模式。两次点击：中心点 + 对角点（提交后退出）。</summary>
     Rectangle,
     /// <summary>圆角矩形模式。两次点击：中心点 + 对角点（提交后退出）。</summary>

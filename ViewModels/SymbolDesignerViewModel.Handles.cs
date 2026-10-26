@@ -35,6 +35,9 @@ public partial class SymbolDesignerViewModel
         // BooleanPath：骨架模式不出拖拽手柄（轮廓点不允许拖拽）
         if (item.TypeKey == nameof(L1Primitive.BooleanPath)) return;
 
+        // Curve：控制点手柄走 CurveHandles，不能按摊平后的折线顶点出顶点手柄
+        if (item.TypeKey == nameof(L1Primitive.Curve)) return;
+
         var pts = BandOutlineBuilder.ParsePathData(item.PathData);
         for (int i = 0; i < pts.Count; i++)
         {
@@ -53,6 +56,9 @@ public partial class SymbolDesignerViewModel
         if (string.IsNullOrEmpty(item.PathData)) return;
         if (item.TypeKey == nameof(L1Primitive.BooleanPath))
             return;  // 布尔结果轮廓点不可拖拽（需求），骨架模式也不显示手柄，此分支为防御
+
+        // Curve：顶点编辑走 UpdateCurveHandle（曲线不能被重建成折线 PathData）
+        if (item.TypeKey == nameof(L1Primitive.Curve)) return;
 
         // 把画布坐标先反旋转回未旋转坐标系（图元本体渲染绕包围盒中心旋转），再转成 Path 局部坐标
         var unrotated = GeometryMath.UnrotateCanvasPoint(item, new Point(newCanvasX, newCanvasY));
@@ -863,5 +869,98 @@ public partial class SymbolDesignerViewModel
         // 段移动后接缝外尖点也跟着变→刷新轮廓手柄
         if (OutlineEditMode == OutlineEditMode.Outline)
             RefreshOutlineCornerHandles();
+    }
+
+    // ============== 曲线（L1 Curve）控制点手柄 ==============
+
+    /// <summary>当前选中曲线的四个手柄（起点 / 控制点1 / 控制点2 / 终点），画布坐标。
+    /// 拖动控制点改弯曲程度与走向；拖动端点改曲线两端位置。</summary>
+    public ObservableCollection<CurveHandle> CurveHandles { get; } = new();
+
+    /// <summary>刷新曲线手柄：仅 SelectedItem 为 L1 Curve 且 PathData 是贝塞尔格式时填充（4 个手柄）。</summary>
+    private void RefreshCurveHandles()
+    {
+        CurveHandles.Clear();
+        if (SelectedItem is not { } item) return;
+        if (item.IsLocked) return;
+        if (item.TypeKey != nameof(L1Primitive.Curve)) return;
+        var pts = GeometryMath.ParseCurvePathData(item.PathData);
+        if (pts is null) return;
+
+        var a = GeometryMath.LocalToCanvas(item, pts[0]);
+        var c1 = GeometryMath.LocalToCanvas(item, pts[1]);
+        var c2 = GeometryMath.LocalToCanvas(item, pts[2]);
+        var b = GeometryMath.LocalToCanvas(item, pts[3]);
+        CurveHandles.Add(new CurveHandle(CurveHandleKind.Start, a.X, a.Y));
+        CurveHandles.Add(new CurveHandle(CurveHandleKind.Control1, c1.X, c1.Y));
+        CurveHandles.Add(new CurveHandle(CurveHandleKind.Control2, c2.X, c2.Y));
+        CurveHandles.Add(new CurveHandle(CurveHandleKind.End, b.X, b.Y));
+    }
+
+    /// <summary>曲线手柄拖拽写回：canvasX/Y 是鼠标的画布坐标（已含旋转），
+    /// 先反旋转变回图元局部坐标再改写 PathData；随后重算包围盒（保持 C 命令不被摊平）。</summary>
+    public void UpdateCurveHandle(CurveHandleKind kind, double canvasX, double canvasY)
+    {
+        if (SelectedItem is not { } item) return;
+        if (item.IsLocked) return;
+        if (item.TypeKey != nameof(L1Primitive.Curve)) return;
+        var pts = GeometryMath.ParseCurvePathData(item.PathData);
+        if (pts is null) return;
+
+        var local = GeometryMath.CanvasToLocal(item, new System.Windows.Point(canvasX, canvasY));
+        int index = kind switch
+        {
+            CurveHandleKind.Start => 0,
+            CurveHandleKind.Control1 => 1,
+            CurveHandleKind.Control2 => 2,
+            _ => 3,
+        };
+        pts[index] = local;
+
+        _suppressVertexRefresh = true;
+        try
+        {
+            item.PathData = GeometryMath.BuildCurvePathData(pts[0], pts[1], pts[2], pts[3]);
+        }
+        finally
+        {
+            _suppressVertexRefresh = false;
+        }
+
+        RecalcCurveBoundingBox(item);
+        RefreshCurveHandles();
+        OnItemGeometryChanged(item);
+    }
+
+    /// <summary>曲线包围盒重算：用摊平后的弧线求真实范围，再把 4 个关键点平移到新原点。
+    /// 不能复用 <see cref="GeometryMath.RecalcBoundingBox"/>——那个会把 PathData 重建成折线。</summary>
+    private static void RecalcCurveBoundingBox(PrimitiveItem item)
+    {
+        var pts = GeometryMath.ParseCurvePathData(item.PathData);
+        if (pts is null) return;
+
+        var flat = new System.Collections.Generic.List<System.Windows.Point> { pts[0] };
+        flat.AddRange(BandOutlineBuilder.FlattenCubic(pts[0], pts[1], pts[2], pts[3]));
+        double minX = flat[0].X, minY = flat[0].Y, maxX = minX, maxY = minY;
+        foreach (var p in flat)
+        {
+            if (p.X < minX) minX = p.X;
+            if (p.Y < minY) minY = p.Y;
+            if (p.X > maxX) maxX = p.X;
+            if (p.Y > maxY) maxY = p.Y;
+        }
+        // 局部坐标已在 [0, W]×[0, H] 内 → 无需平移
+        if (minX >= -1e-6 && minY >= -1e-6
+            && maxX <= item.Width + 1e-6 && maxY <= item.Height + 1e-6) return;
+
+        item.X += minX;
+        item.Y += minY;
+        item.Width = System.Math.Max(2, maxX - minX);
+        item.Height = System.Math.Max(2, maxY - minY);
+        item.PathData = GeometryMath.BuildCurvePathData(
+            new System.Windows.Point(pts[0].X - minX, pts[0].Y - minY),
+            new System.Windows.Point(pts[1].X - minX, pts[1].Y - minY),
+            new System.Windows.Point(pts[2].X - minX, pts[2].Y - minY),
+            new System.Windows.Point(pts[3].X - minX, pts[3].Y - minY));
     }
 }

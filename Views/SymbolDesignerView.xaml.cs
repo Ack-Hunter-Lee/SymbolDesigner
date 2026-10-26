@@ -880,6 +880,45 @@ public partial class SymbolDesignerView : UserControl
         _draggingVertex = null;
     }
 
+    // ───────────── 曲线控制点手柄（起点 / 控制点 / 终点） ─────────────
+
+    private CurveHandleKind? _draggingCurveKind;
+
+    /// <summary>曲线手柄按下：记录角色 + 捕获鼠标。</summary>
+    private void OnCurveHandleMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (DataContext is not SymbolDesignerViewModel) return;
+        if (e.OriginalSource is not FrameworkElement fe || fe.DataContext is not CurveHandle ch) return;
+
+        _draggingCurveKind = ch.Kind;
+        if (sender is UIElement ui) ui.CaptureMouse();
+        e.Handled = true;
+    }
+
+    /// <summary>曲线手柄移动：把鼠标画布坐标写回 PathData（VM 内部先反旋转变回局部坐标，
+    /// 再按摊平后的真实弧线重算包围盒，Q 命令始终保留为曲线）。</summary>
+    private void OnCurveHandleMouseMove(object sender, MouseEventArgs e)
+    {
+        if (_draggingCurveKind is not { } kind) return;
+        if (e.LeftButton != MouseButtonState.Pressed)
+        {
+            _draggingCurveKind = null;
+            return;
+        }
+        if (DataContext is not SymbolDesignerViewModel vm) return;
+
+        var pos = e.GetPosition(CanvasHost);
+        vm.UpdateCurveHandle(kind, pos.X, pos.Y);
+    }
+
+    /// <summary>曲线手柄松开：释放捕获 + 清空拖拽状态。</summary>
+    private void OnCurveHandleMouseUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_draggingCurveKind is null) return;
+        if (sender is UIElement ui && ui.IsMouseCaptured) ui.ReleaseMouseCapture();
+        _draggingCurveKind = null;
+    }
+
     // ───────────── 段拖拽手柄（BandPolyline 选中后整段平移，保持长度） ─────────────
 
     private SegmentDragHandle? _draggingSegment;

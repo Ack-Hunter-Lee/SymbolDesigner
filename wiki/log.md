@@ -2,6 +2,21 @@
 
 > 所有 wiki 操作按时间追加。近期记录保留在此，更早按月归档到 `_archive/log/`。
 
+## 2026-10-26
+
+- 新增"曲线"图元与工具（三次贝塞尔单段，用于花瓣轮廓等折线表达不了的地方）：
+  - 模型：`L1Primitive.Curve` / `DrawMode.Curve`；`PathData = "M 起点 C 控制点1 控制点2 终点"`（局部坐标）。
+    `PrimitiveItem.CurveGeometry` 走 `Geometry.Parse` 保留 **C 命令真曲线**（不摊平），按 PathData 缓存。
+  - 绘制：工具栏「曲线」→ 两击（起点 / 终点，初始为直线），随后拖两个控制点手柄调弯曲。
+  - 手柄：`CurveHandle`（Start/Control1/Control2/End 四角色）+ 独立 `ItemsControl` 图层（ZIndex 9999），
+    拖动写回 `UpdateCurveHandle`（先 `CanvasToLocal` 反旋转，再用摊平弧线重算包围盒，C 命令始终保留）。
+  - 兼容层：`BandOutlineBuilder.ParsePathData` 遇 `Q`/`C` 自动摊平（`FlattenQuadratic`/`FlattenCubic`），
+    让包围盒、命中、缩放、约束等既有消费方零改动继续工作；曲线自身的缩放/镜像走
+    `SelectionScale.TransformCurve`（四个关键点整体仿射，不摊平）。
+    旧版二次贝塞尔（Q）数据在 `ParseCurvePathData` 里按升阶公式自动转三次，不炸历史文件。
+  - 导出：`XamlExporter.CurveElement` 输出含 `C` 的 `Path Data`（客户工程拿到真曲线，非折线近似）。
+  - 未覆盖（按需求刻意不做）：曲线参与布尔运算（进 Clipper 前会被摊平）、带宽轮廓偏移、单图元多段连续曲线。
+
 ## 2026-10-25
 
 - 新增"元素命名"能力：

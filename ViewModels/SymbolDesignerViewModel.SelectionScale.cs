@@ -445,6 +445,12 @@ public partial class SymbolDesignerViewModel
                 ScalePathData(item, snap, anchor, scale);
                 break;
 
+            // 曲线：起点/两控制点/终点做同一仿射缩放（曲线缩放后仍是曲线，不能走 ScalePathData 摊平）
+            case nameof(L1Primitive.Curve):
+                TransformCurve(item, snap.PathData, snap.X, snap.Y,
+                    p => new Point(anchor.X + (p.X - anchor.X) * scale, anchor.Y + (p.Y - anchor.Y) * scale));
+                break;
+
             // BooleanPath：复杂多环骨架（含 F0 前缀 / 弧段）,不做文本级缩放,跳过保持原样。
             default:
                 break;
@@ -504,6 +510,43 @@ public partial class SymbolDesignerViewModel
 
     private static string Fmt(double v) => v.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
 
+    /// <summary>曲线图元（三次贝塞尔）的仿射变换：起点/两个控制点/终点整体过同一个映射，
+    /// 再用变换后的弧线真实范围重设 X/Y/W/H。不走 ParsePathData（那会摊平成折线，曲线退化）。
+    /// map 的输入输出都是画布坐标。</summary>
+    private static void TransformCurve(PrimitiveItem item, string pathData,
+        double originX, double originY, Func<Point, Point> map)
+    {
+        var local = GeometryMath.ParseCurvePathData(pathData);
+        if (local is null) return;
+
+        var a = map(new Point(originX + local[0].X, originY + local[0].Y));
+        var c1 = map(new Point(originX + local[1].X, originY + local[1].Y));
+        var c2 = map(new Point(originX + local[2].X, originY + local[2].Y));
+        var b = map(new Point(originX + local[3].X, originY + local[3].Y));
+
+        // 用摊平后的弧线求新包围盒（控制点可能落在弧线外，不能拿四点范围代替真实范围）
+        var flat = new List<Point> { a };
+        flat.AddRange(BandOutlineBuilder.FlattenCubic(a, c1, c2, b));
+        double minX = flat[0].X, minY = flat[0].Y, maxX = minX, maxY = minY;
+        foreach (var p in flat)
+        {
+            if (p.X < minX) minX = p.X;
+            if (p.Y < minY) minY = p.Y;
+            if (p.X > maxX) maxX = p.X;
+            if (p.Y > maxY) maxY = p.Y;
+        }
+
+        item.X = minX;
+        item.Y = minY;
+        item.Width = Math.Max(0.01, maxX - minX);
+        item.Height = Math.Max(0.01, maxY - minY);
+        item.PathData = GeometryMath.BuildCurvePathData(
+            new Point(a.X - minX, a.Y - minY),
+            new Point(c1.X - minX, c1.Y - minY),
+            new Point(c2.X - minX, c2.Y - minY),
+            new Point(b.X - minX, b.Y - minY));
+    }
+
     // —— 镜像翻转：围绕选区包围盒中心做水平/垂直翻转（选中整体一起翻，轴过包围盒中心） ——
 
     /// <summary>水平镜像（x' = 2·cx - x）。围绕当前选中整体包围盒的水平中心线翻转。</summary>
@@ -559,6 +602,12 @@ public partial class SymbolDesignerViewModel
             case nameof(L1Primitive.Polyline):
             case nameof(L1Primitive.BandPolyline):
                 MirrorPathData(item, cx, cy, horizontal);
+                break;
+
+            // 曲线：四个关键点一起翻转，保持曲线语义（不能走 MirrorPathData 摊平）
+            case nameof(L1Primitive.Curve):
+                TransformCurve(item, item.PathData, item.X, item.Y,
+                    p => horizontal ? new Point(2 * cx - p.X, p.Y) : new Point(p.X, 2 * cy - p.Y));
                 break;
 
             default:

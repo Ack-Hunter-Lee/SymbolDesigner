@@ -840,9 +840,14 @@ public static class BandOutlineBuilder
         return result;
     }
 
-    /// <summary>解析 "M x,y L x,y ..." 字符串为顶点列表。</summary>
+    /// <summary>解析 "M x,y L x,y ..." 字符串为顶点列表。
+    /// 含 Q/C（二次/三次贝塞尔）命令的路径（曲线图元 PathData）先摊平成折线再返回：
+    /// 包围盒、命中测试、缩放等消费方只认折线；带宽轮廓管道本身也只接受折线输入。</summary>
     public static List<Point> ParsePathData(string s)
     {
+        if (s.IndexOf('Q') >= 0 || s.IndexOf('C') >= 0)
+            return FlattenCurvedPathData(s);
+
         var pts = new List<Point>();
         var tokens = s.Split(new[] { ' ', ',', 'M', 'L' }, StringSplitOptions.RemoveEmptyEntries);
         for (int i = 0; i + 1 < tokens.Length; i += 2)
@@ -850,6 +855,116 @@ public static class BandOutlineBuilder
             if (double.TryParse(tokens[i], NumberStyles.Float, CultureInfo.InvariantCulture, out var x)
              && double.TryParse(tokens[i + 1], NumberStyles.Float, CultureInfo.InvariantCulture, out var y))
                 pts.Add(new Point(x, y));
+        }
+        return pts;
+    }
+
+    /// <summary>二次贝塞尔摊平（不含起点，末尾含终点）。steps 越大越贴近真实曲线。</summary>
+    public static List<Point> FlattenQuadratic(Point p0, Point c, Point p1, int steps = 24)
+    {
+        var pts = new List<Point>(steps);
+        for (int i = 1; i <= steps; i++)
+        {
+            double t = (double)i / steps, mt = 1 - t;
+            pts.Add(new Point(
+                mt * mt * p0.X + 2 * mt * t * c.X + t * t * p1.X,
+                mt * mt * p0.Y + 2 * mt * t * c.Y + t * t * p1.Y));
+        }
+        return pts;
+    }
+
+    /// <summary>三次贝塞尔摊平（不含起点，末尾含终点）。</summary>
+    public static List<Point> FlattenCubic(Point p0, Point c1, Point c2, Point p1, int steps = 32)
+    {
+        var pts = new List<Point>(steps);
+        for (int i = 1; i <= steps; i++)
+        {
+            double t = (double)i / steps, mt = 1 - t;
+            double a = mt * mt * mt, b = 3 * mt * mt * t, c = 3 * mt * t * t, d = t * t * t;
+            pts.Add(new Point(
+                a * p0.X + b * c1.X + c * c2.X + d * p1.X,
+                a * p0.Y + b * c1.Y + c * c2.Y + d * p1.Y));
+        }
+        return pts;
+    }
+
+    /// <summary>把含 M/L/Q/C/Z 的路径解析为折线顶点（绝对坐标；曲线命令按固定步数摊平）。</summary>
+    private static List<Point> FlattenCurvedPathData(string s)
+    {
+        // 先扫描成"命令 + 数字序列"（本项目的 PathData 全部由本程序生成，只有绝对值命令）
+        var commands = new List<(char Cmd, List<double> Args)>();
+        var args = new List<double>();
+        char cmd = '\0';
+        int i = 0;
+        while (i < s.Length)
+        {
+            char ch = s[i];
+            if (char.IsLetter(ch))
+            {
+                if (cmd != '\0' && args.Count > 0) commands.Add((cmd, new List<double>(args)));
+                args.Clear();
+                cmd = char.ToUpperInvariant(ch);
+                i++;
+            }
+            else if (ch is '-' or '+' or '.' || char.IsDigit(ch))
+            {
+                int numStart = i;
+                if (ch is '-' or '+') i++;
+                while (i < s.Length && (char.IsDigit(s[i]) || s[i] == '.')) i++;
+                if (double.TryParse(s[numStart..i], NumberStyles.Float, CultureInfo.InvariantCulture, out var v))
+                    args.Add(v);
+            }
+            else i++;
+        }
+        if (cmd != '\0' && args.Count > 0) commands.Add((cmd, args));
+
+        var pts = new List<Point>();
+        var cur = new Point();
+        var start = new Point();
+        foreach (var (c, n) in commands)
+        {
+            switch (c)
+            {
+                case 'M':
+                    for (int k = 0; k + 1 < n.Count; k += 2)
+                    {
+                        var p = new Point(n[k], n[k + 1]);
+                        if (k == 0) start = p;
+                        pts.Add(p);
+                        cur = p;
+                    }
+                    break;
+                case 'L':
+                    for (int k = 0; k + 1 < n.Count; k += 2)
+                    {
+                        var p = new Point(n[k], n[k + 1]);
+                        pts.Add(p);
+                        cur = p;
+                    }
+                    break;
+                case 'Q':
+                    for (int k = 0; k + 3 < n.Count; k += 4)
+                    {
+                        var c1 = new Point(n[k], n[k + 1]);
+                        var end = new Point(n[k + 2], n[k + 3]);
+                        pts.AddRange(FlattenQuadratic(cur, c1, end));
+                        cur = end;
+                    }
+                    break;
+                case 'C':
+                    for (int k = 0; k + 5 < n.Count; k += 6)
+                    {
+                        var c1 = new Point(n[k], n[k + 1]);
+                        var c2 = new Point(n[k + 2], n[k + 3]);
+                        var end = new Point(n[k + 4], n[k + 5]);
+                        pts.AddRange(FlattenCubic(cur, c1, c2, end));
+                        cur = end;
+                    }
+                    break;
+                case 'Z':
+                    cur = start;
+                    break;
+            }
         }
         return pts;
     }

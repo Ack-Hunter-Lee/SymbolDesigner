@@ -25,6 +25,7 @@ public partial class SymbolDesignerViewModel
         new ToolboxEntry(nameof(L1Primitive.Pie),        "扇形",   "◔"),
         new ToolboxEntry(nameof(L1Primitive.RoundedRectangle), "圆角矩形", "▢"),
         new ToolboxEntry(nameof(L1Primitive.Line),       "直线",   "／"),
+        new ToolboxEntry(nameof(L1Primitive.Curve),      "曲线",   "⌒"),
         new ToolboxEntry(nameof(L1Primitive.Polyline),   "折线",   "〰"),
         new ToolboxEntry(nameof(L1Primitive.BandPolyline), "带宽折线", "▰"),
         new ToolboxEntry(nameof(L1Primitive.Belt),       "传送带", "⛓"),

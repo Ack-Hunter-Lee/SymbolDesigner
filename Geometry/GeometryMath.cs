@@ -59,6 +59,72 @@ public static class GeometryMath
     public static Point LocalToCanvas(PrimitiveItem item, Point local)
         => RotateCanvasPoint(item, new Point(item.X + local.X, item.Y + local.Y));
 
+    /// <summary>旋转后的画布坐标 → 图元局部坐标（<see cref="LocalToCanvas"/> 的逆）。
+    /// 手柄拖动写回几何前必须过这一层：鼠标拿到的是旋转后的画布坐标。</summary>
+    public static Point CanvasToLocal(PrimitiveItem item, Point canvas)
+    {
+        var unrotated = UnrotateCanvasPoint(item, canvas);
+        return new Point(unrotated.X - item.X, unrotated.Y - item.Y);
+    }
+
+    // —— 曲线（三次贝塞尔）图元的 PathData 读写 ——
+
+    /// <summary>曲线图元的 PathData 格式："M 起点 C 控制点1 控制点2 终点"（局部坐标）。
+    /// 返回 4 个关键点（起点 / 控制点1 / 控制点2 / 终点）；兼容旧版二次贝塞尔的 Q 格式
+    /// （Q 等价升阶为三次：c1 = p0 + 2/3(c−p0)，c2 = p1 + 2/3(c−p1)）。
+    /// 返回 null = 格式不符（空串 / 被改成折线 / 多段曲线）。</summary>
+    public static Point[]? ParseCurvePathData(string? pathData)
+    {
+        if (string.IsNullOrWhiteSpace(pathData)) return null;
+        bool isCubic = pathData.IndexOf('C') >= 0;
+        int need = isCubic ? 8 : 6;
+        var nums = new System.Collections.Generic.List<double>(need);
+        int i = 0;
+        while (i < pathData.Length && nums.Count < need)
+        {
+            char ch = pathData[i];
+            if (ch is '-' or '+' or '.' || char.IsDigit(ch))
+            {
+                int start = i;
+                if (ch is '-' or '+') i++;
+                while (i < pathData.Length && (char.IsDigit(pathData[i]) || pathData[i] == '.')) i++;
+                if (double.TryParse(pathData[start..i], NumberStyles.Float, CultureInfo.InvariantCulture, out var v))
+                    nums.Add(v);
+            }
+            else i++;
+        }
+        if (nums.Count < need) return null;
+
+        if (isCubic)
+        {
+            return new[]
+            {
+                new Point(nums[0], nums[1]),
+                new Point(nums[2], nums[3]),
+                new Point(nums[4], nums[5]),
+                new Point(nums[6], nums[7]),
+            };
+        }
+
+        // 旧版 Q（起点 / 单控制点 / 终点）→ 等价三次升阶
+        var p0 = new Point(nums[0], nums[1]);
+        var qc = new Point(nums[2], nums[3]);
+        var p1 = new Point(nums[4], nums[5]);
+        return new[]
+        {
+            p0,
+            new Point(p0.X + 2.0 / 3 * (qc.X - p0.X), p0.Y + 2.0 / 3 * (qc.Y - p0.Y)),
+            new Point(p1.X + 2.0 / 3 * (qc.X - p1.X), p1.Y + 2.0 / 3 * (qc.Y - p1.Y)),
+            p1,
+        };
+    }
+
+    /// <summary>把四个曲线关键点（起点 / 控制点1 / 控制点2 / 终点）序列化为 PathData（局部坐标）。</summary>
+    public static string BuildCurvePathData(Point a, Point c1, Point c2, Point b)
+        => string.Format(CultureInfo.InvariantCulture,
+            "M {0:0.##},{1:0.##} C {2:0.##},{3:0.##} {4:0.##},{5:0.##} {6:0.##},{7:0.##}",
+            a.X, a.Y, c1.X, c1.Y, c2.X, c2.Y, b.X, b.Y);
+
     // —— 布尔 / 折线数值容差（集中自 BooleanOps / ClipperBooleanEngine，统一语义，避免散布） ——
 
     /// <summary>近重合合并阈值：Combine 在切点处把同一交点算成两个数值不等的端点，圆被采样为贝塞尔后

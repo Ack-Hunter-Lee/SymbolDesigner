@@ -139,6 +139,9 @@ public static class XamlExporter
             "Polyline"
                 => PolylineElement(p, left, top, z, ctx),
 
+            "Curve"
+                => CurveElement(p, left, top, z, ctx),
+
             "Pie"
                 => PieElement(p, left, top, z, ctx),
 
@@ -430,6 +433,23 @@ public static class XamlExporter
     }
 
     // ---------- 各类型元素的 XML 生成 ----------
+
+    /// <summary>曲线（二次贝塞尔）导出：Path Data 原样输出 CurveGeometry 的 mini-language
+    /// （含 Q 命令 → 客户工程里是真曲线，不是折线近似）。仅描边、无填充；圆头端点/圆角连接。</summary>
+    private static string CurveElement(PrimitiveItem p, string left, string top, string z,
+        ExportContext ctx)
+    {
+        var geom = p.CurveGeometry;
+        if (geom is null) return Comment("Curve PathData 为空，无法导出");
+        string dataStr = System.Security.SecurityElement.Escape(geom.ToString(CultureInfo.InvariantCulture));
+
+        return $"<Path Canvas.Left=\"{left}\" Canvas.Top=\"{top}\"" +
+               $" Data=\"{dataStr}\"" +
+               $" Panel.ZIndex=\"{z}\"" +
+               $" Stroke=\"{ctx.StrokeExpression}\" StrokeThickness=\"{ctx.StrokeWidthExpression}\"" +
+               $" StrokeStartLineCap=\"Round\" StrokeEndLineCap=\"Round\" StrokeLineJoin=\"Round\"" +
+               $" Stretch=\"None\" />";
+    }
 
     /// <summary>传送带（Belt）导出：单线描边 Path，Data = BeltGeometry（M / L / A / Z，含真圆弧）。
     /// Stretch=None → 坐标即局部坐标（原点 = 求解结果包围盒左上角），Canvas.Left/Top 负责定位；

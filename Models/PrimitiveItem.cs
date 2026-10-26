@@ -572,6 +572,7 @@ public partial class PrimitiveItem : ObservableObject
         }
         OnPropertyChanged(nameof(OutlineGeometry));
         OnPropertyChanged(nameof(PolylineGeometry));
+        OnPropertyChanged(nameof(CurveGeometry));
         OnPropertyChanged(nameof(SelectionGeometry));
     }
 
@@ -876,6 +877,41 @@ public partial class PrimitiveItem : ObservableObject
         }
     }
 
+    /// <summary>曲线（L1 Curve）专用几何：PathData 原样交给 Geometry.Parse，保留 Q 命令的**真曲线**，
+    /// 不做摊平（PolylineGeometry 会把曲线摊成折线，视觉上出现小棱角）。
+    /// 模板绑定：L1CurveNode 绑此属性；导出也用它（客户工程里拿到的是真贝塞尔）。
+    /// 按 PathData 缓存，X/Y 变化不失效。</summary>
+    public System.Windows.Media.Geometry? CurveGeometry
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(PathData))
+            {
+                _curveCache = null;
+                _cachedCurvePath = null;
+                return null;
+            }
+            if (_curveCache is not null && _cachedCurvePath == PathData)
+                return _curveCache;
+            try
+            {
+                var geom = System.Windows.Media.Geometry.Parse(PathData);
+                geom.Freeze();
+                _curveCache = geom;
+                _cachedCurvePath = PathData;
+                return _curveCache;
+            }
+            catch (FormatException)
+            {
+                // PathData 被外部改成非法串 → 不抛给 UI，退回折线骨架
+                return PolylineGeometry;
+            }
+        }
+    }
+
+    private System.Windows.Media.Geometry? _curveCache;
+    private string? _cachedCurvePath;
+
     /// <summary>以画布坐标表示的"闭合可填充几何"（图元局部几何 + X/Y 平移，Freeze 后返回）。
     /// 布尔运算（合并/剪除/相交）的输入：只对"有面积"的闭合图元返回非 null；
     /// Line / 开放 Polyline 无面积 → 返回 null，不可参与布尔。</summary>
@@ -1000,6 +1036,7 @@ public partial class PrimitiveItem : ObservableObject
         nameof(L1Primitive.Line) => BuildLineSelectionGeometry(),
         nameof(L1Primitive.Polyline) when IsClosed => OutlineGeometry,
         nameof(L1Primitive.Polyline) => PolylineGeometry,
+        nameof(L1Primitive.Curve) => CurveGeometry,
         nameof(L1Primitive.BandPolyline) => OutlineGeometry,
         nameof(L1Primitive.BooleanPath) => OutlineGeometry,
         nameof(L1Primitive.Belt) => BeltGeometry,

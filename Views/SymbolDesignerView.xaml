@@ -218,6 +218,18 @@
                 StrokeStartLineCap="Round"
                 StrokeThickness="0.6" />
         </DataTemplate>
+        <DataTemplate x:Key="L1CurvePreview">
+            <!--  曲线 Curve 预览：一条向上拱起的弧线，描边与其他工具统一 0.6。  -->
+            <Path
+                Width="16"
+                Height="14"
+                Data="M 0,12 Q 8,-4 16,12"
+                Stretch="None"
+                Stroke="{StaticResource Brush.Tool.Icon}"
+                StrokeEndLineCap="Round"
+                StrokeStartLineCap="Round"
+                StrokeThickness="0.6" />
+        </DataTemplate>
         <DataTemplate x:Key="L1BandPolylinePreview">
             <!--
                 带状折线 BandPolyline 预览：与 Polyline 同形，描边加粗示意"带宽"语义。
@@ -751,10 +763,27 @@
                 </Grid>
             </views:DraggablePrimitive>
         </DataTemplate>
+        <!--  曲线（二次贝塞尔）：绑 CurveGeometry（未摊平的真曲线），仅描边、无填充，圆头端点  -->
+        <DataTemplate x:Key="L1CurveNode" DataType="{x:Type models:PrimitiveItem}">
+            <views:DraggablePrimitive Opacity="{Binding Opacity}">
+                <Path
+                    Data="{Binding CurveGeometry}"
+                    Stretch="None"
+                    Stroke="{Binding StrokeBrush}"
+                    StrokeDashArray="{Binding StrokeDashArray}"
+                    StrokeEndLineCap="Round"
+                    StrokeLineJoin="Round"
+                    StrokeStartLineCap="Round"
+                    StrokeThickness="{Binding StrokeWidth}" />
+            </views:DraggablePrimitive>
+        </DataTemplate>
         <!--  DataTemplateSelector：根据 PrimitiveItem 类型选模板（已废弃 L2/FanBlade 分支）  -->
         <views:PrimitiveTemplateSelector
             x:Key="PrimitiveSelector"
             L1BooleanPath="{StaticResource L1BooleanPathNode}"
+            L1Belt="{StaticResource L1BeltNode}"
+            L1BandPolyline="{StaticResource L1BandPolylineNode}"
+            L1Curve="{StaticResource L1CurveNode}"
             L1Ellipse="{StaticResource L1EllipseNode}"
             L1Line="{StaticResource L1LineNode}"
             L1Polyline="{StaticResource L1PolylineNode}"
@@ -762,9 +791,7 @@
             L1Ring="{StaticResource L1RingNode}"
             L1Pie="{StaticResource L1PieNode}"
             L1RoundedRectangle="{StaticResource L1RoundedNode}"
-            L1BandPolyline="{StaticResource L1BandPolylineNode}"
             L1Triangle="{StaticResource L1TriangleNode}"
-            L1Belt="{StaticResource L1BeltNode}"
             L1Default="{StaticResource L1DefaultNode}" />
     </UserControl.Resources>
 
@@ -878,6 +905,9 @@
                                                 </DataTrigger>
                                                 <DataTrigger Binding="{Binding TypeKey}" Value="Polyline">
                                                     <Setter Property="ContentTemplate" Value="{StaticResource L1PolylinePreview}" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding TypeKey}" Value="Curve">
+                                                    <Setter Property="ContentTemplate" Value="{StaticResource L1CurvePreview}" />
                                                 </DataTrigger>
                                                 <DataTrigger Binding="{Binding TypeKey}" Value="BandPolyline">
                                                     <Setter Property="ContentTemplate" Value="{StaticResource L1BandPolylinePreview}" />
@@ -2020,6 +2050,81 @@
                                                     ScaleY="{Binding InverseScale}" />
                                             </Rectangle.RenderTransform>
                                         </Rectangle>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!--
+                                曲线控制点手柄：起点 / 控制点1 / 控制点2 / 终点（三次贝塞尔）。
+                                拖动两个控制点改弯曲形状，拖动端点改走向。
+                                仅在 SelectedItem 是 Curve 时由 VM 填充集合（空集合 = 不显示）。
+                            -->
+                            <ItemsControl
+                                IsHitTestVisible="True"
+                                ItemsSource="{Binding CurveHandles}"
+                                PreviewMouseLeftButtonDown="OnCurveHandleMouseDown"
+                                PreviewMouseLeftButtonUp="OnCurveHandleMouseUp"
+                                PreviewMouseMove="OnCurveHandleMouseMove">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <Canvas />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemContainerStyle>
+                                    <Style TargetType="ContentPresenter">
+                                        <Setter Property="Canvas.Left" Value="{Binding X}" />
+                                        <Setter Property="Canvas.Top" Value="{Binding Y}" />
+                                        <Setter Property="Panel.ZIndex" Value="9999" />
+                                        <Setter Property="Width" Value="4" />
+                                        <Setter Property="Height" Value="4" />
+                                        <Setter Property="Margin" Value="-2,-2,0,0" />
+                                    </Style>
+                                </ItemsControl.ItemContainerStyle>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <!--  两个控制点用实心圆（圆点拖改弯曲），起点/终点用方块（拖改端点位置）  -->
+                                        <Grid Tag="{Binding Kind}" ToolTip="拖拽调整曲线">
+                                            <Ellipse
+                                                Width="4"
+                                                Height="4"
+                                                Fill="{StaticResource Brush.State.Accent}"
+                                                Stroke="{StaticResource Brush.Brand.Stroke}"
+                                                StrokeThickness="0.1">
+                                                <Ellipse.Style>
+                                                    <Style TargetType="Ellipse">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Kind}" Value="{x:Static viewmodels:CurveHandleKind.Control1}">
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Kind}" Value="{x:Static viewmodels:CurveHandleKind.Control2}">
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Ellipse.Style>
+                                            </Ellipse>
+                                            <Rectangle
+                                                Width="4"
+                                                Height="4"
+                                                Fill="{StaticResource Brush.Brand.Stroke}"
+                                                Stroke="{StaticResource Brush.State.Accent}"
+                                                StrokeThickness="0.1">
+                                                <Rectangle.Style>
+                                                    <Style TargetType="Rectangle">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Kind}" Value="{x:Static viewmodels:CurveHandleKind.Control1}">
+                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Kind}" Value="{x:Static viewmodels:CurveHandleKind.Control2}">
+                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Rectangle.Style>
+                                            </Rectangle>
+                                        </Grid>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
