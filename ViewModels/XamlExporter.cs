@@ -87,6 +87,11 @@ public static class XamlExporter
         public Dictionary<string, string> PatternResources { get; } = new();
         /// <summary>渐变画刷资源：Key → XAML。Fill 里只写 {StaticResource Key}。</summary>
         public Dictionary<string, string> GradientResources { get; } = new();
+        /// <summary>图元 → 已分配的唯一 x:Name（未命名图元为 string.Empty）。
+        /// 同一导出批次内缓存，保证两次遍历（资源扫描 + 写出）拿到同一个名字。</summary>
+        public Dictionary<PrimitiveItem, string> XamlNames { get; } = new();
+        /// <summary>本批次已占用的 x:Name（大小写不敏感去重，符合 XAML 名称作用域语义）。</summary>
+        public HashSet<string> UsedNames { get; } = new(StringComparer.OrdinalIgnoreCase);
         // 当前图元的 Fill 表达式 / Stroke 表达式 / 线宽。ExportOne 调用前由调用方设置。
         public string FillExpression = "#FFa8c4d8";
         public string StrokeExpression = "#FF5a7a8c";
@@ -149,7 +154,44 @@ public static class XamlExporter
             _ => Comment($"未知的图元类型: {p.TypeKey}"),
         };
         // 旋转此前完全没导出（旋转过的图形导出后变回轴对齐）。阵列副本的旋转也依赖这里。
-        return p.Rotation == 0 ? element : ApplyRotation(element, p.Rotation);
+        if (p.Rotation != 0) element = ApplyRotation(element, p.Rotation);
+
+        // 用户命名 → x:Name（放在旋转注入之后，两次注入都作用在同一外层标签的不同位置）
+        string xamlName = ResolveXamlName(p, ctx);
+        if (xamlName.Length > 0)
+            element = InjectRootAttributes(element, $" x:Name=\"{xamlName}\"");
+
+        return element;
+    }
+
+    /// <summary>把图元名称转换为合法且批次内唯一的 x:Name。
+    /// 规则：非字母数字下划线 → 下划线；数字开头补前缀下划线；重名追加 _2/_3…。
+    /// 未命名 → 返回空字符串（不输出 x:Name）。</summary>
+    private static string ResolveXamlName(PrimitiveItem p, ExportContext ctx)
+    {
+        if (ctx.XamlNames.TryGetValue(p, out var cached)) return cached;
+
+        string raw = (p.Name ?? string.Empty).Trim();
+        if (raw.Length == 0)
+        {
+            ctx.XamlNames[p] = string.Empty;
+            return string.Empty;
+        }
+
+        var sb = new StringBuilder(raw.Length);
+        foreach (char c in raw)
+            sb.Append(char.IsLetterOrDigit(c) || c == '_' ? c : '_');
+        // XML/XAML 名称不能以数字开头
+        if (char.IsDigit(sb[0])) sb.Insert(0, '_');
+
+        string candidate = sb.ToString();
+        string unique = candidate;
+        int suffix = 2;
+        while (!ctx.UsedNames.Add(unique))
+            unique = candidate + "_" + suffix++;
+
+        ctx.XamlNames[p] = unique;
+        return unique;
     }
 
     /// <summary>把旋转注入元素标签：RenderTransformOrigin=0.5,0.5 让旋转绕**自身中心**
@@ -160,13 +202,20 @@ public static class XamlExporter
     /// 直接内联进属性值，其中的 '>' 不是外层标签的结束，长度/引号扫描都会误判。</summary>
     private static string ApplyRotation(string element, double angleDeg)
     {
+        string attr = $" RenderTransformOrigin=\"0.5,0.5\" RenderTransform=\"{{RotateTransform Angle={Fmt(angleDeg)}}}\"";
+        return InjectRootAttributes(element, attr);
+    }
+
+    /// <summary>向外层起始标签注入属性片段（如 x:Name / RenderTransform）。
+    /// 注释、非元素输出直接原样返回。注入点用"标签嵌套深度"扫描定位：
+    /// 渐变填充等表达式会把 &lt;LinearGradientBrush&gt; 内联进属性值，
+    /// 其中的 '&gt;' 不是外层标签的结束，长度/引号扫描都会误判。</summary>
+    private static string InjectRootAttributes(string element, string attributes)
+    {
         string trimmed = element.TrimStart();
-        // 注释 / 非元素输出不注入
         if (!trimmed.StartsWith("<", System.StringComparison.Ordinal)
             || trimmed.StartsWith("<!--", System.StringComparison.Ordinal))
             return element;
-
-        string attr = $" RenderTransformOrigin=\"0.5,0.5\" RenderTransform=\"{{RotateTransform Angle={Fmt(angleDeg)}}}\"";
 
         // 深度扫描：每个 '<' 进一层、每个 '>' 出一层，回到 0 的那个 '>' 就是外层起始标签的结束。
         // 内联的 <LinearGradientBrush ...><GradientStop/></LinearGradientBrush> 成对匹配，不影响结果。
@@ -182,8 +231,8 @@ public static class XamlExporter
         int slash = tagEnd - 1;
         while (slash > 0 && char.IsWhiteSpace(element[slash])) slash--;
         if (element[slash] == '/')
-            return element[..slash].TrimEnd() + attr + " />" + element[(tagEnd + 1)..];
-        return element[..tagEnd].TrimEnd() + attr + element[tagEnd..];
+            return element[..slash].TrimEnd() + attributes + " />" + element[(tagEnd + 1)..];
+        return element[..tagEnd].TrimEnd() + attributes + element[tagEnd..];
     }
 
     // ========================== 颜色/画刷表达式生成 ==========================

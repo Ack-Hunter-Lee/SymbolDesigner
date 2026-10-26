@@ -58,6 +58,15 @@ public partial class PrimitiveItem : ObservableObject
     /// 旧版"PrimitiveKind(L1/L2)"分类概念已废弃——渲染分支/属性面板/选中决策一律按 TypeKey 字符串判断。</summary>
     [ObservableProperty] private string _typeKey = string.Empty;
 
+    /// <summary>用户自定义元素名称（可为空）。空 = 未命名，界面与导出都回退到 TypeKey。
+    /// 随工程保存；导出 XAML 时作为 x:Name（非法字符替换为下划线、重名自动追加序号）。</summary>
+    [ObservableProperty] private string _name = string.Empty;
+
+    /// <summary>元素页列表与属性面板的显示名：有名称用名称，否则回退类型标识。</summary>
+    public string DisplayName => string.IsNullOrWhiteSpace(Name) ? TypeKey : Name;
+
+    partial void OnNameChanged(string value) => OnPropertyChanged(nameof(DisplayName));
+
     [ObservableProperty] private double _x;
     [ObservableProperty] private double _y;
     [ObservableProperty] private double _width = 30;

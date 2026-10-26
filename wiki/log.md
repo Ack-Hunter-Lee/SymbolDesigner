@@ -2,6 +2,19 @@
 
 > 所有 wiki 操作按时间追加。近期记录保留在此，更早按月归档到 `_archive/log/`。
 
+## 2026-10-25
+
+- 新增"元素命名"能力：
+  - `PrimitiveItem.Name`（`[ObservableProperty]`）+ `DisplayName`（空则回退 `TypeKey`）；
+    属性面板顶部新增名称输入框（锁定开关上方），元素页列表改显示 `DisplayName`。
+  - 持久化：`PrimitiveItemDto.Name`（`string?`，空名不落盘），`ToDto` / `CreateFromDto` 双向映射。
+  - XAML 导出：`XamlExporter.ResolveXamlName` 把名称转成合法且批次内唯一的 `x:Name`
+    （非法字符→`_`、数字开头补 `_`、重名 `_2/_3`），经新增的 `InjectRootAttributes` 注入外层标签；
+    `ApplyRotation` 同步复用该注入器，注释/非元素输出自动跳过。
+  - 验证：临时控制台程序实跑导出，`急停 按钮` → `x:Name="急停_按钮"`、同名第二个 → `..._2`、
+    `1号` → `_1号`、未命名无 `x:Name`，且与 `RenderTransform` 同标签共存合法；
+    `SymbolDesigner.csproj` 与 `SymbolDesigner.Cli.csproj` 均 0 错误。
+
 ## 2026-10-24
 
 - 新增术语表页 `glossary.md`（TypeKey / BandWidth / BooleanPath / 阵列 / 约束 / 撤销 / 视图主题 / 工具命令），

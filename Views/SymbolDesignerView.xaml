@@ -3093,11 +3093,29 @@
                                 BorderThickness="1"
                                 CornerRadius="3"
                                 Visibility="{Binding HasSelectedItem, Converter={StaticResource BoolToVis}}">
-                                <CheckBox
-                                    IsChecked="{Binding SelectedItem.IsLocked, Mode=TwoWay}"
-                                    Content="锁定图元（禁止移动 / 编辑）"
-                                    FontSize="10"
-                                    Foreground="{StaticResource Brush.Text.Primary}" />
+                                <StackPanel>
+                                    <!--  元素名称：随工程保存，导出 XAML 时作为 x:Name  -->
+                                    <TextBlock
+                                        Margin="0,0,0,3"
+                                        FontSize="10"
+                                        Foreground="{StaticResource Brush.Text.Hint}"
+                                        Text="元素名称" />
+                                    <TextBox
+                                        Margin="0,0,0,6"
+                                        Padding="3,1"
+                                        Background="{StaticResource Brush.Bg.Input}"
+                                        BorderBrush="{StaticResource Brush.Border.Subtle}"
+                                        BorderThickness="1"
+                                        FontSize="11"
+                                        Foreground="{StaticResource Brush.Text.Primary}"
+                                        Text="{Binding SelectedItem.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                        ToolTip="留空则显示为图元类型；导出 XAML 时作为 x:Name" />
+                                    <CheckBox
+                                        IsChecked="{Binding SelectedItem.IsLocked, Mode=TwoWay}"
+                                        Content="锁定图元（禁止移动 / 编辑）"
+                                        FontSize="10"
+                                        Foreground="{StaticResource Brush.Text.Primary}" />
+                                </StackPanel>
                             </Border>
 
                             <!--  编辑区：锁定后整体禁用（透明度 / 外观 / 几何等全部编辑控件）  -->
@@ -5171,7 +5189,7 @@
                                                         FontSize="11"
                                                         FontWeight="SemiBold"
                                                         Foreground="{StaticResource Brush.Text.Hint}"
-                                                        Text="{Binding TypeKey}" />
+                                                        Text="{Binding DisplayName}" />
                                                     <Border
                                                         Margin="6,0,0,0"
                                                         Padding="4,0"

@@ -95,6 +95,8 @@ public class PrimitiveItemDto
     public string Id { get; set; } = string.Empty;
     public string Kind { get; set; } = "L1";
     public string TypeKey { get; set; } = string.Empty;
+    /// <summary>用户自定义元素名称（缺省 null/空 = 未命名）。导出 XAML 时转成 x:Name。</summary>
+    public string? Name { get; set; }
     public double X { get; set; }
     public double Y { get; set; }
     public double Width { get; set; } = 30;

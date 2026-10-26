@@ -52,6 +52,10 @@ confidence: high
 - `CreateFromDto` 有已知坑：**必须先赋整体 `BandWidth` 再填 `VertexBandWidths`**，
   否则 `OnBandWidthChanged` 会覆盖逐顶点带宽（曾导致加载后带宽被抹平）。
 - 图元 `Id`（Guid）是约束/阵列/撤销引用的锚；复制粘贴时 `ToDto(CreateFromDto(dto))` 往返 + **置空 Id** 保证新身份。
+- **元素命名**：`PrimitiveItem.Name`（用户自定义，可空）+ `DisplayName`（空则回退 `TypeKey`，元素页/属性面板用它显示）。
+  名称随工程落盘为 `PrimitiveItemDto.Name`；导出 XAML 时转成 `x:Name`——
+  非字母数字下划线一律替换为 `_`、数字开头补前缀 `_`、同批次重名自动追加 `_2/_3`（`XamlExporter.ResolveXamlName`）。
+  名称**不参与几何/命中/阵列**，仅元数据；阵列副本沿用源名称，导出时按序号去重。
 
 ## 相关页面
 

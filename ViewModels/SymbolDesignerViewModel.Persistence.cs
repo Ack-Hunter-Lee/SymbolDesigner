@@ -183,6 +183,7 @@ public partial class SymbolDesignerViewModel
             // 旧版 Kind = p.Kind.ToString() 已删除（L1/L2 分类废弃；序列化不再输出 Kind 字段）。
             Id = p.Id.ToString(), // 持久约束引用图元的唯一标识
             TypeKey = p.TypeKey,
+            Name = string.IsNullOrWhiteSpace(p.Name) ? null : p.Name,
             X = p.X,
             Y = p.Y,
             Width = p.Width,
@@ -451,6 +452,7 @@ public partial class SymbolDesignerViewModel
             Id = Guid.TryParse(dto.Id, out var g) ? g : Guid.NewGuid(), // 老文件无 Id → 分配新
             // TypeKey 兼容：旧工程文件存的是 "ThickPolyline"，新命名体系下是 "BandPolyline" → 加载时映射
             TypeKey = dto.TypeKey == "ThickPolyline" ? nameof(L1Primitive.BandPolyline) : dto.TypeKey,
+            Name = dto.Name ?? string.Empty,
             X = dto.X,
             Y = dto.Y,
             Width = dto.Width,
